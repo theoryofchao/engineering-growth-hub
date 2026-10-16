@@ -6,7 +6,7 @@ import { API_BASE_URL } from "@/lib/config";
 import { PomodoroTimer } from "@/components/pomodoro-timer";
 import { ExerciseQuiz } from "@/components/exercise-quiz";
 import { ContentBlocks } from "@/components/content-blocks";
-import type { Note } from "@/components/notes-drawer";
+import type { Note } from "@/components/notes-panel";
 
 type LearningSession = {
   id: number;
