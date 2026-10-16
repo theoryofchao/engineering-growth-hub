@@ -23,12 +23,25 @@ class ExerciseSummary(BaseModel):
     options: list[str]
 
 
+class NoteDetail(BaseModel):
+    body: str
+    updated_at: datetime
+
+
+class ContentBlockDetail(BaseModel):
+    id: int
+    sequence: int
+    heading: str
+    body: str
+    note: NoteDetail | None = None
+
+
 class LearningSessionDetail(BaseModel):
     id: int
     title: str
     duration_minutes: int
     objective: str
-    content: str
+    content_blocks: list[ContentBlockDetail]
     sequence: int
     access_tier: str
     topic: TopicSummary

@@ -19,7 +19,36 @@
       "sequence": 1,
       "access_tier": "free",
       "objective": "Describe the workflow pattern experienced engineers use with agentic coding tools (Claude Code, Codex, etc.), and explain why each practice exists.",
-      "content": "The engineers getting real value from coding agents aren't 'vibe coding' — typing a vague prompt and accepting whatever comes back. The pattern that shows up repeatedly, across Anthropic's own best-practice guidance and independent practitioner write-ups, has a few consistent elements:\n\n1) Separate planning from implementation. Before any code gets written, the agent explores the codebase and proposes a plan — which files change, what the approach is, what could go wrong. Only after that plan is reviewed does implementation start. Skipping this step is the single biggest cause of an agent confidently solving the wrong problem.\n\n2) Repository context files do the onboarding. CLAUDE.md (and Codex's AGENTS.md) encode the things a new hire would otherwise take weeks to absorb: build/test commands, architectural boundaries, what not to touch, code style. Without this, every session re-derives context from scratch.\n\n3) Give the agent a check it can run on itself. The highest-leverage habit is making sure the agent has a fast, reliable way to verify its own work — a test suite, a type checker, a build — before a human ever looks at it. This is why 'write a failing test first, then make it pass' works so well with agents: the check is unambiguous and the agent can iterate against it alone.\n\n4) Delegation for independent, parallelizable work. Senior engineers increasingly run multiple agents on genuinely independent sub-tasks (e.g. separate services, or research vs. implementation) rather than one agent doing everything serially. This only works when the sub-tasks truly don't depend on each other — forcing parallelism onto a sequential problem creates merge conflicts and wasted work.\n\n5) The engineer stays the reviewer and the accountable party. None of the above changes who's responsible for correctness. The role shifts from 'typing every line' to 'directing, reviewing, and signing off' — closer to how a staff engineer already works with a junior engineer's pull requests, just at higher velocity.\n\nNone of this is about typing faster. It's about structuring the interaction so an agent's mistakes get caught cheaply (by a test, a build, a plan review) instead of expensively (in production, or after hours of wrong-direction work).",
+      "content_blocks": [
+        {
+          "heading": "Not \"Vibe Coding\"",
+          "body": "The engineers getting real value from coding agents aren't 'vibe coding' — typing a vague prompt and accepting whatever comes back. The pattern that shows up repeatedly, across Anthropic's own best-practice guidance and independent practitioner write-ups, has a few consistent elements."
+        },
+        {
+          "heading": "1. Separate Planning from Implementation",
+          "body": "Before any code gets written, the agent explores the codebase and proposes a plan — which files change, what the approach is, what could go wrong. Only after that plan is reviewed does implementation start. Skipping this step is the single biggest cause of an agent confidently solving the wrong problem."
+        },
+        {
+          "heading": "2. Repository Context Files Do the Onboarding",
+          "body": "CLAUDE.md (and Codex's AGENTS.md) encode the things a new hire would otherwise take weeks to absorb: build/test commands, architectural boundaries, what not to touch, code style. Without this, every session re-derives context from scratch."
+        },
+        {
+          "heading": "3. Give the Agent a Check It Can Run on Itself",
+          "body": "The highest-leverage habit is making sure the agent has a fast, reliable way to verify its own work — a test suite, a type checker, a build — before a human ever looks at it. This is why 'write a failing test first, then make it pass' works so well with agents: the check is unambiguous and the agent can iterate against it alone."
+        },
+        {
+          "heading": "4. Delegation for Independent, Parallelizable Work",
+          "body": "Senior engineers increasingly run multiple agents on genuinely independent sub-tasks (e.g. separate services, or research vs. implementation) rather than one agent doing everything serially. This only works when the sub-tasks truly don't depend on each other — forcing parallelism onto a sequential problem creates merge conflicts and wasted work."
+        },
+        {
+          "heading": "5. The Engineer Stays the Reviewer",
+          "body": "None of the above changes who's responsible for correctness. The role shifts from 'typing every line' to 'directing, reviewing, and signing off' — closer to how a staff engineer already works with a junior engineer's pull requests, just at higher velocity."
+        },
+        {
+          "heading": "The Bottom Line",
+          "body": "None of this is about typing faster. It's about structuring the interaction so an agent's mistakes get caught cheaply (by a test, a build, a plan review) instead of expensively (in production, or after hours of wrong-direction work)."
+        }
+      ],
       "exercises": [
         {
           "type": "multiple_choice",
@@ -44,7 +73,32 @@
       "sequence": 2,
       "access_tier": "free",
       "objective": "Evaluate productivity claims about AI coding tools against measured evidence, and identify which task types show real gains versus which show self-reporting bias.",
-      "content": "Marketing and anecdote both lean hard on '10x engineer' framing. The actual measured evidence tells a much more modest, uneven story — and the gap between perceived and measured speed is itself one of the most important findings.\n\nThe METR randomized controlled trial (2025) had experienced open-source developers complete real tasks in codebases they knew well, with and without AI assistance. Before starting, they predicted AI would make them about 24% faster. After finishing, they *felt* about 20% faster. The measured result: they were 19% *slower* with AI assistance. A February 2026 follow-up with more developers and tasks found modest gains — roughly 18% for experienced returning developers, about 4% for new ones — with confidence intervals wide enough to include zero in both cases.\n\nLarge-scale survey data shows the same perception gap at scale: DORA/DX-style surveys find 80%+ of developers self-report productivity gains, while measured telemetry (PR lead time, throughput) across large developer populations tends to land closer to 10%.\n\nWhy the gap? Two things offset the raw speed of code generation: (a) reviewing and debugging AI-written code takes real time, especially in unfamiliar or complex codebases, and (b) the *feeling* of progress (code appearing quickly) isn't the same as the *time to a correct, merged, reviewed change*.\n\nWhere the evidence does show consistent real gains: boilerplate and scaffolding, test generation, working in an unfamiliar language or library, and greenfield prototyping. Where gains shrink or reverse: large, unfamiliar, or architecturally complex codebases — exactly the domain senior and staff engineers spend most of their time in.\n\nThe practical takeaway isn't 'AI doesn't help.' It's: treat productivity claims the way you'd treat any other engineering claim — ask for the measurement methodology, not the anecdote, and expect the honest number to be a modest, task-dependent improvement rather than a multiplier.",
+      "content_blocks": [
+        {
+          "heading": "The \"10x Engineer\" Claim vs. the Data",
+          "body": "Marketing and anecdote both lean hard on '10x engineer' framing. The actual measured evidence tells a much more modest, uneven story — and the gap between perceived and measured speed is itself one of the most important findings."
+        },
+        {
+          "heading": "The METR Randomized Trial",
+          "body": "The METR randomized controlled trial (2025) had experienced open-source developers complete real tasks in codebases they knew well, with and without AI assistance. Before starting, they predicted AI would make them about 24% faster. After finishing, they *felt* about 20% faster. The measured result: they were 19% *slower* with AI assistance. A February 2026 follow-up with more developers and tasks found modest gains — roughly 18% for experienced returning developers, about 4% for new ones — with confidence intervals wide enough to include zero in both cases."
+        },
+        {
+          "heading": "The Pattern Holds at Scale",
+          "body": "Large-scale survey data shows the same perception gap at scale: DORA/DX-style surveys find 80%+ of developers self-report productivity gains, while measured telemetry (PR lead time, throughput) across large developer populations tends to land closer to 10%."
+        },
+        {
+          "heading": "Why the Perception Gap?",
+          "body": "Two things offset the raw speed of code generation: (a) reviewing and debugging AI-written code takes real time, especially in unfamiliar or complex codebases, and (b) the *feeling* of progress (code appearing quickly) isn't the same as the *time to a correct, merged, reviewed change*."
+        },
+        {
+          "heading": "Where the Gains Are Real",
+          "body": "Where the evidence does show consistent real gains: boilerplate and scaffolding, test generation, working in an unfamiliar language or library, and greenfield prototyping. Where gains shrink or reverse: large, unfamiliar, or architecturally complex codebases — exactly the domain senior and staff engineers spend most of their time in."
+        },
+        {
+          "heading": "The Practical Takeaway",
+          "body": "Treat productivity claims the way you'd treat any other engineering claim — ask for the measurement methodology, not the anecdote, and expect the honest number to be a modest, task-dependent improvement rather than a multiplier."
+        }
+      ],
       "exercises": [
         {
           "type": "multiple_choice",

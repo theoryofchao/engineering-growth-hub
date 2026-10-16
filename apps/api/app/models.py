@@ -75,7 +75,6 @@ class LearningSession(db.Model):
     title = db.Column(db.String(200), nullable=False)
     duration_minutes = db.Column(db.Integer, nullable=False)
     objective = db.Column(db.Text, nullable=False)
-    content = db.Column(db.Text, nullable=False)
     sequence = db.Column(db.Integer, nullable=False, default=1)
     access_tier = db.Column(db.String(50), nullable=False, default="free")
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
@@ -85,10 +84,72 @@ class LearningSession(db.Model):
     exercises = db.relationship(
         "Exercise", back_populates="learning_session", order_by="Exercise.sequence"
     )
+    content_blocks = db.relationship(
+        "ContentBlock", back_populates="learning_session", order_by="ContentBlock.sequence"
+    )
 
     __table_args__ = (
         db.CheckConstraint("duration_minutes in (25, 50)", name="ck_learning_session_duration"),
     )
+
+
+class ContentBlock(db.Model):
+    """One authored slide/section of a lesson's content.
+
+    Content is explicitly broken into blocks by whoever authors the seed
+    JSON (not auto-split from a text blob), so each block has a stable
+    identity to attach a note to and to use as a slide in slide view.
+    """
+
+    __tablename__ = "content_blocks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    learning_session_id = db.Column(
+        db.Integer, db.ForeignKey("learning_sessions.id"), nullable=False
+    )
+    sequence = db.Column(db.Integer, nullable=False)
+    heading = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
+
+    learning_session = db.relationship("LearningSession", back_populates="content_blocks")
+    note = db.relationship("Note", back_populates="content_block", uselist=False)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "learning_session_id", "sequence", name="uq_content_block_session_sequence"
+        ),
+    )
+
+
+class Note(db.Model):
+    """A learner's free-form note on one content block. One note per
+    block, edited in place (not a log of separate timestamped entries).
+    No `user_id` yet — single-user MVP, same as the rest of this schema.
+    """
+
+    __tablename__ = "notes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    content_block_id = db.Column(
+        db.Integer, db.ForeignKey("content_blocks.id"), nullable=False, unique=True
+    )
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
+
+    content_block = db.relationship("ContentBlock", back_populates="note")
+
+    @staticmethod
+    def upsert(content_block_id: int, body: str) -> "Note":
+        note = Note.query.filter_by(content_block_id=content_block_id).first()
+        if note is None:
+            note = Note(content_block_id=content_block_id, body=body)
+            db.session.add(note)
+        else:
+            note.body = body
+            note.updated_at = _utcnow()
+        return note
 
 
 class StudySession(db.Model):

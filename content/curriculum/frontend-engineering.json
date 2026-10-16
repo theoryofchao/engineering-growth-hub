@@ -19,7 +19,20 @@
       "sequence": 1,
       "access_tier": "free",
       "objective": "Explain the steps browsers take to convert HTML/CSS into rendered pixels, and identify which steps a given code change affects.",
-      "content": "The critical rendering path is the sequence of steps a browser takes to convert HTML, CSS, and JavaScript into pixels on screen: 1) Parse HTML into the DOM. 2) Parse CSS into the CSSOM. 3) Combine DOM + CSSOM into the render tree (visible nodes only). 4) Layout: compute the size and position of every render tree node. 5) Paint: fill in pixels for text, color, images, borders, shadows. 6) Composite: combine painted layers in the correct order, using the GPU where possible.\n\nChanges that only affect paint (e.g. background-color) are cheaper than changes that trigger layout (e.g. width, font-size), because layout invalidates everything downstream of it. CSS properties like `transform` and `opacity` can be composited without touching layout or paint, which is why animating them is preferred for smooth 60fps animations.",
+      "content_blocks": [
+        {
+          "heading": "Overview",
+          "body": "The critical rendering path is the sequence of steps a browser takes to convert HTML, CSS, and JavaScript into pixels on screen."
+        },
+        {
+          "heading": "The Six Steps",
+          "body": "1) Parse HTML into the DOM.\n2) Parse CSS into the CSSOM.\n3) Combine DOM + CSSOM into the render tree (visible nodes only).\n4) Layout: compute the size and position of every render tree node.\n5) Paint: fill in pixels for text, color, images, borders, shadows.\n6) Composite: combine painted layers in the correct order, using the GPU where possible."
+        },
+        {
+          "heading": "Why This Matters for Performance",
+          "body": "Changes that only affect paint (e.g. background-color) are cheaper than changes that trigger layout (e.g. width, font-size), because layout invalidates everything downstream of it. CSS properties like `transform` and `opacity` can be composited without touching layout or paint, which is why animating them is preferred for smooth 60fps animations."
+        }
+      ],
       "exercises": [
         {
           "type": "multiple_choice",

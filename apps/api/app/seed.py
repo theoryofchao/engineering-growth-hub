@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 from app.extensions import db
-from app.models import Domain, Exercise, LearningSession, Module, Topic
+from app.models import ContentBlock, Domain, Exercise, LearningSession, Module, Topic
 
 CONTENT_DIR = Path(__file__).resolve().parents[3] / "content" / "curriculum"
 CURRICULUM_MAP_FILENAME = "curriculum-map.json"
@@ -85,6 +85,7 @@ def load_file(path: Path) -> None:
     for session_data in data["learning_sessions"]:
         session_data = dict(session_data)
         exercises_data = session_data.pop("exercises", [])
+        content_blocks_data = session_data.pop("content_blocks", [])
 
         learning_session = LearningSession.query.filter_by(
             topic_id=topic.id, sequence=session_data["sequence"]
@@ -93,6 +94,20 @@ def load_file(path: Path) -> None:
             learning_session = LearningSession(topic_id=topic.id, **session_data)
             db.session.add(learning_session)
             db.session.flush()
+
+        for block_index, block_data in enumerate(content_blocks_data, start=1):
+            existing_block = ContentBlock.query.filter_by(
+                learning_session_id=learning_session.id, sequence=block_index
+            ).first()
+            if existing_block is None:
+                db.session.add(
+                    ContentBlock(
+                        learning_session_id=learning_session.id,
+                        sequence=block_index,
+                        heading=block_data["heading"],
+                        body=block_data["body"],
+                    )
+                )
 
         for exercise_data in exercises_data:
             existing = Exercise.query.filter_by(

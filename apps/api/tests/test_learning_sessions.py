@@ -19,6 +19,11 @@ def test_get_learning_session_returns_content(app, client):
     assert "options" in body["exercises"][0]
     assert "correct_index" not in body["exercises"][0]
 
+    assert len(body["content_blocks"]) == 3
+    assert body["content_blocks"][0]["sequence"] == 1
+    assert body["content_blocks"][0]["heading"] == "Overview"
+    assert body["content_blocks"][0]["note"] is None
+
 
 def test_get_learning_session_404_for_missing_id(client):
     response = client.get("/api/v1/learning-sessions/999")

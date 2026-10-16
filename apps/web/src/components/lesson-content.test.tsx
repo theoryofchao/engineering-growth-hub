@@ -9,7 +9,9 @@ function baseLessonResponse(overrides: Partial<Record<string, unknown>> = {}) {
     title: "Critical Rendering Path",
     duration_minutes: 25,
     objective: "Explain the critical rendering path.",
-    content: "The critical rendering path is...",
+    content_blocks: [
+      { id: 1, sequence: 1, heading: "Overview", body: "The critical rendering path is...", note: null },
+    ],
     access_tier: "free",
     topic: { id: 1, title: "Browser Rendering", slug: "browser-rendering" },
     exercises: [],

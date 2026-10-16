@@ -5,13 +5,15 @@ import { useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { PomodoroTimer } from "@/components/pomodoro-timer";
 import { ExerciseQuiz } from "@/components/exercise-quiz";
+import { ContentBlocks } from "@/components/content-blocks";
+import type { Note } from "@/components/notes-drawer";
 
 type LearningSession = {
   id: number;
   title: string;
   duration_minutes: number;
   objective: string;
-  content: string;
+  content_blocks: { id: number; sequence: number; heading: string; body: string; note: Note | null }[];
   access_tier: string;
   topic: { id: number; title: string; slug: string };
   exercises: { id: number; type: string; prompt: string; options: string[] }[];
@@ -119,9 +121,9 @@ export function LessonContent({ sessionId }: { sessionId: number }) {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
           Lesson
         </h2>
-        <p className="mt-1 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
-          {data.content}
-        </p>
+        <div className="mt-2">
+          <ContentBlocks initialBlocks={data.content_blocks} />
+        </div>
       </section>
 
       {data.exercises.length > 0 && (

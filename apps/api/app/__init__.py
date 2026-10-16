@@ -29,6 +29,7 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.routes.exercises import exercises_bp
     from app.routes.health import health_bp
     from app.routes.learning_sessions import learning_sessions_bp
+    from app.routes.notes import notes_bp
     from app.routes.study_sessions import study_sessions_bp
     from app.routes.topics import topics_bp
 
@@ -38,6 +39,7 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(exercises_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(topics_bp)
+    app.register_blueprint(notes_bp)
 
     @app.errorhandler(404)
     def handle_not_found(error):

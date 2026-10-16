@@ -5,7 +5,13 @@ from flask import Blueprint, abort, jsonify
 
 from app.extensions import db
 from app.models import LearningSession
-from app.schemas import ExerciseSummary, LearningSessionDetail, TopicSummary
+from app.schemas import (
+    ContentBlockDetail,
+    ExerciseSummary,
+    LearningSessionDetail,
+    NoteDetail,
+    TopicSummary,
+)
 
 learning_sessions_bp = Blueprint("learning_sessions", __name__, url_prefix="/api/v1")
 
@@ -16,10 +22,23 @@ def _serialize(learning_session: LearningSession) -> dict:
         title=learning_session.title,
         duration_minutes=learning_session.duration_minutes,
         objective=learning_session.objective,
-        content=learning_session.content,
         sequence=learning_session.sequence,
         access_tier=learning_session.access_tier,
         topic=TopicSummary.model_validate(learning_session.topic),
+        content_blocks=[
+            ContentBlockDetail(
+                id=block.id,
+                sequence=block.sequence,
+                heading=block.heading,
+                body=block.body,
+                note=(
+                    NoteDetail(body=block.note.body, updated_at=block.note.updated_at)
+                    if block.note
+                    else None
+                ),
+            )
+            for block in learning_session.content_blocks
+        ],
         exercises=[
             ExerciseSummary(
                 id=exercise.id,

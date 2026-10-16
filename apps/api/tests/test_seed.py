@@ -1,4 +1,4 @@
-from app.models import Domain, Exercise, LearningSession, Topic
+from app.models import ContentBlock, Domain, Exercise, LearningSession, Topic
 from app.seed import seed_all
 
 
@@ -18,6 +18,12 @@ def test_seed_all_creates_frontend_engineering_content(app):
         assert session is not None
         assert session.title == "Critical Rendering Path"
         assert session.duration_minutes == 25
+
+        blocks = ContentBlock.query.filter_by(learning_session_id=session.id).order_by(
+            ContentBlock.sequence
+        ).all()
+        assert len(blocks) == 3
+        assert blocks[0].heading == "Overview"
 
         exercise = Exercise.query.filter_by(learning_session_id=session.id).first()
         assert exercise is not None
@@ -50,6 +56,7 @@ def test_seed_all_is_idempotent(app):
             Domain.query.count(),
             Topic.query.count(),
             LearningSession.query.count(),
+            ContentBlock.query.count(),
             Exercise.query.count(),
         )
 
@@ -58,6 +65,7 @@ def test_seed_all_is_idempotent(app):
             Domain.query.count(),
             Topic.query.count(),
             LearningSession.query.count(),
+            ContentBlock.query.count(),
             Exercise.query.count(),
         )
 
