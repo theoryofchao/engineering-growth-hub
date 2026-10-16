@@ -1,0 +1,180 @@
+{
+  "domains": [
+    {
+      "name": "Computer Science Foundations",
+      "description": "Algorithms, memory, operating systems, networking, theory",
+      "modules": [
+        {"id": 1, "title": "Data Structures", "tier": "D", "description": "Implement a structure from first principles and select it using measured access patterns."},
+        {"id": 2, "title": "Algorithms & Problem Solving", "tier": "D", "description": "Design correct solutions and justify time space and invariants."},
+        {"id": 3, "title": "Computer Architecture", "tier": "W", "description": "Connect hardware behavior to software runtime costs."},
+        {"id": 4, "title": "Operating Systems", "tier": "W", "description": "Diagnose resource concurrency and process failures."},
+        {"id": 5, "title": "Computer Networking", "tier": "D", "description": "Trace a request end to end and isolate network faults."},
+        {"id": 6, "title": "Mathematics for Computing", "tier": "W", "description": "Apply mathematics to algorithms systems and experimental conclusions."},
+        {"id": 7, "title": "Programming Language Theory", "tier": "W", "description": "Explain how code becomes runtime behavior and where guarantees apply."}
+      ]
+    },
+    {
+      "name": "Programming & Code Quality",
+      "description": "Idiomatic programming, maintainability, collaborative practice",
+      "modules": [
+        {"id": 8, "title": "Programming Fundamentals", "tier": "D", "description": "Implement robust programs without relying on framework conventions."},
+        {"id": 9, "title": "Programming Paradigms", "tier": "D", "description": "Choose paradigms based on constraints and failure modes."},
+        {"id": 10, "title": "Design Principles & Patterns", "tier": "D", "description": "Introduce abstractions that reduce change cost without unnecessary complexity."},
+        {"id": 11, "title": "Code Quality & Maintainability", "tier": "D", "description": "Improve internal quality while preserving externally observable behavior."},
+        {"id": 12, "title": "Developer Tools & Workflows", "tier": "D", "description": "Work efficiently and reproducibly in unfamiliar repositories."},
+        {"id": 13, "title": "Collaborative Coding", "tier": "D", "description": "Raise quality and shared understanding through collaboration."}
+      ]
+    },
+    {
+      "name": "Web & Frontend",
+      "description": "Browser, React, accessibility, frontend performance",
+      "modules": [
+        {"id": 14, "title": "Web Fundamentals", "tier": "D", "description": "Build robust interfaces using web platform primitives."},
+        {"id": 15, "title": "Browser Internals", "tier": "D", "description": "Explain browser scheduling and rendering and diagnose jank."},
+        {"id": 16, "title": "Frontend Architecture", "tier": "D", "description": "Choose frontend boundaries and rendering strategies deliberately."},
+        {"id": 17, "title": "Frontend Performance", "tier": "D", "description": "Improve real user experience through measured intervention."},
+        {"id": 18, "title": "UI UX & Accessibility", "tier": "D", "description": "Implement inclusive interfaces across device and input contexts."},
+        {"id": 19, "title": "Advanced Client Applications", "tier": "W", "description": "Build clients resilient to connectivity and synchronization failures."}
+      ]
+    },
+    {
+      "name": "Backend & APIs",
+      "description": "Service architecture, API contracts, identity, job processing",
+      "modules": [
+        {"id": 20, "title": "Backend Fundamentals", "tier": "D", "description": "Build robust maintainable request processing services."},
+        {"id": 21, "title": "API Design", "tier": "D", "description": "Define APIs that are easy to consume and safe to evolve."},
+        {"id": 22, "title": "Authentication & Authorization", "tier": "D", "description": "Enforce identity and permissions across trust boundaries."},
+        {"id": 23, "title": "Backend Architecture", "tier": "D", "description": "Separate business rules from infrastructure and isolate change."},
+        {"id": 24, "title": "Background Processing", "tier": "D", "description": "Implement recoverable asynchronous execution."}
+      ]
+    },
+    {
+      "name": "Data & Storage",
+      "description": "SQL, persistence design, caching, data architecture",
+      "modules": [
+        {"id": 25, "title": "Relational Databases", "tier": "D", "description": "Build correct and efficient relational persistence."},
+        {"id": 26, "title": "Specialized Databases", "tier": "L", "description": "Choose a storage engine for workloads with explicit constraints."},
+        {"id": 27, "title": "Data Architecture", "tier": "D", "description": "Design data systems resilient to change and concurrency."},
+        {"id": 28, "title": "Caching", "tier": "D", "description": "Improve latency while controlling staleness and correctness."},
+        {"id": 29, "title": "Data Engineering", "tier": "L", "description": "Review pipelines for correctness freshness and maintainability."}
+      ]
+    },
+    {
+      "name": "Software Architecture",
+      "description": "System design, quality attributes, evolutionary architecture",
+      "modules": [
+        {"id": 30, "title": "Architecture Fundamentals", "tier": "D", "description": "Translate constraints into defensible design decisions."},
+        {"id": 31, "title": "Architectural Styles", "tier": "D", "description": "Evaluate styles by organizational and runtime tradeoffs."},
+        {"id": 32, "title": "System Design Building Blocks", "tier": "D", "description": "Compose scalable architecture using well understood primitives."},
+        {"id": 33, "title": "System Design Methodology", "tier": "D", "description": "Lead a system design discussion from ambiguity to decision."},
+        {"id": 34, "title": "Architecture Evolution", "tier": "W", "description": "Plan safe change to existing production architecture."}
+      ]
+    },
+    {
+      "name": "Distributed Systems",
+      "description": "Failure modes, consistency, messaging, resilience",
+      "modules": [
+        {"id": 35, "title": "Distributed Fundamentals", "tier": "W", "description": "Reason about distributed behavior under failure."},
+        {"id": 36, "title": "Distributed Data", "tier": "W", "description": "Select distributed correctness and recovery guarantees."},
+        {"id": 37, "title": "Messaging & Streaming", "tier": "W", "description": "Operate reliable event driven workloads."},
+        {"id": 38, "title": "Resilience Patterns", "tier": "W", "description": "Prevent cascading failures and recover predictably."},
+        {"id": 39, "title": "Distributed Scalability", "tier": "W", "description": "Design practical scaling and fault tolerance approaches."}
+      ]
+    },
+    {
+      "name": "Testing & Quality",
+      "description": "Verification, debugging, testing infrastructure",
+      "modules": [
+        {"id": 40, "title": "Testing Fundamentals", "tier": "D", "description": "Create fast trustworthy feedback on behavior."},
+        {"id": 41, "title": "Advanced Testing", "tier": "D", "description": "Find defects missed by example driven tests."},
+        {"id": 42, "title": "Test Infrastructure", "tier": "D", "description": "Make tests repeatable across developer and CI environments."},
+        {"id": 43, "title": "Debugging & Root Cause Analysis", "tier": "D", "description": "Diagnose unknown failures systematically and verify remediation."}
+      ]
+    },
+    {
+      "name": "Infrastructure & Cloud",
+      "description": "Linux, containers, orchestration, cloud, IaC",
+      "modules": [
+        {"id": 44, "title": "Linux & Infrastructure", "tier": "W", "description": "Operate Linux services and diagnose host level failures."},
+        {"id": 45, "title": "Containers & Virtualization", "tier": "W", "description": "Build reproducible and secure containerized services."},
+        {"id": 46, "title": "Kubernetes", "tier": "L", "description": "Explain orchestration mechanics and review deployments."},
+        {"id": 47, "title": "Cloud Platforms", "tier": "W", "description": "Deploy secure small production-like cloud systems."},
+        {"id": 48, "title": "Infrastructure as Code", "tier": "W", "description": "Provision auditable reproducible environments."}
+      ]
+    },
+    {
+      "name": "DevOps & Delivery",
+      "description": "CI/CD, releases, platforms, delivery metrics",
+      "modules": [
+        {"id": 49, "title": "CI/CD", "tier": "W", "description": "Ship verified changes through automated delivery."},
+        {"id": 50, "title": "Deployment Strategies", "tier": "W", "description": "Release software with limited disruption and safe recovery."},
+        {"id": 51, "title": "Platform Engineering", "tier": "L", "description": "Evaluate platform investments for team productivity."},
+        {"id": 52, "title": "Delivery Management", "tier": "G", "description": "Improve flow and outcomes without vanity metrics."}
+      ]
+    },
+    {
+      "name": "Observability & Reliability",
+      "description": "Instrumentation, monitoring, SRE, incident response",
+      "modules": [
+        {"id": 53, "title": "Observability Fundamentals", "tier": "D", "description": "Instrument services so distributed failures can be diagnosed."},
+        {"id": 54, "title": "Monitoring & Alerting", "tier": "D", "description": "Detect important customer impact with low-noise alerts."},
+        {"id": 55, "title": "Site Reliability Engineering", "tier": "W", "description": "Manage reliability with measurable customer outcomes."},
+        {"id": 56, "title": "Incident Management", "tier": "W", "description": "Respond to incidents and learn from them effectively."},
+        {"id": 57, "title": "Production Resilience", "tier": "W", "description": "Build and verify business recovery capabilities."}
+      ]
+    },
+    {
+      "name": "Security & Privacy",
+      "description": "Application security, secure delivery, privacy",
+      "modules": [
+        {"id": 58, "title": "Application Security", "tier": "D", "description": "Find and remediate common application vulnerabilities."},
+        {"id": 59, "title": "Infrastructure Security", "tier": "W", "description": "Design operational defense in depth."},
+        {"id": 60, "title": "Secure Software Development", "tier": "D", "description": "Integrate security into engineering lifecycle."},
+        {"id": 61, "title": "Privacy Compliance & Governance", "tier": "L", "description": "Recognize data governance constraints and review risks."}
+      ]
+    },
+    {
+      "name": "Performance Engineering",
+      "description": "Profiling, optimization, load and capacity",
+      "modules": [
+        {"id": 62, "title": "Application Performance", "tier": "W", "description": "Measure identify and improve expensive code paths."},
+        {"id": 63, "title": "Database Performance", "tier": "W", "description": "Remove data-layer bottlenecks without introducing regressions."},
+        {"id": 64, "title": "Scalability & Capacity", "tier": "W", "description": "Predict and validate scaling thresholds."},
+        {"id": 65, "title": "Performance Measurement", "tier": "W", "description": "Produce trustworthy performance evidence."}
+      ]
+    },
+    {
+      "name": "AI & ML Engineering",
+      "description": "AI applications, evaluations, AI-assisted development",
+      "modules": [
+        {"id": 66, "title": "Machine Learning Foundations", "tier": "L", "description": "Understand model training evaluation and failure modes."},
+        {"id": 67, "title": "LLM Fundamentals", "tier": "W", "description": "Explain model constraints and select suitable inference options."},
+        {"id": 68, "title": "AI Application Engineering", "tier": "W", "description": "Build AI features with measurable behavior and bounded tool use."},
+        {"id": 69, "title": "AI Production Systems", "tier": "W", "description": "Operate AI features safely and cost effectively."},
+        {"id": 70, "title": "AI-Assisted Software Development", "tier": "D", "description": "Use agents effectively while retaining accountability for correctness."}
+      ]
+    },
+    {
+      "name": "Product & Collaboration",
+      "description": "Product thinking, execution, communication",
+      "modules": [
+        {"id": 71, "title": "Requirements & Product Thinking", "tier": "G", "description": "Translate ambiguous customer problems into actionable outcomes."},
+        {"id": 72, "title": "Software Project Execution", "tier": "G", "description": "Plan and guide deliverable increments with explicit risks."},
+        {"id": 73, "title": "Product Analytics & Experimentation", "tier": "G", "description": "Measure product outcomes and avoid misleading conclusions."},
+        {"id": 74, "title": "Technical Communication", "tier": "G", "description": "Explain constraints decisions and tradeoffs to varied audiences."},
+        {"id": 75, "title": "Cross-Functional Engineering", "tier": "G", "description": "Build alignment across functions without hiding engineering constraints."}
+      ]
+    },
+    {
+      "name": "Leadership & Strategy",
+      "description": "Leadership, mentorship, economics, roadmaps",
+      "modules": [
+        {"id": 76, "title": "Technical Leadership", "tier": "G", "description": "Lead complex engineering decisions and implementation alignment."},
+        {"id": 77, "title": "Mentorship & Team Development", "tier": "G", "description": "Develop others through actionable feedback and support."},
+        {"id": 78, "title": "Engineering Management Fundamentals", "tier": "G", "description": "Understand people management constraints and team effectiveness."},
+        {"id": 79, "title": "Engineering Economics", "tier": "G", "description": "Evaluate technical choices against business value and risk."},
+        {"id": 80, "title": "Engineering Strategy", "tier": "G", "description": "Align technical direction with long range business outcomes."}
+      ]
+    }
+  ]
+}

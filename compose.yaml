@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-egh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-egh}
+      POSTGRES_DB: ${POSTGRES_DB:-engineering_growth_hub}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-egh} -d ${POSTGRES_DB:-engineering_growth_hub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./apps/api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      FLASK_APP: wsgi.py
+      FLASK_DEBUG: "1"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-egh}:${POSTGRES_PASSWORD:-egh}@db:5432/${POSTGRES_DB:-engineering_growth_hub}
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./apps/api:/app
+
+  web:
+    build: ./apps/web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:5000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app
+      - web-node-modules:/app/node_modules
+      - web-next-cache:/app/.next
+
+volumes:
+  db-data:
+  web-node-modules:
+  web-next-cache:

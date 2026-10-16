@@ -1,0 +1,42 @@
+{
+  "domain": {
+    "name": "Frontend Engineering",
+    "description": "Deep mastery of browser internals, rendering, and client application architecture."
+  },
+  "module": {
+    "title": "Browser Fundamentals"
+  },
+  "topic": {
+    "title": "Browser Rendering",
+    "slug": "browser-rendering",
+    "description": "How browsers turn HTML, CSS, and JS into pixels on screen.",
+    "proficiency_tier": "D"
+  },
+  "learning_sessions": [
+    {
+      "title": "Critical Rendering Path",
+      "duration_minutes": 25,
+      "sequence": 1,
+      "access_tier": "free",
+      "objective": "Explain the steps browsers take to convert HTML/CSS into rendered pixels, and identify which steps a given code change affects.",
+      "content": "The critical rendering path is the sequence of steps a browser takes to convert HTML, CSS, and JavaScript into pixels on screen: 1) Parse HTML into the DOM. 2) Parse CSS into the CSSOM. 3) Combine DOM + CSSOM into the render tree (visible nodes only). 4) Layout: compute the size and position of every render tree node. 5) Paint: fill in pixels for text, color, images, borders, shadows. 6) Composite: combine painted layers in the correct order, using the GPU where possible.\n\nChanges that only affect paint (e.g. background-color) are cheaper than changes that trigger layout (e.g. width, font-size), because layout invalidates everything downstream of it. CSS properties like `transform` and `opacity` can be composited without touching layout or paint, which is why animating them is preferred for smooth 60fps animations.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "You change a button's `background-color` on hover. Which critical-rendering-path step is the most expensive one this change triggers?",
+          "definition": {
+            "options": [
+              "Layout (reflow) across the affected subtree",
+              "Paint only, for the button's pixels",
+              "Full DOM re-parse",
+              "CSSOM re-parse of the entire stylesheet"
+            ],
+            "correct_index": 1,
+            "explanation": "background-color doesn't change any element's size or position, so layout is skipped entirely; the browser only has to repaint the button's own pixels."
+          }
+        }
+      ]
+    }
+  ]
+}
