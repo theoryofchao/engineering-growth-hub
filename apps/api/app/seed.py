@@ -94,24 +94,58 @@ def load_file(path: Path) -> None:
             learning_session = LearningSession(topic_id=topic.id, **session_data)
             db.session.add(learning_session)
             db.session.flush()
+        else:
+            # Upsert, not insert-only: a content edit in the source file
+            # must actually reach the database on reseed, or editing
+            # this JSON silently does nothing once a row already exists.
+            for key, value in session_data.items():
+                setattr(learning_session, key, value)
 
         for block_index, block_data in enumerate(content_blocks_data, start=1):
-            existing_block = ContentBlock.query.filter_by(
+            block_data = dict(block_data)
+            block_exercises_data = block_data.pop("exercises", [])
+
+            block = ContentBlock.query.filter_by(
                 learning_session_id=learning_session.id, sequence=block_index
             ).first()
-            if existing_block is None:
-                db.session.add(
-                    ContentBlock(
-                        learning_session_id=learning_session.id,
-                        sequence=block_index,
-                        heading=block_data["heading"],
-                        body=block_data["body"],
-                    )
+            if block is None:
+                block = ContentBlock(
+                    learning_session_id=learning_session.id,
+                    sequence=block_index,
+                    heading=block_data["heading"],
+                    body=block_data["body"],
                 )
+                db.session.add(block)
+                db.session.flush()
+            else:
+                block.heading = block_data["heading"]
+                block.body = block_data["body"]
 
+            for exercise_index, exercise_data in enumerate(block_exercises_data, start=1):
+                existing = Exercise.query.filter_by(content_block_id=block.id, sequence=exercise_index).first()
+                if existing is None:
+                    db.session.add(
+                        Exercise(
+                            learning_session_id=learning_session.id,
+                            content_block_id=block.id,
+                            type=exercise_data["type"],
+                            sequence=exercise_index,
+                            prompt=exercise_data["prompt"],
+                            definition_json=exercise_data["definition"],
+                        )
+                    )
+                else:
+                    existing.type = exercise_data["type"]
+                    existing.prompt = exercise_data["prompt"]
+                    existing.definition_json = exercise_data["definition"]
+
+        # Lesson-level (not pinned to a slide) exercises — kept for the
+        # 2 pre-existing lessons seeded before per-block exercises existed.
         for exercise_data in exercises_data:
             existing = Exercise.query.filter_by(
-                learning_session_id=learning_session.id, sequence=exercise_data["sequence"]
+                learning_session_id=learning_session.id,
+                content_block_id=None,
+                sequence=exercise_data["sequence"],
             ).first()
             if existing is None:
                 db.session.add(
@@ -123,6 +157,10 @@ def load_file(path: Path) -> None:
                         definition_json=exercise_data["definition"],
                     )
                 )
+            else:
+                existing.type = exercise_data["type"]
+                existing.prompt = exercise_data["prompt"]
+                existing.definition_json = exercise_data["definition"]
 
     db.session.commit()
 

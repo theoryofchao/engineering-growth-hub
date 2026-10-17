@@ -34,6 +34,16 @@ class ContentBlockDetail(BaseModel):
     heading: str
     body: str
     note: NoteDetail | None = None
+    exercises: list[ExerciseSummary] = []
+
+
+class LearningSessionSummary(BaseModel):
+    """One entry in a topic's lesson list, for in-topic navigation."""
+
+    id: int
+    title: str
+    sequence: int
+    duration_minutes: int
 
 
 class LearningSessionDetail(BaseModel):
@@ -45,6 +55,13 @@ class LearningSessionDetail(BaseModel):
     sequence: int
     access_tier: str
     topic: TopicSummary
+    # Every learning session in this topic (including this one), ordered
+    # by sequence — lets the frontend render "other lessons in this
+    # topic" navigation instead of a dead end after lesson 1.
+    topic_sessions: list[LearningSessionSummary]
+    # Lesson-level exercises not pinned to any specific slide (shown in a
+    # wrap-up section). Most exercises should be block-scoped instead —
+    # see ContentBlockDetail.exercises.
     exercises: list[ExerciseSummary]
 
 

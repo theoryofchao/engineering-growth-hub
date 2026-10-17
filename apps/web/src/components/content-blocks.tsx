@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { API_BASE_URL } from "@/lib/config";
 import { Note, NotesPanel } from "@/components/notes-panel";
+import { ExerciseQuiz } from "@/components/exercise-quiz";
+
+type ExerciseSummary = { id: number; type: string; prompt: string; options: string[] };
 
 type Block = {
   id: number;
@@ -11,6 +14,7 @@ type Block = {
   heading: string;
   body: string;
   note: Note | null;
+  exercises: ExerciseSummary[];
 };
 
 type ViewMode = "page" | "slide";
@@ -32,9 +36,15 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
   const [activeNoteBlockId, setActiveNoteBlockId] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
   const [saveState, setSaveState] = useState<SaveState>({ phase: "idle" });
+  const blockRefs = useRef(new Map<number, HTMLDivElement>());
 
   const activeBlock = blocks.find((b) => b.id === activeNoteBlockId) ?? null;
+  const activeBlockIndex = activeBlock ? blocks.findIndex((b) => b.id === activeBlock.id) : -1;
   const isDirty = activeBlock !== null && draft.trim() !== (activeBlock.note?.body ?? "").trim();
+
+  function scrollToBlock(blockId: number) {
+    blockRefs.current.get(blockId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 
   async function persistNote(blockId: number, body: string): Promise<Note> {
     const response = await fetch(`${API_BASE_URL}/api/v1/content-blocks/${blockId}/note`, {
@@ -46,11 +56,11 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
     return (await response.json()) as Note;
   }
 
-  // Not modal, and navigation (slide Next/Prev, clicking a different
-  // section) must keep working while this is open — so switching which
-  // block's notes are shown goes through here rather than blocking the
-  // rest of the UI. If there are unsaved edits, ask once, then proceed
-  // either way: the user chose to move on, not to get stuck.
+  // The notes panel has its own Previous/Next, so switching which block
+  // is "active" happens often while it's open — including from inside
+  // the panel itself, not just by closing and reopening it. If there
+  // are unsaved edits, ask once, then proceed either way: the point is
+  // to let the reader keep moving, not to trap them on one section.
   async function switchActiveBlock(newBlockId: number | null) {
     if (activeBlock !== null && isDirty) {
       const shouldSave = window.confirm(
@@ -79,6 +89,24 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
       await switchActiveBlock(blocks[newIndex].id);
     }
     setSlideIndex(newIndex);
+  }
+
+  // Previous/Next inside the notes panel: in slide view this moves the
+  // actual slide (so the panel always reflects what's on screen); in
+  // page view there's no single "current" position outside the panel,
+  // so this scrolls the newly-active section into view instead.
+  async function goToAdjacentBlock(direction: 1 | -1) {
+    if (activeBlockIndex === -1) return;
+    const newIndex = activeBlockIndex + direction;
+    if (newIndex < 0 || newIndex >= blocks.length) return;
+
+    if (viewMode === "slide") {
+      await goToSlide(newIndex);
+    } else {
+      const newBlockId = blocks[newIndex].id;
+      await switchActiveBlock(newBlockId);
+      scrollToBlock(newBlockId);
+    }
   }
 
   async function handleSave() {
@@ -159,18 +187,24 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
       {viewMode === "page" ? (
         <div className="flex flex-col gap-4">
           {blocks.map((block) => (
-            <button
+            <div
               key={block.id}
-              type="button"
-              onClick={() => switchActiveBlock(block.id)}
-              className={`group rounded-lg border-2 p-4 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900 ${
+              ref={(el) => {
+                if (el) blockRefs.current.set(block.id, el);
+                else blockRefs.current.delete(block.id);
+              }}
+              className={`rounded-lg border-2 p-4 transition-colors ${
                 showBoundaries
                   ? "border-dashed border-zinc-400 dark:border-zinc-600"
                   : "border-transparent"
               }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-lg font-semibold text-black dark:text-zinc-50">
+              <button
+                type="button"
+                onClick={() => switchActiveBlock(block.id)}
+                className="group flex w-full items-center justify-between gap-2 text-left"
+              >
+                <h3 className="text-lg font-semibold text-black group-hover:underline dark:text-zinc-50">
                   {block.heading}
                 </h3>
                 <span className="flex shrink-0 items-center gap-2">
@@ -183,11 +217,18 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
                     {block.note ? "View/edit notes" : "Add notes"}
                   </span>
                 </span>
-              </div>
+              </button>
               <p className="mt-1 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
                 {block.body}
               </p>
-            </button>
+              {block.exercises.length > 0 && (
+                <div className="mt-3 flex flex-col gap-3">
+                  {block.exercises.map((exercise) => (
+                    <ExerciseQuiz key={exercise.id} exercise={exercise} />
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       ) : (
@@ -212,6 +253,13 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
             <p className="mt-2 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
               {blocks[slideIndex].body}
             </p>
+            {blocks[slideIndex].exercises.length > 0 && (
+              <div className="mt-3 flex flex-col gap-3">
+                {blocks[slideIndex].exercises.map((exercise) => (
+                  <ExerciseQuiz key={exercise.id} exercise={exercise} />
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-between">
@@ -243,6 +291,11 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => switchActiveBlock(null)}
+          onPrevious={() => goToAdjacentBlock(-1)}
+          onNext={() => goToAdjacentBlock(1)}
+          hasPrevious={activeBlockIndex > 0}
+          hasNext={activeBlockIndex !== -1 && activeBlockIndex < blocks.length - 1}
+          positionLabel={`${activeBlockIndex + 1} of ${blocks.length}`}
           saving={saveState.phase === "saving"}
           error={saveState.phase === "error" ? saveState.message : null}
         />

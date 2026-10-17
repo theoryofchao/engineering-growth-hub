@@ -1,3 +1,4 @@
+from app.extensions import db
 from app.models import ContentBlock, Domain, Exercise, LearningSession, Topic
 from app.seed import seed_all
 
@@ -46,7 +47,47 @@ def test_seed_all_imports_full_curriculum_map(app):
 
         ai_topic = Topic.query.filter_by(slug="70-ai-assisted-software-development").first()
         assert ai_topic is not None
-        assert len(ai_topic.learning_sessions) == 2
+        assert len(ai_topic.learning_sessions) == 5
+
+        # Sessions 3/4 pin their exercises to specific slides, not the session.
+        setups_session = next(
+            s for s in ai_topic.learning_sessions if s.sequence == 3
+        )
+        block_exercises = [e for b in setups_session.content_blocks for e in b.exercises]
+        assert len(block_exercises) == 7
+        assert all(e.content_block_id is not None for e in block_exercises)
+
+
+def test_seed_all_updates_existing_rows_not_just_inserts_missing_ones(app):
+    """Regression test: a prior version of this loader only ever inserted
+    rows that didn't exist yet, so editing content in the source JSON and
+    re-running `flask seed` silently did nothing once a row already
+    existed. Simulate "stale" DB content diverging from the source file,
+    then confirm a reseed overwrites it back to match the file.
+    """
+    with app.app_context():
+        seed_all()
+
+        topic = Topic.query.filter_by(slug="browser-rendering").first()
+        session = topic.learning_sessions[0]
+        block = session.content_blocks[0]
+        exercise = block.exercises[0] if block.exercises else session.exercises[0]
+
+        block.heading = "STALE HEADING"
+        block.body = "STALE BODY"
+        session.title = "STALE TITLE"
+        exercise.prompt = "STALE PROMPT"
+        db.session.commit()
+
+        seed_all()
+
+        db.session.refresh(block)
+        db.session.refresh(session)
+        db.session.refresh(exercise)
+        assert block.heading != "STALE HEADING"
+        assert block.body != "STALE BODY"
+        assert session.title != "STALE TITLE"
+        assert exercise.prompt != "STALE PROMPT"
 
 
 def test_seed_all_is_idempotent(app):

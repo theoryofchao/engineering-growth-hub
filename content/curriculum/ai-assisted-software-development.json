@@ -22,48 +22,131 @@
       "content_blocks": [
         {
           "heading": "Not \"Vibe Coding\"",
-          "body": "The engineers getting real value from coding agents aren't 'vibe coding' — typing a vague prompt and accepting whatever comes back. The pattern that shows up repeatedly, across Anthropic's own best-practice guidance and independent practitioner write-ups, has a few consistent elements."
+          "body": "The engineers getting real value from coding agents aren't 'vibe coding' — typing a vague prompt like 'add a login page' and accepting whatever comes back without reading it closely. That pattern produces code that looks plausible, passes a quick visual check, and then breaks in a way nobody can explain three weeks later, because nobody actually understood what the agent did or why.\n\nThe alternative isn't typing more carefully. It's structuring the whole interaction so the agent's work gets checked cheaply and often, by something more reliable than a glance. Across Anthropic's own best-practice guidance and independent practitioner write-ups — people solving real production problems, not demoing a feature for an audience — the same five habits show up over and over. None of them require a different model or a fancier tool. They're about how the work gets organized."
         },
         {
           "heading": "1. Separate Planning from Implementation",
-          "body": "Before any code gets written, the agent explores the codebase and proposes a plan — which files change, what the approach is, what could go wrong. Only after that plan is reviewed does implementation start. Skipping this step is the single biggest cause of an agent confidently solving the wrong problem."
+          "body": "Before any code gets written, the agent explores the codebase and proposes a plan: which files it intends to touch, what the implementation approach is, and what could realistically go wrong. Only after a human reviews that plan does implementation start.\n\nWhat this looks like in practice: ask an agent to 'add rate limiting to the login endpoint,' and a good plan comes back looking something like:\n- Files: `auth/routes.py` (add decorator), `auth/rate_limiter.py` (new), `tests/test_rate_limiter.py` (new)\n- Approach: token-bucket limiter backed by Redis, keyed by IP + username\n- Risk: the Redis instance already handles session storage — need to confirm a new key namespace won't collide, and check whether Redis is even available in the test environment\n\nThat risk note is the whole point. If the agent had just started implementing, it might have silently assumed Redis was available everywhere, written code that passes locally, and broken CI the moment it was actually depended on — or collided with existing session keys in production. Catching that assumption in a one-paragraph plan costs thirty seconds of review. Catching it after the code is written, reviewed, and merged costs an incident.\n\nSkipping this step is the single biggest cause of an agent confidently solving the wrong problem — not because the agent is unreliable, but because an unreviewed first guess about scope is exactly as likely to be wrong as a human's unreviewed first guess, and agents commit to that first guess faster than people do.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "An agent is about to implement a feature that touches five files in an unfamiliar part of the codebase. What's the highest-leverage thing to do before it writes any code?",
+              "definition": {
+                "options": [
+                  "Let it start implementing immediately so you can review the diff when it's done",
+                  "Have it propose a plan first (files, approach, risks) and review that before starting",
+                  "Write the code yourself instead of delegating it, since the codebase is unfamiliar",
+                  "Ask it to run all five file changes in parallel subagents to save time"
+                ],
+                "correct_index": 1,
+                "explanation": "Separating planning from implementation is the single highest-leverage practice — it catches 'solving the wrong problem' while it's still cheap to redirect, before any code exists to un-write."
+              }
+            },
+            {
+              "type": "multiple_choice",
+              "sequence": 2,
+              "prompt": "In the rate-limiting example, the agent's plan flagged a Redis key-collision risk before writing any code. What would have happened if that risk had NOT been caught until after the code was merged?",
+              "definition": {
+                "options": [
+                  "Code review would have caught it instead, at roughly the same cost",
+                  "The bug would ship and get discovered as a production incident instead",
+                  "The test suite would catch the key collision automatically before merge",
+                  "The agent would refuse to proceed without resolving the ambiguity first"
+                ],
+                "correct_index": 1,
+                "explanation": "The value of catching a risk during planning is timing — the same flaw can exist either way, but catching it before code exists costs a sentence of review, while catching it after merge costs an incident response."
+              }
+            }
+          ]
         },
         {
           "heading": "2. Repository Context Files Do the Onboarding",
-          "body": "CLAUDE.md (and Codex's AGENTS.md) encode the things a new hire would otherwise take weeks to absorb: build/test commands, architectural boundaries, what not to touch, code style. Without this, every session re-derives context from scratch."
+          "body": "CLAUDE.md (and Codex's AGENTS.md) encode the things a new hire would otherwise take weeks to absorb by osmosis: which commands actually run the test suite, which directories are off-limits, what the team's naming conventions are, which parts of the codebase are legacy and shouldn't be touched without a specific reason.\n\nA minimal but genuinely useful CLAUDE.md might read:\n```\n## Commands\n- Tests: `make test` (not `pytest` directly — it sets required env vars)\n- Lint: `make lint`\n- Dev server: `make dev` (binds to :8000)\n\n## Boundaries\n- `legacy/` is frozen — report bugs there, don't fix them\n- Migrations go through `alembic revision --autogenerate`, never hand-written SQL\n```\n\nWithout this, every new session re-derives all of it from scratch — by guessing, by grepping around, or by trying the wrong test command and failing before trying the right one. That's not just slower; a wrong guess about a boundary (editing something in `legacy/` because nothing said not to) is exactly the kind of mistake a plan-review step might not catch, because the resulting code can still look entirely reasonable.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "A CLAUDE.md says: \"Tests: `make test` (not `pytest` directly — it sets required env vars).\" An agent ignores this and runs `pytest` directly. What's the most likely result?",
+              "definition": {
+                "options": [
+                  "The tests pass normally since pytest and make test run identical code",
+                  "Tests fail or behave incorrectly because required environment variables are missing",
+                  "Make test gets triggered automatically as a fallback when pytest runs",
+                  "CLAUDE.md instructions are suggestions only and have no effect on behavior"
+                ],
+                "correct_index": 1,
+                "explanation": "This is exactly why the instruction exists — `make test` does something `pytest` alone doesn't (setting required env vars), so skipping it isn't a stylistic choice, it changes whether the tests run correctly at all."
+              }
+            }
+          ]
         },
         {
           "heading": "3. Give the Agent a Check It Can Run on Itself",
-          "body": "The highest-leverage habit is making sure the agent has a fast, reliable way to verify its own work — a test suite, a type checker, a build — before a human ever looks at it. This is why 'write a failing test first, then make it pass' works so well with agents: the check is unambiguous and the agent can iterate against it alone."
+          "body": "The highest-leverage habit is making sure the agent has a fast, reliable way to verify its own work — a test suite, a type checker, a build — before a human ever looks at it. This is why 'write a failing test first, then make it pass' works so well with agents specifically: the check is unambiguous, and the agent can iterate against it alone, dozens of times if needed, without spending any of a reviewer's attention.\n\nConcretely: instead of 'fix the bug where discount codes don't stack,' a more effective instruction is 'write a test that applies two discount codes and asserts the combined total is correct — it should currently fail — then make it pass.' The agent now has a mechanical, binary signal (red → green) instead of a vague goal, and it can run that test as many times as it needs. Compare that to an agent asked only to 'fix it,' with no test: its only way to know it's done is to re-read its own code and declare victory — precisely the failure mode that erodes trust over time.\n\nThe same idea extends past tests: a type checker catches whole categories of mistakes (wrong argument types, null-handling gaps) in seconds, and a build that fails loudly is better than one that silently produces a broken artifact. Whatever the check is, the property that matters is the same: fast, unambiguous, and runnable by the agent without waiting on a human.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Which instruction gives an agent fixing a bug the clearest, most unambiguous way to know when it's actually done?",
+              "definition": {
+                "options": [
+                  "Fix the bug where discount codes fail to stack together properly",
+                  "Investigate the discount code logic and make any necessary improvements",
+                  "Write a failing test for stacked codes, then make it pass",
+                  "Review the discount code function and clean up unclear parts"
+                ],
+                "correct_index": 2,
+                "explanation": "Only this option gives the agent a mechanical, binary signal — a test that goes from red to green — rather than a goal it has to judge as 'done' using its own self-assessment."
+              }
+            }
+          ]
         },
         {
           "heading": "4. Delegation for Independent, Parallelizable Work",
-          "body": "Senior engineers increasingly run multiple agents on genuinely independent sub-tasks (e.g. separate services, or research vs. implementation) rather than one agent doing everything serially. This only works when the sub-tasks truly don't depend on each other — forcing parallelism onto a sequential problem creates merge conflicts and wasted work."
+          "body": "Senior engineers increasingly run multiple agents on genuinely independent sub-tasks — one agent researching how an unfamiliar library's API works while another implements a feature that doesn't depend on that research yet, or one agent per independent microservice — rather than one agent doing everything serially.\n\nThe test for whether a task is actually parallelizable is simple, and easy to get wrong under time pressure: would two humans working on these two pieces need to talk to each other before either could finish? If yes, it's not independent — it's sequential work wearing a parallel disguise. Splitting 'rename this widely-used function' and 'add a new endpoint that calls it' across two agents looks like parallelism, but the rename agent will finish, the endpoint agent will call the function under its old name, and now there's a merge conflict and a broken build to untangle — the coordination cost of fixing it typically exceeds whatever time was saved running the two agents at once.\n\nGenuinely independent work looks more like: one agent adds tests to code that already works and isn't changing, while another builds an unrelated feature in a different part of the codebase. Neither needs information from the other to finish.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Which pair of tasks is safe to delegate to two agents running in parallel?",
+              "definition": {
+                "options": [
+                  "Renaming a shared utility function, and updating every file that calls it",
+                  "Adding tests to stable code, and building an unrelated new feature",
+                  "Writing an API endpoint, and writing the client code that calls it",
+                  "Refactoring a shared config file, and adding a feature that reads it"
+                ],
+                "correct_index": 1,
+                "explanation": "The other three pairs all have one agent's output depend on the other's — a rename affects every caller, an endpoint's shape determines the client code, and a config refactor changes what a feature reading it expects. Only this pair is genuinely independent."
+              }
+            }
+          ]
         },
         {
           "heading": "5. The Engineer Stays the Reviewer",
-          "body": "None of the above changes who's responsible for correctness. The role shifts from 'typing every line' to 'directing, reviewing, and signing off' — closer to how a staff engineer already works with a junior engineer's pull requests, just at higher velocity."
+          "body": "None of the above changes who's responsible for correctness. The role shifts from 'typing every line' to 'directing, reviewing, and signing off' — which is a familiar shape, not a new one: it's close to how a staff engineer already works with a junior engineer's pull requests, just compressed from a day's turnaround to minutes, and repeatable across far more concurrent work than one person could mentor directly.\n\nThat similarity is also the warning. The same review discipline that catches a junior engineer's subtle mistakes — reading the diff, not just the description; checking the edge cases; asking 'what happens if this input is empty or huge' — has to apply here too, and it's tempting to skip it specifically because the output looks polished and confident. An agent's code reads as fluently as a senior engineer's even when it's subtly wrong, which is a different failure mode than a junior engineer's code, which usually *looks* uncertain exactly where it is uncertain.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Why is reviewing an agent's code arguably harder than reviewing a junior engineer's code, even though the agent's code often looks more polished?",
+              "definition": {
+                "options": [
+                  "Agent code is always functionally correct, so review is just a formality",
+                  "Confident, fluent code can be subtly wrong without looking uncertain at all",
+                  "Agents refuse to submit code that hasn't already been fully tested",
+                  "Junior engineers write code that is harder to read than agent output"
+                ],
+                "correct_index": 1,
+                "explanation": "A junior engineer's uncertainty often shows in the code itself — hedgy comments, obvious gaps. An agent's output reads fluently regardless of whether it's actually correct, which removes a cue reviewers normally rely on."
+              }
+            }
+          ]
         },
         {
           "heading": "The Bottom Line",
-          "body": "None of this is about typing faster. It's about structuring the interaction so an agent's mistakes get caught cheaply (by a test, a build, a plan review) instead of expensively (in production, or after hours of wrong-direction work)."
-        }
-      ],
-      "exercises": [
-        {
-          "type": "multiple_choice",
-          "sequence": 1,
-          "prompt": "An agent is about to implement a feature that touches five files in an unfamiliar part of the codebase. What's the highest-leverage thing to do before it writes any code?",
-          "definition": {
-            "options": [
-              "Let it start implementing immediately so you can review the diff when it's done",
-              "Have it propose a plan first (files, approach, risks) and review that before implementation begins",
-              "Write the code yourself instead, since the codebase is unfamiliar",
-              "Ask it to run all five file changes in parallel subagents to save time"
-            ],
-            "correct_index": 1,
-            "explanation": "Separating planning from implementation is the single highest-leverage practice — it catches 'solving the wrong problem' while it's still cheap to redirect, before any code exists to un-write."
-          }
+          "body": "None of this is about typing faster. It's about structuring the interaction so an agent's mistakes get caught cheaply — by a test, a build, a plan review — instead of expensively, in production or after hours of work built on a wrong assumption.\n\nEvery practice in this lesson is really the same idea applied at a different point in the workflow: plans catch scope mistakes before code exists; tests catch logic mistakes before a human looks; context files catch 'didn't know the rule' mistakes before they happen at all; delegation boundaries catch coordination mistakes before they become merge conflicts; and review catches everything that slipped through the earlier gates."
         }
       ]
     },
@@ -76,44 +159,509 @@
       "content_blocks": [
         {
           "heading": "The \"10x Engineer\" Claim vs. the Data",
-          "body": "Marketing and anecdote both lean hard on '10x engineer' framing. The actual measured evidence tells a much more modest, uneven story — and the gap between perceived and measured speed is itself one of the most important findings."
+          "body": "Marketing and anecdote both lean hard on '10x engineer' framing — blog posts titled 'I built a whole app in a weekend,' demo videos of a feature going from idea to merged PR in minutes. Those stories are true as far as they go: for a certain kind of task, in a certain kind of codebase, that speed is real.\n\nThe measured evidence across broader populations of developers and tasks tells a much more modest, uneven story — and the gap between what people predict, what they feel, and what gets measured is itself one of the most important findings in this whole area. It says something about how unreliable gut-feel productivity estimates are, with or without AI involved."
         },
         {
           "heading": "The METR Randomized Trial",
-          "body": "The METR randomized controlled trial (2025) had experienced open-source developers complete real tasks in codebases they knew well, with and without AI assistance. Before starting, they predicted AI would make them about 24% faster. After finishing, they *felt* about 20% faster. The measured result: they were 19% *slower* with AI assistance. A February 2026 follow-up with more developers and tasks found modest gains — roughly 18% for experienced returning developers, about 4% for new ones — with confidence intervals wide enough to include zero in both cases."
+          "body": "The METR randomized controlled trial (2025) is the most carefully designed study in this space: experienced open-source developers completed real tasks in codebases they already knew well — not toy benchmarks — with AI assistance for half the tasks and without it for the other half, randomly assigned.\n\nBefore starting, they predicted AI would make them about 24% faster. After finishing, they *felt* about 20% faster. The measured result, from actual task-completion timestamps: they were 19% *slower* with AI assistance.\n\nThat's not a rounding error — predicted and felt both pointed one direction, and the stopwatch pointed the other. A February 2026 follow-up, run with more developers and a wider range of tasks, found smaller but still mixed results: roughly 18% faster for experienced developers returning to the study, about 4% faster for developers new to it — with confidence intervals wide enough in both cases to include zero, meaning the data can't rule out 'no effect at all.'\n\nWhy would experienced developers predict and feel a speedup that didn't happen? The leading explanation from the study itself: time spent reading, understanding, and correcting AI-generated code in an already-familiar codebase doesn't register the same way as time spent typing — it feels like review, not work, even though it consumes just as many minutes.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "In METR's 2025 randomized trial, experienced developers predicted AI would make them 24% faster and felt 20% faster after finishing. What did the actual measurement show?",
+              "definition": {
+                "options": [
+                  "19% faster, closely matching what developers had predicted beforehand",
+                  "19% slower, the opposite of what was predicted",
+                  "No measurable difference in either direction was found",
+                  "Over 10x faster, confirming the most optimistic predictions"
+                ],
+                "correct_index": 1,
+                "explanation": "The measured result was 19% slower, despite developers predicting and feeling faster — a striking perception gap that shows up again in later follow-up studies and large-scale survey data."
+              }
+            },
+            {
+              "type": "multiple_choice",
+              "sequence": 2,
+              "prompt": "The February 2026 METR follow-up found modest gains for experienced returning developers and smaller gains for new developers. What made both results hard to treat as solid evidence of a real speedup?",
+              "definition": {
+                "options": [
+                  "Both studies measured only self-reported time, not actual task completion",
+                  "Confidence intervals were wide enough to include zero in both cases",
+                  "The follow-up used a completely different and incomparable task format",
+                  "Only developers who already believed AI helps were included in it"
+                ],
+                "correct_index": 1,
+                "explanation": "Wide confidence intervals that include zero mean the data can't rule out 'no real effect' — a small positive number with that much uncertainty isn't strong evidence of a genuine speedup, regardless of its sign."
+              }
+            }
+          ]
         },
         {
           "heading": "The Pattern Holds at Scale",
-          "body": "Large-scale survey data shows the same perception gap at scale: DORA/DX-style surveys find 80%+ of developers self-report productivity gains, while measured telemetry (PR lead time, throughput) across large developer populations tends to land closer to 10%."
+          "body": "This isn't a one-study fluke. Large-scale survey data shows the same perception gap, just measured differently: DORA- and DX-style surveys, which ask developers to self-report, find 80%+ reporting productivity gains from AI tools. Measured telemetry from the same kinds of organizations — pull request lead time, throughput, cycle time — tends to land closer to 10% improvement, and some studies report defect rates rising alongside the speed gains, meaning part of the 'throughput' increase is work that has to be redone.\n\nThe consistent shape across every data source: self-report runs several times higher than instrumented measurement. That's not proof AI tools don't help — it's a reason to be specifically skeptical of any claim based on how fast something *felt*, including your own, and to prefer sources that measured actual outcomes.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "DORA/DX-style surveys find 80%+ of developers self-report productivity gains from AI tools, while measured telemetry across the same kinds of organizations tends to show closer to 10%. What does this gap suggest?",
+              "definition": {
+                "options": [
+                  "The telemetry tools are undercounting real gains due to technical limits",
+                  "Self-reported productivity feelings are a poor substitute for measured outcomes",
+                  "Developers in telemetry studies use AI tools less than survey respondents",
+                  "The two data sources are measuring genuinely unrelated things entirely"
+                ],
+                "correct_index": 1,
+                "explanation": "The consistent pattern across every data source in this space — self-report running several times higher than instrumented measurement — is the core reason to distrust gut-feel productivity claims, your own included."
+              }
+            }
+          ]
         },
         {
           "heading": "Why the Perception Gap?",
-          "body": "Two things offset the raw speed of code generation: (a) reviewing and debugging AI-written code takes real time, especially in unfamiliar or complex codebases, and (b) the *feeling* of progress (code appearing quickly) isn't the same as the *time to a correct, merged, reviewed change*."
+          "body": "Two mechanisms explain most of the gap between feeling fast and measuring fast. First: reviewing and debugging AI-written code takes real, measurable time, especially in a codebase complex or unfamiliar enough that catching a subtle mistake requires actually understanding the surrounding context — and that review time doesn't feel like 'coding time' even though it's required before the work is actually done.\n\nSecond: the *feeling* of progress — code appearing on screen quickly, a plausible-looking diff — isn't the same thing as *time to a correct, reviewed, merged change*. A fast first draft that needs three rounds of correction can easily lose to a slower first draft that needed none, and the slower-feeling path is the one that was actually faster end to end.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "A developer finishes a task in less wall-clock time using AI assistance, but spent several of those minutes catching and fixing a subtle bug the AI introduced. Why might they still report feeling faster?",
+              "definition": {
+                "options": [
+                  "Bug-fixing time is always faster than writing code from scratch",
+                  "Review and correction time doesn't register the same as 'coding' time",
+                  "The AI's code is never actually wrong once it compiles cleanly",
+                  "Feeling faster and being faster are mathematically the same measurement"
+                ],
+                "correct_index": 1,
+                "explanation": "This is the core mechanism behind the perception gap: time spent reviewing and correcting doesn't feel like 'work' the way typing does, even though it's required time before the task is actually finished."
+              }
+            }
+          ]
         },
         {
           "heading": "Where the Gains Are Real",
-          "body": "Where the evidence does show consistent real gains: boilerplate and scaffolding, test generation, working in an unfamiliar language or library, and greenfield prototyping. Where gains shrink or reverse: large, unfamiliar, or architecturally complex codebases — exactly the domain senior and staff engineers spend most of their time in."
+          "body": "The evidence does show consistent, real gains in specific categories: boilerplate and scaffolding (generating a new CRUD endpoint that follows an existing pattern exactly), test generation (writing the tedious-but-mechanical cases around a function whose behavior is already decided), working in an unfamiliar language or library (where the alternative is reading documentation from scratch), and greenfield prototyping (no existing constraints to violate).\n\nGains shrink or reverse in large, unfamiliar, or architecturally complex codebases — exactly where senior and staff engineers spend most of their time, and exactly where METR's study measured a slowdown. The pattern is consistent: AI assistance helps most where the task is well-specified and the codebase context needed to do it correctly is small. It helps least where doing the task correctly requires holding a lot of system-wide context in your head — context an agent doesn't have unless you've explicitly given it.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Based on where the evidence shows real, consistent AI productivity gains, which task is the best candidate?",
+              "definition": {
+                "options": [
+                  "Refactoring a core authentication module used throughout a large codebase",
+                  "Generating a new CRUD endpoint that follows an existing pattern",
+                  "Debugging an intermittent race condition in a distributed job queue",
+                  "Redesigning a service's architecture to support a new scaling requirement"
+                ],
+                "correct_index": 1,
+                "explanation": "Boilerplate that follows an existing, well-defined pattern is exactly the category with the most consistent measured gains — the opposite of large, architecturally complex, system-wide-context-heavy work like the other three options."
+              }
+            }
+          ]
         },
         {
           "heading": "The Practical Takeaway",
-          "body": "Treat productivity claims the way you'd treat any other engineering claim — ask for the measurement methodology, not the anecdote, and expect the honest number to be a modest, task-dependent improvement rather than a multiplier."
+          "body": "Treat productivity claims about AI tools the way you'd treat any other engineering claim: ask for the measurement methodology, not the anecdote. 'It felt faster' and 'I shipped a demo in a weekend' are both true statements that tell you almost nothing about whether a team's velocity on real, ongoing work actually improved.\n\nThe honest expectation, based on the best current evidence, is a modest, task-dependent improvement — concentrated in boilerplate, tests, and unfamiliar territory — not a blanket multiplier, and definitely not '10x' for the kind of work that dominates a senior engineer's week."
         }
-      ],
-      "exercises": [
+      ]
+    },
+    {
+      "title": "Real Setups: How Named Engineers Configure Their Agents",
+      "duration_minutes": 25,
+      "sequence": 3,
+      "access_tier": "free",
+      "objective": "Describe specific, named practitioners' documented agentic-coding setups (not generic advice), and apply at least one of their techniques to a real project tonight.",
+      "content_blocks": [
         {
-          "type": "multiple_choice",
-          "sequence": 1,
-          "prompt": "In METR's 2025 randomized trial, experienced developers predicted AI would make them 24% faster and felt 20% faster after finishing. What did the actual measurement show?",
-          "definition": {
-            "options": [
-              "19% faster, confirming their self-reported feeling",
-              "19% slower — the opposite of what they predicted and felt",
-              "No measurable difference either way",
-              "Over 10x faster on tasks involving test generation"
-            ],
-            "correct_index": 1,
-            "explanation": "The measured result was 19% slower, despite developers predicting and feeling faster — a striking perception gap that shows up again in later follow-up studies and large-scale survey data."
-          }
+          "heading": "Not Generic Advice — Specific People's Actual Setups",
+          "body": "Every 'top 10 Claude Code tips' listicle says roughly the same vague things — 'write clear prompts,' 'review the output,' 'use context files.' This lesson is different: every practice here is traceable to a specific person who wrote it down publicly, with their own reasoning, from real daily use — not a marketing post.\n\nTwo names come up repeatedly. Armin Ronacher created Flask and Jinja2 — two of the most widely used tools in the Python web ecosystem — and has written in detail about the agentic-coding setup he actually uses for daily work. Simon Willison created Datasette and has spent years publishing detailed, specific writing about using LLM tools for real engineering work, including a workshop handout specifically about setting up a codebase for coding agents. Both have been running these workflows daily for shipped work, not demos recorded for an audience."
+        },
+        {
+          "heading": "1. CLAUDE.md Is an Onboarding Doc, Not a Wishlist",
+          "body": "Ronacher's clearest point, from his \"Agentic Coding Recommendations\" post: a CLAUDE.md that's too long stops helping. Every line in it is a tax paid on the agent's context budget on every single session, whether or not that line turns out to matter for the current task. The test he applies is the same one you'd apply to a new hire's onboarding doc: is this a fact the agent needs to act correctly right now, or is it background the agent could discover itself by reading the code? If it's the latter, cut it.\n\nA concrete contrast: 'This project uses Python 3.11 and follows PEP 8' is nearly useless — the agent can tell the Python version from `pyproject.toml`, and style conventions are visible in every file it reads. 'Database migrations must go through `alembic revision --autogenerate`, never hand-written SQL, because we run multiple replicas and hand-written migrations have caused replication drift twice' is exactly the kind of line worth keeping — it's a rule the agent can't discover by reading code, and it explains *why*, which helps the agent apply the rule correctly in an edge case the line didn't explicitly cover.\n\nTry this tonight: open (or create) the CLAUDE.md / AGENTS.md for one of your own projects. For every line, ask \"would I actually notice if this were missing?\" Cut anything you can't answer yes to.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Which line is a better fit for a CLAUDE.md, by Ronacher's own test?",
+              "definition": {
+                "options": [
+                  "\"This project uses TypeScript and generally follows standard formatting conventions\"",
+                  "\"Never edit `generated/` — CI rebuilds it and discards your changes\"",
+                  "\"We care deeply about code quality and maintainability in this codebase\"",
+                  "\"The codebase is organized in a clear and logical way throughout\""
+                ],
+                "correct_index": 1,
+                "explanation": "Only this line is something the agent genuinely can't discover by reading the code — nothing in `generated/`'s contents signals that edits there are pointless. The others are either visible from the code itself or too vague to act on."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "2. Give the Agent a Debuggable Surface, Not a Guess",
+          "body": "A concrete example from the same Ronacher post: his sign-up flow sends confirmation emails, and in debug mode those emails are printed to stdout instead of actually being sent. His CLAUDE.md states this explicitly. So when an agent is testing a sign-up flow and needs the confirmation link to continue — the kind of step that would otherwise require a human to go check an inbox and paste a link into the agent's chat — it checks the log instead. It doesn't guess, and it doesn't stall waiting on a person.\n\nThis generalizes well beyond email: any place where an agent needs feedback from a system it can't directly observe — a background job's result, a webhook's payload, an async task's completion — benefits from the same pattern. If there's a log, a status endpoint, or a file the outcome gets written to, the agent can close the loop on its own. If the only way to observe the outcome is a human checking a UI, the agent is stuck waiting every single time, turning what should be an autonomous task back into a supervised one.\n\nOne sentence of CLAUDE.md turned a manual hand-off into something the agent can complete end-to-end, without that session ever needing a human to be the courier for a piece of information the system already had.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Armin Ronacher's CLAUDE.md includes a line noting that outgoing emails are logged to stdout in debug mode instead of actually sent. Why does that one line materially help an agent building a sign-up flow?",
+              "definition": {
+                "options": [
+                  "It lets the agent read the real link from the log",
+                  "It makes the email-sending code run noticeably faster in production overall",
+                  "It's a required configuration flag for the email provider's own API",
+                  "It prevents the agent from writing any email-related code at all"
+                ],
+                "correct_index": 0,
+                "explanation": "This is the exact mechanism from Ronacher's post: a debuggable surface (logs) turns a manual hand-off (\"paste me the link\") into something the agent can complete autonomously, because the information it needs is somewhere it can actually look."
+              }
+            },
+            {
+              "type": "multiple_choice",
+              "sequence": 2,
+              "prompt": "A team's background job system writes its results to a database table, but the agent has no documented way to query it. What's the most likely outcome when an agent needs to know if a job succeeded?",
+              "definition": {
+                "options": [
+                  "The agent automatically discovers the database schema and queries it correctly",
+                  "The agent stalls or guesses, with no reliable way to check",
+                  "The background job system fails outright because the agent can't observe it",
+                  "The agent silently skips verifying the job and reports success anyway"
+                ],
+                "correct_index": 1,
+                "explanation": "Without a documented, discoverable way to check an outcome — the same role CLAUDE.md's email-log line plays — the agent has no reliable path forward and either stalls or makes an unverified guess, exactly the failure mode a debuggable surface is meant to prevent."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "3. Let the Agent Verify Its Own UI and HTTP Changes",
+          "body": "Willison's workshop handout and blog posts on setting up a codebase for coding agents make a related point from the testing side: give the agent a way to interact with what it built, not just read the code it wrote. He lets agents drive a browser with Playwright or hit endpoints directly with curl, so a UI or API change gets checked against the actually-running application, not just \"this looks right based on reading the diff.\"\n\nThe difference in practice is significant: an agent that writes a new form field and then reads its own code to confirm the field exists is checking that it wrote *something*, not that the something *works* — it can't catch a field that's visually broken, a validation rule that silently fails, or an endpoint that returns the wrong status code for a valid request. An agent that takes a screenshot after the change, or curls the endpoint and checks the response, is checking the actual behavior a user or caller would experience.\n\nTry this tonight: next time you ask an agent for a UI or endpoint change, also explicitly ask it to verify the change itself — with a screenshot, a curl call, or a short Playwright script — before it tells you it's done. Compare how much you trust that result versus a plain \"done\" message with no verification attached.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "An agent adds a new \"Submit\" button to a form, then reports the task is done after reading back its own code changes. What has it actually NOT verified?",
+              "definition": {
+                "options": [
+                  "Whether the code it wrote matches standard formatting conventions",
+                  "Whether the button actually renders correctly and works when clicked",
+                  "Whether the surrounding code still compiles without any syntax errors",
+                  "Whether the function name follows the project's naming conventions"
+                ],
+                "correct_index": 1,
+                "explanation": "Reading code back only confirms the agent wrote something resembling the intended change — it says nothing about whether the button actually renders, is clickable, or triggers the right behavior in the running app. That requires actually exercising it, e.g. with a screenshot or a Playwright script."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "4. One Place for Every Tool: The Makefile Pattern",
+          "body": "Ronacher documents his linters, tests, dev server, and log locations in a single Makefile, and points the agent — via CLAUDE.md — at it as the canonical entry point. The reasoning generalizes well beyond Make specifically: an agent, like a new teammate, shouldn't have to guess or ask which of five plausible test commands is the right one for this particular project, or whether `npm test` and `npm run test:unit` do different things.\n\nWithout a single documented entry point, an agent facing an ambiguous command set does one of two things, both bad: it picks one and hopes, silently running the wrong subset of tests and reporting false confidence, or it stops and asks, burning a round trip on something that should have been free. A `make test` that's always correct removes the ambiguity entirely — there's exactly one command, it's documented in exactly one place, and it's the same command whether a human or an agent runs it.\n\nThis same discoverability argument is why good onboarding documentation exists for humans at all — the Makefile pattern is really 'apply the same discipline you'd want for a new hire's first day, and point the agent at the same resource.'",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "A project has three different test commands (`npm test`, `npm run test:ci`, `jest --config legacy.json`) with no documentation on which one a new contributor should use. What's the most likely consequence for an agent working in this codebase?",
+              "definition": {
+                "options": [
+                  "The agent automatically detects and runs the single correct command",
+                  "The agent may run the wrong tests and report false confidence",
+                  "All three commands run identical test suites so it doesn't matter",
+                  "The project's CI pipeline silently corrects whichever command the agent picks"
+                ],
+                "correct_index": 1,
+                "explanation": "Ambiguity doesn't resolve itself — without one documented entry point, an agent is likely to pick a plausible-looking command that doesn't actually run the full, correct suite, and has no way to know that's what happened."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "5. The Permissions Tradeoff: Speed vs. Blast Radius",
+          "body": "Ronacher runs Claude Code with permission prompts fully disabled (`--dangerously-skip-permissions`) — no confirmation before file edits, shell commands, or network calls. Read in isolation, that sounds reckless, and it would be, except for one detail he's explicit about: he only does this inside a sandboxed Docker container, specifically so that a wrong, buggy, or even maliciously-crafted command's blast radius is contained to a disposable environment that can simply be thrown away and recreated.\n\nSimon Willison makes the identical point independently, in a separate 2026 conversation on agentic engineering: asked what matters most for running agents with real autonomy, his answer is sandboxing. Two practitioners who don't work together, writing and speaking independently, arriving at the exact same conclusion from different starting points, is a stronger signal than either claim alone — it suggests this isn't a personal preference but something close to a hard requirement for the setup to be safe at all.\n\nThe practical version of this for most projects: Docker Compose — which this very project already uses for local development — gives a natural sandbox boundary: a container that can read and write its own filesystem and talk to its own services, but can't touch the host machine or anything outside the compose network unless explicitly configured to. Running an agent with relaxed permissions *inside* that boundary is a meaningfully different risk profile than running it the same way directly on a developer's laptop.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Armin Ronacher runs Claude Code with all permission prompts disabled (--dangerously-skip-permissions). What makes this a defensible choice rather than a reckless one, according to both Ronacher and Simon Willison independently?",
+              "definition": {
+                "options": [
+                  "The flag is safe by default and needs no extra precaution",
+                  "It's only ever used against read-only, non-production codebases anyway",
+                  "It runs inside a sandbox, containing a bad command's damage",
+                  "Claude Code quietly reviews every command before actually running it"
+                ],
+                "correct_index": 2,
+                "explanation": "Both practitioners, writing independently, land on the same precondition: skipping confirmation prompts is only reasonable inside a sandbox. Without that, the same setup is genuinely dangerous — full filesystem and shell access with no human checkpoint."
+              }
+            },
+            {
+              "type": "multiple_choice",
+              "sequence": 2,
+              "prompt": "A developer runs Claude Code with --dangerously-skip-permissions directly on their laptop, with no container or sandbox, reasoning they'll just watch the terminal output carefully. What's the main problem with this approach?",
+              "definition": {
+                "options": [
+                  "Watching the terminal is just as effective as a real sandbox boundary",
+                  "A bad command can act on the real filesystem before anyone reacts",
+                  "Claude Code ignores the flag entirely unless a sandbox is detected",
+                  "The approach is fine as long as the project has good tests"
+                ],
+                "correct_index": 1,
+                "explanation": "Watching output doesn't stop a command from already running — by the time a human reads and reacts to a harmful command's output, it has usually already executed against the real filesystem. A sandbox contains the blast radius structurally, before any human reaction time is needed."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Scaling Up: Loops, Worktrees, and What a Real Company's Playbook Looks Like",
+      "duration_minutes": 25,
+      "sequence": 4,
+      "access_tier": "free",
+      "objective": "Explain how unattended agent loops and parallel worktree workflows work and when each is (and isn't) appropriate, and describe a documented example of a real engineering organization's internal usage.",
+      "content_blocks": [
+        {
+          "heading": "The Ralph Wiggum Loop: An Agent Running Itself",
+          "body": "In mid-2025, developer Geoffrey Huntley described a technique he'd been using: re-run the exact same prompt file against a coding agent, over and over, in a plain loop — no orchestration framework, no special tooling, originally just a Bash `while true` loop reading a single markdown file. He named it after the Simpsons character Ralph Wiggum, and the name stuck in the community that picked it up.\n\nEach iteration starts with a completely fresh context window — the agent has zero memory of the previous iteration, except for whatever it wrote to disk and committed to git. The prompt file itself typically says something like 'read PROGRESS.md, do the next unfinished item, update PROGRESS.md, commit.' His widely cited demonstration ran this loop unattended for an extended stretch and produced a working programming language, compiler included — a result nobody would attempt to hand-hold through a single long conversation, but which a sequence of small, independently-verified steps could reach.\n\nAnthropic later packaged a supported version of the same idea directly into Claude Code: a `/loop` command built on a 'Stop' hook, which intercepts the agent's attempt to end the session and returns it to the same instruction until an explicit completion condition is met, rather than requiring a hand-rolled shell loop.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "The Ralph Wiggum loop re-runs the same prompt file against an agent repeatedly, each time with a completely fresh context window. Why does the technique rely on saving progress to files and git commits instead of conversation memory?",
+              "definition": {
+                "options": [
+                  "Because git operations run measurably faster than in-memory updates",
+                  "Because each fresh context means unsaved progress is simply gone",
+                  "Because Claude Code cannot maintain long conversations under any circumstances",
+                  "Because external storage is required before any subagents can run"
+                ],
+                "correct_index": 1,
+                "explanation": "The fresh-context-per-iteration design is the whole mechanism: durability has to come from outside the conversation, which is exactly what makes an unattended multi-hour run both possible and inspectable afterward."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "Why External State, Not Memory?",
+          "body": "This is the detail that makes the technique work at all: because every iteration starts with a clean slate, anything the agent hasn't written to a file or committed to git is simply gone by the next loop — there's no implicit memory to fall back on. That's not a limitation to work around; it's the design. It forces every unit of progress to be durable and independently inspectable, which is exactly the property you want from a process running unattended for hours without anyone watching it.\n\nIt also has a useful side effect: because progress lives entirely in git history and files on disk, a human can check in on a Ralph loop at any point — read the latest commit, see exactly what changed and why, interrupt it if something's gone wrong — without needing to reconstruct the agent's reasoning from a long conversation transcript. The audit trail *is* the state, not a separate thing kept alongside it.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Midway through an 8-hour Ralph loop run, a developer wants to check whether the agent is making sensible progress. What can they inspect to find out?",
+              "definition": {
+                "options": [
+                  "Nothing — the loop's internal state can't be inspected until it finishes",
+                  "The git commit history, since progress is committed there each time",
+                  "The agent's conversation memory, which persists continuously across all iterations",
+                  "A separate dashboard that Claude Code generates automatically for loop runs"
+                ],
+                "correct_index": 1,
+                "explanation": "Because the design deliberately keeps no memory between iterations, git history and files on disk ARE the complete, inspectable record of progress — there's no separate dashboard or persistent conversation to check, and that's intentional."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "When a Loop Is a Good Idea (and When It's Reckless)",
+          "body": "Huntley's compiler run worked because 'does the compiler compile and pass its own test suite' is a crisp, automatable, unambiguous check — there's no judgment call about whether the result is good, just a pass/fail signal the loop can run against itself after every change. An unattended loop is only ever as safe and as useful as its completion check. Hand it an ambiguous goal with no hard pass/fail signal — 'make the codebase better' or 'improve performance' with no specific target — and it won't fail loudly. It will confidently loop for hours toward something that satisfies no test except its own judgment of 'looks done to me,' exactly the kind of self-assessment this whole lesson has been warning against.\n\nThe practical filter: before considering a loop, write down the exact command that will tell you, mechanically, whether a given iteration succeeded. If you can't write that command, the task isn't ready to be looped — not because the task is unimportant, but because there's no way for the loop to know it's going in the right direction without a human checking in constantly, which defeats the entire point of running it unattended.\n\nTry this tonight: think of one task in your own backlog with a crisp, automatable \"done\" check — a specific failing test that should pass, a lint rule that should go clean, a build that should succeed. Write down what that check actually is. If you can't name one, that task isn't a loop candidate yet, no matter how tedious it is.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "A developer wants to run an unattended loop with the goal \"refactor this module to be cleaner and more maintainable.\" Why is this a poor candidate, independent of how good the agent is?",
+              "definition": {
+                "options": [
+                  "Refactoring tasks are too simple to benefit from an unattended loop",
+                  "There's no mechanical pass/fail check for whether code is \"cleaner\"",
+                  "Unattended loops can only operate on test files, never source code",
+                  "The module would need to already have 100% test coverage first"
+                ],
+                "correct_index": 1,
+                "explanation": "\"Cleaner and more maintainable\" has no mechanical check — it's a judgment call, which means the loop has no reliable signal for whether a given iteration actually moved toward the goal. The task needs a crisp, automatable completion check before it's loop-ready."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "Parallelizing with Git Worktrees",
+          "body": "Running two agents on two different features at once, in the same working directory, is a bad idea for a simple reason: both agents can read and write the same files at the same time, and their edits can clobber each other mid-task — one agent's half-finished change gets silently overwritten or corrupted by the other's, often without either agent noticing until something breaks.\n\nThe fix practitioners converged on — and that Claude Code now supports directly via `claude --worktree <name>` — is giving each agent its own git worktree: a separate working directory, backed by the same repository, checked out on its own branch. Each agent operates in complete filesystem isolation from the others; there's no way for one to even see the other's in-progress changes until they're committed and merged.\n\nSeveral practitioner write-ups describe a companion pattern worth adopting alongside this: a `TASKS.md` file, tracked in git at the repo root, listing what each parallel agent (and the human) is currently working on — a lightweight coordination mechanism that prevents two agents from independently picking up the same task without either knowing. The same write-ups recommend committing after each discrete unit of work rather than batching everything into one giant commit at the end, specifically because small, frequent commits make the resulting diffs far easier for a human to actually review — a large diff spanning hours of parallel work is close to unreviewable, while a sequence of small commits tells a story.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Two agents are both working in the same directory on unrelated features. Agent A is halfway through editing utils.py when Agent B's task also touches utils.py and overwrites Agent A's in-progress changes. What's the direct cause of this failure?",
+              "definition": {
+                "options": [
+                  "The two features were not actually independent of each other",
+                  "Both agents shared the same working directory and could overwrite files",
+                  "One of the two agents had a significant bug in its logic",
+                  "The repository was missing branch protection rules for the main branch"
+                ],
+                "correct_index": 1,
+                "explanation": "This is specifically the filesystem-isolation problem worktrees solve — the features might genuinely be independent, but sharing one working directory means both agents can touch the same file simultaneously regardless. Separate worktrees give each agent its own isolated directory, so this specific failure can't happen even if the tasks turn out to overlap."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "Know the Ceiling",
+          "body": "This doesn't scale without limit. Practitioner reports converge on a practical ceiling somewhere around two to five parallel sessions for a single developer — past that point, the coordination overhead of tracking what each agent is doing, reviewing multiple incoming diffs, and resolving the occasional unexpected conflict eats whatever time the parallelism was supposed to save. Token cost also multiplies directly with every parallel session running — five agents running simultaneously cost roughly five times what one does, which matters for both budget and for how much of a model provider's rate limits get consumed at once.\n\nWorktree isolation only helps when the underlying work is actually independent, which is worth checking explicitly rather than assuming. Two agents touching genuinely separate files — different services, different modules with no shared dependencies — parallelize cleanly. Two agents whose work overlaps on the same shared surface, even if they're nominally 'different tasks,' will produce merge conflicts that cost more human time to untangle than running the same two tasks one after another would have cost in wall-clock time. The question to ask before splitting work across agents isn't 'are these two different tasks' — it's 'would two humans doing these two tasks need to coordinate with each other before either could finish.'",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "You have four tasks today: (1) write unit tests for a function that's already finished, (2) rename a function that's called from dozens of places across the codebase, (3) add a brand-new, self-contained API endpoint, (4) write documentation for a stable, unchanging feature. Which is the worst candidate for running as a parallel, isolated-worktree agent alongside the others?",
+              "definition": {
+                "options": [
+                  "Task 1 — writing tests for an already-finished function",
+                  "Task 2 — renaming a function with many call-sites",
+                  "Task 3 — a new, fully self-contained API endpoint",
+                  "Task 4 — writing docs for an unchanging feature"
+                ],
+                "correct_index": 1,
+                "explanation": "Task 2 touches shared surface area that overlaps with whatever else is in flight, which is exactly the 'tightly coupled work' case where worktree isolation costs more in merge-conflict resolution than it saves in parallel wall-clock time. The other three are naturally independent of each other."
+              }
+            },
+            {
+              "type": "multiple_choice",
+              "sequence": 2,
+              "prompt": "A developer runs five Claude Code agents in parallel on five independent tasks, intending to review all five diffs at the end of the day in one sitting. What's the most likely problem with this plan?",
+              "definition": {
+                "options": [
+                  "Five agents cannot technically run at the same time at all",
+                  "Reviewing five diffs at once loses the benefit of frequent commits",
+                  "Independent tasks always produce unreviewable, tangled merge conflicts regardless anyway",
+                  "Token costs only multiply when the tasks are not fully independent"
+                ],
+                "correct_index": 1,
+                "explanation": "Batching review to the end of the day defeats the point of small, frequent commits per discrete unit of work — the practitioner pattern of committing often exists specifically so diffs stay reviewable as they land, not so they pile up into one large review session."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "What This Looks Like Inside a Real Company",
+          "body": "Anthropic published a case study — \"How Anthropic teams use Claude Code\" — based on interviews across the company, not limited to the engineering org, which makes it a useful sample of what delegation actually looks like once it spreads beyond people who build developer tools for a living.\n\nTwo concrete examples stand out. When a Kubernetes cluster stopped scheduling new pods, an infrastructure team fed screenshots of their monitoring dashboards directly into Claude Code to diagnose the outage — it turned out to be pod IP exhaustion, a root cause that required correlating several different metrics, not something obvious from a single error message. Separately, the finance team — people without an engineering background — learned to write their recurring data workflows as plain-text files describing the steps in order, then load those into Claude Code to actually execute them, replacing what had been manual spreadsheet work.\n\nA conference talk by the Claude Code team separately reported that an internal review system called 'Claude Tag' handles roughly 65% of pull requests for one specific product-engineering team — with a hard rule attached: changes to Claude Code's own core still require a human code owner's explicit sign-off, no matter how the change was produced. The pattern across every example here is the same one from earlier in this lesson, now visible at the scale of a whole company: delegate the parts of the work that have a clear, checkable shape; keep an explicit human gate on anything core or high-stakes, without exception.\n\nTry this tonight: write a 3-sentence plain-text description of one of your own recurring manual workflows — a status report you compile, a release checklist, a weekly data pull — specific enough that an agent could follow it step by step, the way Anthropic's finance team did.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Anthropic's internal \"Claude Tag\" system handles roughly 65% of PRs for one product-engineering team, but changes to Claude Code's own core still require human sign-off. What does this combination illustrate?",
+              "definition": {
+                "options": [
+                  "Automated review is only ever trustworthy for low-stakes, peripheral work",
+                  "High delegation and a human gate on core changes coexist deliberately",
+                  "The 65% figure applies equally to every team at the company",
+                  "Core changes are reviewed faster than peripheral ones at Anthropic"
+                ],
+                "correct_index": 1,
+                "explanation": "The point isn't 'delegate everything' or 'delegate nothing' — heavy delegation on well-scoped work and a strict human gate on core, high-stakes work are compatible choices made at the same time, matching the plan-and-verify discipline from earlier in this lesson, just applied at company scale."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Choosing a Toolchain: Claude Code, Codex, and Self-Hosted Models",
+      "duration_minutes": 25,
+      "sequence": 5,
+      "access_tier": "free",
+      "objective": "Compare agentic coding tools and self-hosted models on concrete selection criteria, and explain the tradeoff the way a senior engineer would defend it in review or an interview.",
+      "content_blocks": [
+        {
+          "heading": "Agentic CLI vs. IDE-Embedded Assistant",
+          "body": "Coding-agent tools split into two product shapes, and conflating them leads to the wrong comparison. Agentic CLI tools — Claude Code, Codex CLI — run in a terminal, can read and edit across an entire repository, execute commands, and operate semi-autonomously on a task you hand off and come back to. IDE-embedded assistants — Cursor, Copilot — live inside the editor, stay tightly in the loop with every keystroke, and are built for inline completion and small, local edits rather than repo-wide delegation.\n\nNeither shape is strictly better; they're built for different jobs. A multi-file refactor or a 'implement this spec end to end' task fits the agentic-CLI model from earlier lessons in this module — plan, delegate, verify. A tight loop of 'finish this line' or 'rename this variable everywhere in view' fits the IDE-embedded model. Many engineers use both, for different parts of the same day."
+        },
+        {
+          "heading": "What Actually Differs Between Claude Code and Codex",
+          "body": "Both Claude Code and Codex CLI are agentic terminal tools, which makes them easy to treat as interchangeable — and easy to pick between on hype rather than evidence. The differences that actually matter for a real task: which model is doing the reasoning (and how it performs on *your* codebase's language and patterns, not a benchmark's), how each tool manages context and repository indexing at scale, what its permission and approval model looks like (what it's allowed to run without asking), and what surrounding primitives it gives you for the workflow from earlier lessons — repository context files, hooks, delegated subagents, and the equivalent.\n\nNone of that is settled by a single demo video or a strong opinion from one blog post. It's settled by running the same representative task — ideally one with a known-good outcome — through each tool on the actual codebase in question, with the same plan-review-verify discipline applied to both.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Two engineers disagree about which agentic CLI tool is 'better' after each tried a different task once. What's the most defensible way to settle which fits their team?",
+              "definition": {
+                "options": [
+                  "Run the same real task through each tool on their own codebase",
+                  "Pick whichever tool a well-known blog post or conference demo recommends",
+                  "Default to whichever tool currently has more GitHub stars or social buzz",
+                  "Let whichever engineer happens to type the fastest choose for the team"
+                ],
+                "correct_index": 0,
+                "explanation": "Brand reputation and a single anecdote don't transfer across codebases or tasks; the only comparison that generalizes is running an equivalent real task through each option against the repo it will actually be used on."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "Where Self-Hosted Models Enter the Picture",
+          "body": "Running an open-weight model locally or on owned infrastructure — via Ollama, llama.cpp, or vLLM — is a real option, not a hobbyist curiosity. The legitimate reasons to do it: a data-residency or contractual obligation that code can never leave a given network boundary, an air-gapped environment with no outbound network access at all, cost at a volume high enough that owned hardware beats per-token API pricing, or wanting full control over model versioning and uptime.\n\nThe honest 2026 reality check: open-weight coding models have closed much of the gap on bounded, well-specified tasks, but still generally lag frontier hosted models on long, ambiguous, multi-file agentic work — exactly the work this module has spent the most time on. Self-hosting is usually the right call for a narrow, well-defined use case operating under a hard constraint, not a wholesale replacement for a frontier hosted agent on everything.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "A fintech team is contractually barred from sending any code to a third-party API. What does this constraint actually imply for their coding-agent choice?",
+              "definition": {
+                "options": [
+                  "Accept the risk and use a hosted frontier model anyway, since speed matters more than the policy",
+                  "Start with a self-hosted model, even though it may lag a frontier model on hard tasks",
+                  "Conclude that no AI-assisted coding workflow is possible at all under a constraint like this one",
+                  "Use the hosted model only for test code, since the rule technically applies to production only"
+                ],
+                "correct_index": 1,
+                "explanation": "A hard data-residency constraint is exactly the case self-hosting exists for: the team trades some capability on complex, ambiguous tasks for compliance with a requirement that isn't negotiable. The other options either ignore the constraint or invent an exception the scenario doesn't support."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "A Decision Framework, Not a Favorite",
+          "body": "Choosing a coding-agent toolchain is a build-vs-buy decision like any other — the same discipline from module 79's economics content applies here. Four axes actually decide it: data sensitivity (is there a hard constraint ruling a hosted API out entirely), task shape (bounded and well-specified vs. open-ended multi-file delegation), budget and volume (per-token cost at the team's actual usage vs. the overhead of running and maintaining owned infrastructure), and the team's appetite for operating that extra infrastructure at all.\n\nNotice what's missing from that list: which tool is currently trending, and which one a conference keynote demoed. Those inputs produce a toolchain that was right for someone else's constraints, not a reasoned answer to this team's own.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "Which pair of factors most determines whether a self-hosted model is a reasonable substitute for a frontier hosted agent on a given task?",
+              "definition": {
+                "options": [
+                  "The engineer's own personal preference and how polished the tool's marketing copy happens to look",
+                  "How bounded the task is, and whether a cost or compliance rule blocks the hosted API",
+                  "Whether the codebase happens to already be written in TypeScript, Python, or something else",
+                  "How many spare GPUs the team happens to already own sitting unused somewhere in a closet"
+                ],
+                "correct_index": 1,
+                "explanation": "Task shape (bounded vs. open-ended) and a hard constraint (compliance or cost) are what actually predict fit; language choice and leftover hardware don't settle the question on their own."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "What This Signals in an Interview",
+          "body": "Interviewers increasingly probe past 'I used Claude Code' or 'I used Copilot' for whether a candidate can explain *why* a tool fit a specific situation, what guardrails they put around it — a test-as-check, a scoped permission, the plan-then-review discipline from earlier lessons — and what they'd change next time. Naming a tool is table stakes in 2026; it signals nothing about judgment on its own.\n\nThe stronger answer is concrete and falsifiable: a specific task, a specific boundary placed on the agent, and a specific mistake caught before it shipped. That's also, not coincidentally, the same evidence this whole module has been building toward — accountability for correctness, not enthusiasm about the tool.",
+          "exercises": [
+            {
+              "type": "multiple_choice",
+              "sequence": 1,
+              "prompt": "In an interview, which answer about AI-assisted development is the stronger signal of seniority?",
+              "definition": {
+                "options": [
+                  "\"I use Claude Code for absolutely everything — it's basically a 10x multiplier.\"",
+                  "\"I just let the agent decide on its own which tool fits best for each task.\"",
+                  "\"I scoped a bounded task, reviewed the diff against the plan, and caught a bug it missed.\"",
+                  "\"I avoid AI coding tools entirely, so I can always be sure the code is correct.\""
+                ],
+                "correct_index": 2,
+                "explanation": "Naming a tool and a multiplier is table stakes; describing a concrete task boundary, a verification step, and a real mistake caught is what distinguishes judgment from repeating marketing language."
+              }
+            }
+          ]
+        },
+        {
+          "heading": "The Bottom Line",
+          "body": "There is no universal winner between Claude Code, Codex, IDE-embedded assistants, and self-hosted models — and treating it as a brand loyalty question wastes the one advantage a deliberate choice actually gives: being able to defend it. Decide on data constraints, task shape, and cost, the same way you'd justify any other infrastructure choice. Then be able to say, specifically, why that choice fit the problem — and what you'd watch for if the problem changed."
         }
       ]
     }

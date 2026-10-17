@@ -114,6 +114,9 @@ class ContentBlock(db.Model):
 
     learning_session = db.relationship("LearningSession", back_populates="content_blocks")
     note = db.relationship("Note", back_populates="content_block", uselist=False)
+    exercises = db.relationship(
+        "Exercise", back_populates="content_block", order_by="Exercise.sequence"
+    )
 
     __table_args__ = (
         db.UniqueConstraint(
@@ -217,7 +220,11 @@ class StudySession(db.Model):
 
 
 class Exercise(db.Model):
-    """A quiz/exercise attached to a learning session.
+    """A quiz/exercise attached to a learning session, optionally pinned
+    to one content block/slide (`content_block_id`) so it renders right
+    after that slide instead of in a lesson-level wrap-up section. Kept
+    nullable and additive rather than replacing `learning_session_id`,
+    so existing lesson-level exercises don't need to move.
 
     `definition_json` holds the answer key (e.g. `correct_index`,
     `explanation` for multiple_choice) and must never be sent to the
@@ -231,6 +238,9 @@ class Exercise(db.Model):
     learning_session_id = db.Column(
         db.Integer, db.ForeignKey("learning_sessions.id"), nullable=False
     )
+    content_block_id = db.Column(
+        db.Integer, db.ForeignKey("content_blocks.id"), nullable=True
+    )
     type = db.Column(db.String(50), nullable=False, default="multiple_choice")
     prompt = db.Column(db.Text, nullable=False)
     definition_json = db.Column(db.JSON, nullable=False)
@@ -238,6 +248,7 @@ class Exercise(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
 
     learning_session = db.relationship("LearningSession", back_populates="exercises")
+    content_block = db.relationship("ContentBlock", back_populates="exercises")
     submissions = db.relationship(
         "ExerciseSubmission", back_populates="exercise", order_by="ExerciseSubmission.submitted_at"
     )

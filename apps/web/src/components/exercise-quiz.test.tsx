@@ -24,7 +24,7 @@ describe("ExerciseQuiz", () => {
 
     expect(screen.getByText("Submit answer")).toBeDisabled();
 
-    fireEvent.click(screen.getByLabelText("Layout"));
+    fireEvent.click(screen.getByLabelText(/Layout/));
     expect(screen.getByText("Submit answer")).not.toBeDisabled();
   });
 
@@ -42,11 +42,14 @@ describe("ExerciseQuiz", () => {
 
     render(<ExerciseQuiz exercise={exercise} />);
 
-    fireEvent.click(screen.getByLabelText("Paint"));
+    fireEvent.click(screen.getByLabelText(/Paint/));
     fireEvent.click(screen.getByText("Submit answer"));
 
     await waitFor(() => expect(screen.getByText("Correct!")).toBeInTheDocument());
     expect(screen.getByText("Paint only, no layout needed.")).toBeInTheDocument();
+    // "Paint" is options[1], so the submitted index must be 1 regardless
+    // of where it was displayed (display order is shuffled, selection
+    // tracks the original index).
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/v1/exercises/5/submissions"),
       expect.objectContaining({
@@ -70,7 +73,7 @@ describe("ExerciseQuiz", () => {
 
     render(<ExerciseQuiz exercise={exercise} />);
 
-    fireEvent.click(screen.getByLabelText("Layout"));
+    fireEvent.click(screen.getByLabelText(/Layout/));
     fireEvent.click(screen.getByText("Submit answer"));
 
     await waitFor(() => expect(screen.getByText("Not quite.")).toBeInTheDocument());
@@ -81,9 +84,37 @@ describe("ExerciseQuiz", () => {
 
     render(<ExerciseQuiz exercise={exercise} />);
 
-    fireEvent.click(screen.getByLabelText("Layout"));
+    fireEvent.click(screen.getByLabelText(/Layout/));
     fireEvent.click(screen.getByText("Submit answer"));
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
+
+  it("labels options A, B, C... in whatever order they're displayed", () => {
+    const fourOptionExercise = {
+      id: 6,
+      type: "multiple_choice",
+      prompt: "Pick one",
+      options: ["First", "Second", "Third", "Fourth"],
+    };
+    render(<ExerciseQuiz exercise={fourOptionExercise} />);
+
+    expect(screen.getByText("A.")).toBeInTheDocument();
+    expect(screen.getByText("B.")).toBeInTheDocument();
+    expect(screen.getByText("C.")).toBeInTheDocument();
+    expect(screen.getByText("D.")).toBeInTheDocument();
+  });
+
+  it("shuffles display order (original index still drives selection and scoring)", () => {
+    // Force Fisher-Yates to produce a specific, reversed permutation so
+    // this test is deterministic rather than asserting on randomness.
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+
+    render(<ExerciseQuiz exercise={exercise} />); // options: ["Layout", "Paint"]
+
+    const labels = screen.getAllByRole("radio").map((radio) => radio.closest("label")?.textContent);
+    expect(labels).toEqual(["A.Paint", "B.Layout"]); // reversed from authored order
+
+    randomSpy.mockRestore();
   });
 });

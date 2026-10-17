@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { API_BASE_URL } from "@/lib/config";
@@ -8,16 +9,103 @@ import { ExerciseQuiz } from "@/components/exercise-quiz";
 import { ContentBlocks } from "@/components/content-blocks";
 import type { Note } from "@/components/notes-panel";
 
+type ExerciseSummary = { id: number; type: string; prompt: string; options: string[] };
+
+type TopicSessionSummary = {
+  id: number;
+  title: string;
+  sequence: number;
+  duration_minutes: number;
+};
+
 type LearningSession = {
   id: number;
   title: string;
   duration_minutes: number;
   objective: string;
-  content_blocks: { id: number; sequence: number; heading: string; body: string; note: Note | null }[];
+  content_blocks: {
+    id: number;
+    sequence: number;
+    heading: string;
+    body: string;
+    note: Note | null;
+    exercises: ExerciseSummary[];
+  }[];
   access_tier: string;
   topic: { id: number; title: string; slug: string };
-  exercises: { id: number; type: string; prompt: string; options: string[] }[];
+  topic_sessions: TopicSessionSummary[];
+  exercises: ExerciseSummary[];
 };
+
+function TopicLessonNav({
+  currentId,
+  sessions,
+}: {
+  currentId: number;
+  sessions: TopicSessionSummary[];
+}) {
+  if (sessions.length <= 1) return null;
+
+  const currentIndex = sessions.findIndex((s) => s.id === currentId);
+  const prev = currentIndex > 0 ? sessions[currentIndex - 1] : null;
+  const next = currentIndex < sessions.length - 1 ? sessions[currentIndex + 1] : null;
+
+  return (
+    <nav
+      aria-label="Lessons in this topic"
+      className="rounded-lg border border-zinc-300 p-3 dark:border-zinc-700"
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        Lessons in this topic
+      </p>
+      <ol className="mt-2 flex flex-col gap-0.5">
+        {sessions.map((s) =>
+          s.id === currentId ? (
+            <li
+              key={s.id}
+              className="rounded px-2 py-1 text-sm font-medium text-black dark:text-zinc-50"
+            >
+              {s.sequence}. {s.title}
+            </li>
+          ) : (
+            <li key={s.id}>
+              <Link
+                href={`/learning/${s.id}`}
+                className="block rounded px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-black dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
+              >
+                {s.sequence}. {s.title}
+              </Link>
+            </li>
+          ),
+        )}
+      </ol>
+      {(prev || next) && (
+        <div className="mt-3 flex justify-between gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
+          {prev ? (
+            <Link
+              href={`/learning/${prev.id}`}
+              className="text-zinc-600 hover:underline dark:text-zinc-400"
+            >
+              ← {prev.title}
+            </Link>
+          ) : (
+            <span />
+          )}
+          {next ? (
+            <Link
+              href={`/learning/${next.id}`}
+              className="text-right text-zinc-600 hover:underline dark:text-zinc-400"
+            >
+              {next.title} →
+            </Link>
+          ) : (
+            <span />
+          )}
+        </div>
+      )}
+    </nav>
+  );
+}
 
 type State =
   | { phase: "loading" }
@@ -107,6 +195,8 @@ export function LessonContent({ sessionId }: { sessionId: number }) {
           {data.duration_minutes} minutes
         </p>
       </header>
+
+      <TopicLessonNav currentId={data.id} sessions={data.topic_sessions} />
 
       <PomodoroTimer learningSessionId={data.id} modeMinutes={data.duration_minutes} />
 

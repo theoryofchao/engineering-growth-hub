@@ -25,8 +25,24 @@ type State =
   | { phase: "error"; message: string }
   | { phase: "result"; result: SubmissionResult };
 
+/** Fisher-Yates shuffle of [0, 1, ..., count-1]. */
+function shuffledIndices(count: number): number[] {
+  const indices = Array.from({ length: count }, (_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  return indices;
+}
+
 export function ExerciseQuiz({ exercise }: { exercise: Exercise }) {
   const [state, setState] = useState<State>({ phase: "answering", selectedIndex: null });
+  // Display order is randomized per mount (not tied to the correct
+  // answer's original position in definition_json) so the correct
+  // option doesn't cluster at a predictable letter across questions.
+  // Selection/submission still use the ORIGINAL index throughout —
+  // this is purely a display-order shuffle, the backend is unaware of it.
+  const [displayOrder] = useState(() => shuffledIndices(exercise.options.length));
 
   async function submit() {
     if (state.phase !== "answering" || state.selectedIndex === null) return;
@@ -61,7 +77,9 @@ export function ExerciseQuiz({ exercise }: { exercise: Exercise }) {
 
       <fieldset className="mt-3 flex flex-col gap-2" disabled={state.phase !== "answering"}>
         <legend className="sr-only">Answer options</legend>
-        {exercise.options.map((option, index) => {
+        {displayOrder.map((index, position) => {
+          const option = exercise.options[index];
+          const letter = String.fromCharCode(65 + position); // A, B, C, D...
           const isSelected = state.phase === "answering" && state.selectedIndex === index;
           const isCorrectAnswer = state.phase === "result" && state.result.correct_index === index;
 
@@ -82,6 +100,7 @@ export function ExerciseQuiz({ exercise }: { exercise: Exercise }) {
                 checked={isSelected}
                 onChange={() => setState({ phase: "answering", selectedIndex: index })}
               />
+              <span className="font-medium text-zinc-500 dark:text-zinc-400">{letter}.</span>
               {option}
             </label>
           );

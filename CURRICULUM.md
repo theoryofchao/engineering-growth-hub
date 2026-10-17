@@ -1,8 +1,8 @@
 # Modern Software Engineering — Living Curriculum
 
 > **Canonical file:** `CURRICULUM.md`  
-> **Version:** 1.0.0  
-> **Last reviewed:** 2026-10-15  
+> **Version:** 1.1.0  
+> **Last reviewed:** 2026-10-17  
 > **Status:** Active / evolving  
 > **Audience:** Experienced full-stack software engineer progressing toward senior technical leadership  
 > **Scope:** 16 domains, 80 stable numbered modules, extensible subtopics and assessments
@@ -36,6 +36,36 @@ A module is not considered mastered because it has been read; progress must be s
 | **G** | Leadership development | Influence execution and improve engineering outcomes | Review packet, written decision, facilitation or coaching evidence |
 
 These tiers describe intended depth, not seniority labels. Some modules in the same domain have different target tiers.
+
+## Seniority signal
+
+| Label | Meaning |
+|---|---|
+| **Core** | Expected competence at any level; necessary but not what gets someone promoted on its own |
+| **Senior** | Typical senior-IC differentiator — depth, ownership, and judgment under ambiguity |
+| **Staff+** | Staff/principal-IC differentiator — cross-system breadth, architectural review, or org-wide reliability/scale ownership |
+| **Staff+/EM** | Leadership-track signal — relevant to a staff+ IC with cross-team influence or to an engineering-management track |
+
+This is directional guidance for prioritizing study toward the next level, not a gate — a junior engineer can and should start Senior-labeled modules early, and a staff engineer still needs Core modules solid. Each module below carries one of these as **Seniority signal**, separate from its depth **Target** tier.
+
+| Domain | IDs | Typical seniority signal |
+|---|---|---|
+| 01. Computer Science Foundations | 01–07 | Core |
+| 02. Programming & Code Quality | 08–13 | Core |
+| 03. Web & Frontend | 14–19 | Core, Senior at the edges (17, 19) |
+| 04. Backend & APIs | 20–24 | Core → Senior (22–24) |
+| 05. Data & Storage | 25–29 | Core → Staff+ (26, 29) |
+| 06. Software Architecture | 30–34 | Senior → Staff+ (34) |
+| 07. Distributed Systems | 35–39 | Senior → Staff+ (39) |
+| 08. Testing & Quality | 40–43 | Core → Senior (41–43) |
+| 09. Infrastructure & Cloud | 44–48 | Senior, Staff+ at Kubernetes (46) |
+| 10. DevOps & Delivery | 49–52 | Senior → Staff+/EM (51–52) |
+| 11. Observability & Reliability | 53–57 | Senior → Staff+ (55, 57) |
+| 12. Security & Privacy | 58–61 | Senior → Staff+ (61) |
+| 13. Performance Engineering | 62–65 | Senior |
+| 14. AI & ML Engineering | 66–70 | Staff+ (66), Senior (67–70, with 70 the fastest-rising signal right now) |
+| 15. Product & Collaboration | 71–75 | Staff+/EM |
+| 16. Leadership & Strategy | 76–80 | Staff+/EM |
 
 ### Completion statuses
 
@@ -73,6 +103,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 01 — Data Structures
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `08`
 - **Learning objective:** Implement a structure from first principles and select it using measured access patterns.
 - **Proficiency assessment:** Build a hash map heap and LRU cache; benchmark and explain complexity.
@@ -90,6 +121,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 02 — Algorithms & Problem Solving
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `01`, `06`, `08`
 - **Learning objective:** Design correct solutions and justify time space and invariants.
 - **Proficiency assessment:** Solve unseen problems with complexity proofs and property-based edge tests.
@@ -108,6 +140,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 03 — Computer Architecture
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Core
 - **Prerequisites:** `08`
 - **Learning objective:** Connect hardware behavior to software runtime costs.
 - **Proficiency assessment:** Profile cache- and allocation-heavy code and explain results.
@@ -124,6 +157,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 04 — Operating Systems
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Core
 - **Prerequisites:** `03`, `08`
 - **Learning objective:** Diagnose resource concurrency and process failures.
 - **Proficiency assessment:** Investigate a deadlock memory leak and exhausted file descriptors.
@@ -141,6 +175,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 05 — Computer Networking
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `04`, `08`
 - **Learning objective:** Trace a request end to end and isolate network faults.
 - **Proficiency assessment:** Use packet capture and system tools to diagnose DNS TLS and timeouts.
@@ -159,6 +194,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 06 — Mathematics for Computing
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Core
 - **Prerequisites:** `08`
 - **Learning objective:** Apply mathematics to algorithms systems and experimental conclusions.
 - **Proficiency assessment:** Prove an algorithm invariant and interpret an experiment with uncertainty.
@@ -176,6 +212,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 07 — Programming Language Theory
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Core
 - **Prerequisites:** `03`, `08`
 - **Learning objective:** Explain how code becomes runtime behavior and where guarantees apply.
 - **Proficiency assessment:** Implement a small parser interpreter or type checker.
@@ -195,6 +232,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 08 — Programming Fundamentals
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** None
 - **Learning objective:** Implement robust programs without relying on framework conventions.
 - **Proficiency assessment:** Implement and test equivalent nontrivial logic in two languages.
@@ -212,6 +250,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 09 — Programming Paradigms
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `08`
 - **Learning objective:** Choose paradigms based on constraints and failure modes.
 - **Proficiency assessment:** Compare functional and object-oriented implementations and their tradeoffs.
@@ -229,6 +268,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 10 — Design Principles & Patterns
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `08`, `09`
 - **Learning objective:** Introduce abstractions that reduce change cost without unnecessary complexity.
 - **Proficiency assessment:** Refactor a tightly coupled component and defend each abstraction.
@@ -246,6 +286,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 11 — Code Quality & Maintainability
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `08`, `10`
 - **Learning objective:** Improve internal quality while preserving externally observable behavior.
 - **Proficiency assessment:** Modernize legacy code with before-and-after test and complexity evidence.
@@ -263,6 +304,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 12 — Developer Tools & Workflows
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `08`
 - **Learning objective:** Work efficiently and reproducibly in unfamiliar repositories.
 - **Proficiency assessment:** Bisect a regression resolve a complex merge and reproduce a build.
@@ -280,6 +322,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 13 — Collaborative Coding
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `10`, `11`, `12`
 - **Learning objective:** Raise quality and shared understanding through collaboration.
 - **Proficiency assessment:** Review a seeded flawed PR and deliver actionable feedback.
@@ -299,6 +342,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 14 — Web Fundamentals
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `05`, `08`
 - **Learning objective:** Build robust interfaces using web platform primitives.
 - **Proficiency assessment:** Deliver a small accessible interactive app without a UI framework.
@@ -316,6 +360,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 15 — Browser Internals
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `03`, `14`
 - **Learning objective:** Explain browser scheduling and rendering and diagnose jank.
 - **Proficiency assessment:** Reproduce and fix long tasks layout thrashing and paint costs.
@@ -333,6 +378,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 16 — Frontend Architecture
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `10`, `14`, `15`
 - **Learning objective:** Choose frontend boundaries and rendering strategies deliberately.
 - **Proficiency assessment:** Build a multi-route app and document alternative rendering designs.
@@ -350,6 +396,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 17 — Frontend Performance
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `15`, `16`, `65`
 - **Learning objective:** Improve real user experience through measured intervention.
 - **Proficiency assessment:** Establish baseline and measure improved metrics under controlled tests.
@@ -367,6 +414,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 18 — UI UX & Accessibility
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `14`, `16`
 - **Learning objective:** Implement inclusive interfaces across device and input contexts.
 - **Proficiency assessment:** Build and audit a keyboard-usable localized responsive feature.
@@ -384,6 +432,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 19 — Advanced Client Applications
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `14`, `16`, `21`
 - **Learning objective:** Build clients resilient to connectivity and synchronization failures.
 - **Proficiency assessment:** Demonstrate offline mutation reconciliation and reconnect recovery.
@@ -403,6 +452,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 20 — Backend Fundamentals
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `05`, `08`
 - **Learning objective:** Build robust maintainable request processing services.
 - **Proficiency assessment:** Implement a service with graceful shutdown and negative-path tests.
@@ -420,6 +470,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 21 — API Design
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `20`, `25`
 - **Learning objective:** Define APIs that are easy to consume and safe to evolve.
 - **Proficiency assessment:** Design version and contract-test a public-facing API.
@@ -438,6 +489,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 22 — Authentication & Authorization
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `21`, `58`
 - **Learning objective:** Enforce identity and permissions across trust boundaries.
 - **Proficiency assessment:** Implement authentication roles and negative authorization tests.
@@ -455,6 +507,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 23 — Backend Architecture
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `10`, `20`, `21`, `25`
 - **Learning objective:** Separate business rules from infrastructure and isolate change.
 - **Proficiency assessment:** Replace storage adapter while preserving tested domain behavior.
@@ -472,6 +525,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 24 — Background Processing
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `20`, `21`, `35`
 - **Learning objective:** Implement recoverable asynchronous execution.
 - **Proficiency assessment:** Demonstrate crash recovery retry exhaustion and duplicate prevention.
@@ -491,6 +545,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 25 — Relational Databases
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `01`, `20`
 - **Learning objective:** Build correct and efficient relational persistence.
 - **Proficiency assessment:** Optimize slow queries and reproduce transaction anomalies.
@@ -508,6 +563,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 26 — Specialized Databases
 
 - **Target:** Broad architectural literacy (`L`)
+- **Seniority signal:** Staff+
 - **Prerequisites:** `25`, `27`
 - **Learning objective:** Choose a storage engine for workloads with explicit constraints.
 - **Proficiency assessment:** Produce selection ADRs comparing specialized and relational solutions.
@@ -525,6 +581,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 27 — Data Architecture
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `25`
 - **Learning objective:** Design data systems resilient to change and concurrency.
 - **Proficiency assessment:** Model consistency and migration scenarios including failure injection.
@@ -542,6 +599,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 28 — Caching
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `20`, `25`
 - **Learning objective:** Improve latency while controlling staleness and correctness.
 - **Proficiency assessment:** Implement cache and measure hit rates invalidation and failure cases.
@@ -559,6 +617,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 29 — Data Engineering
 
 - **Target:** Broad architectural literacy (`L`)
+- **Seniority signal:** Staff+
 - **Prerequisites:** `25`, `37`
 - **Learning objective:** Review pipelines for correctness freshness and maintainability.
 - **Proficiency assessment:** Design recoverable streaming and batch ingestion with data quality gates.
@@ -578,6 +637,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 30 — Architecture Fundamentals
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `10`, `20`, `25`
 - **Learning objective:** Translate constraints into defensible design decisions.
 - **Proficiency assessment:** Write and defend an architecture proposal with alternatives.
@@ -595,6 +655,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 31 — Architectural Styles
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `30`, `35`
 - **Learning objective:** Evaluate styles by organizational and runtime tradeoffs.
 - **Proficiency assessment:** Compare three architecture approaches and cost of operations.
@@ -612,6 +673,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 32 — System Design Building Blocks
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `05`, `20`, `25`, `28`
 - **Learning objective:** Compose scalable architecture using well understood primitives.
 - **Proficiency assessment:** Design a scalable service and justify each component.
@@ -629,6 +691,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 33 — System Design Methodology
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `30`, `31`, `32`
 - **Learning objective:** Lead a system design discussion from ambiguity to decision.
 - **Proficiency assessment:** Complete a timed design review with evolving constraints.
@@ -646,6 +709,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 34 — Architecture Evolution
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Staff+
 - **Prerequisites:** `30`, `31`, `33`
 - **Learning objective:** Plan safe change to existing production architecture.
 - **Proficiency assessment:** Write staged migration plan with verification and rollback.
@@ -665,6 +729,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 35 — Distributed Fundamentals
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `05`, `25`, `30`
 - **Learning objective:** Reason about distributed behavior under failure.
 - **Proficiency assessment:** Explain and experimentally demonstrate partition behavior.
@@ -682,6 +747,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 36 — Distributed Data
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `27`, `35`
 - **Learning objective:** Select distributed correctness and recovery guarantees.
 - **Proficiency assessment:** Implement saga compensation and analyze concurrent updates.
@@ -699,6 +765,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 37 — Messaging & Streaming
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `24`, `35`
 - **Learning objective:** Operate reliable event driven workloads.
 - **Proficiency assessment:** Build consumer with dedupe replay and dead-letter recovery.
@@ -716,6 +783,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 38 — Resilience Patterns
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `20`, `35`, `53`
 - **Learning objective:** Prevent cascading failures and recover predictably.
 - **Proficiency assessment:** Compare behavior before and after resilience controls in fault tests.
@@ -733,6 +801,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 39 — Distributed Scalability
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Staff+
 - **Prerequisites:** `35`, `36`, `37`
 - **Learning objective:** Design practical scaling and fault tolerance approaches.
 - **Proficiency assessment:** Validate a capacity and failure model with load and failover tests.
@@ -752,6 +821,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 40 — Testing Fundamentals
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Core
 - **Prerequisites:** `08`, `11`
 - **Learning objective:** Create fast trustworthy feedback on behavior.
 - **Proficiency assessment:** Deliver layered test suite including negative cases.
@@ -769,6 +839,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 41 — Advanced Testing
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `21`, `38`, `40`
 - **Learning objective:** Find defects missed by example driven tests.
 - **Proficiency assessment:** Demonstrate a new defect detected by property or mutation tests.
@@ -786,6 +857,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 42 — Test Infrastructure
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `40`, `45`, `49`
 - **Learning objective:** Make tests repeatable across developer and CI environments.
 - **Proficiency assessment:** Build isolated CI suite and diagnose a seeded flaky test.
@@ -803,6 +875,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 43 — Debugging & Root Cause Analysis
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `04`, `12`, `40`
 - **Learning objective:** Diagnose unknown failures systematically and verify remediation.
 - **Proficiency assessment:** Find seeded defect and produce root cause evidence.
@@ -822,6 +895,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 44 — Linux & Infrastructure
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `04`, `05`, `12`
 - **Learning objective:** Operate Linux services and diagnose host level failures.
 - **Proficiency assessment:** Fix service networking and resource exhaustion scenarios.
@@ -839,6 +913,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 45 — Containers & Virtualization
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `20`, `44`
 - **Learning objective:** Build reproducible and secure containerized services.
 - **Proficiency assessment:** Package and harden a multi-container application.
@@ -856,6 +931,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 46 — Kubernetes
 
 - **Target:** Broad architectural literacy (`L`)
+- **Seniority signal:** Staff+
 - **Prerequisites:** `44`, `45`, `47`
 - **Learning objective:** Explain orchestration mechanics and review deployments.
 - **Proficiency assessment:** Diagnose failing pod or service in a test cluster.
@@ -873,6 +949,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 47 — Cloud Platforms
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `32`, `44`, `45`
 - **Learning objective:** Deploy secure small production-like cloud systems.
 - **Proficiency assessment:** Provision workload with private components budget and logging.
@@ -890,6 +967,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 48 — Infrastructure as Code
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `12`, `47`
 - **Learning objective:** Provision auditable reproducible environments.
 - **Proficiency assessment:** Deploy update and detect drift through reviewed IaC changes.
@@ -909,6 +987,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 49 — CI/CD
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `12`, `40`, `45`
 - **Learning objective:** Ship verified changes through automated delivery.
 - **Proficiency assessment:** Build commit-to-deployment pipeline with testing and scanning.
@@ -926,6 +1005,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 50 — Deployment Strategies
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `49`, `53`
 - **Learning objective:** Release software with limited disruption and safe recovery.
 - **Proficiency assessment:** Inject bad release and demonstrate controlled rollback.
@@ -943,6 +1023,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 51 — Platform Engineering
 
 - **Target:** Broad architectural literacy (`L`)
+- **Seniority signal:** Staff+
 - **Prerequisites:** `45`, `48`, `49`
 - **Learning objective:** Evaluate platform investments for team productivity.
 - **Proficiency assessment:** Design golden path and score developer experience.
@@ -960,6 +1041,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 52 — Delivery Management
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `49`, `50`, `72`
 - **Learning objective:** Improve flow and outcomes without vanity metrics.
 - **Proficiency assessment:** Analyze sample delivery data and propose experiment.
@@ -979,6 +1061,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 53 — Observability Fundamentals
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `20`, `35`, `43`
 - **Learning objective:** Instrument services so distributed failures can be diagnosed.
 - **Proficiency assessment:** Correlate a cross-service failure using logs metrics traces.
@@ -996,6 +1079,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 54 — Monitoring & Alerting
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `53`, `65`
 - **Learning objective:** Detect important customer impact with low-noise alerts.
 - **Proficiency assessment:** Build alerts detecting seeded latency errors and saturation.
@@ -1013,6 +1097,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 55 — Site Reliability Engineering
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Staff+
 - **Prerequisites:** `53`, `54`, `64`
 - **Learning objective:** Manage reliability with measurable customer outcomes.
 - **Proficiency assessment:** Write SLO spec and compute burn under sample incidents.
@@ -1030,6 +1115,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 56 — Incident Management
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `53`, `54`, `55`, `74`
 - **Learning objective:** Respond to incidents and learn from them effectively.
 - **Proficiency assessment:** Conduct tabletop incident and produce postmortem.
@@ -1047,6 +1133,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 57 — Production Resilience
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Staff+
 - **Prerequisites:** `35`, `55`
 - **Learning objective:** Build and verify business recovery capabilities.
 - **Proficiency assessment:** Execute and time data restore and failover tests.
@@ -1066,6 +1153,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 58 — Application Security
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `14`, `20`, `21`
 - **Learning objective:** Find and remediate common application vulnerabilities.
 - **Proficiency assessment:** Exploit intentionally vulnerable lab and regression test fixes.
@@ -1083,6 +1171,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 59 — Infrastructure Security
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `44`, `45`, `47`, `58`
 - **Learning objective:** Design operational defense in depth.
 - **Proficiency assessment:** Harden cloud test environment and demonstrate access restrictions.
@@ -1100,6 +1189,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 60 — Secure Software Development
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `40`, `49`, `58`
 - **Learning objective:** Integrate security into engineering lifecycle.
 - **Proficiency assessment:** Threat-model service and add meaningful security CI controls.
@@ -1117,6 +1207,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 61 — Privacy Compliance & Governance
 
 - **Target:** Broad architectural literacy (`L`)
+- **Seniority signal:** Staff+
 - **Prerequisites:** `27`, `58`, `59`
 - **Learning objective:** Recognize data governance constraints and review risks.
 - **Proficiency assessment:** Evaluate personal-data design and document control gaps.
@@ -1136,6 +1227,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 62 — Application Performance
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `02`, `03`, `43`
 - **Learning objective:** Measure identify and improve expensive code paths.
 - **Proficiency assessment:** Report before/after optimization with reproducible workload.
@@ -1153,6 +1245,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 63 — Database Performance
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `25`, `62`
 - **Learning objective:** Remove data-layer bottlenecks without introducing regressions.
 - **Proficiency assessment:** Fix slow queries and demonstrate plan changes.
@@ -1170,6 +1263,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 64 — Scalability & Capacity
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `39`, `62`, `63`
 - **Learning objective:** Predict and validate scaling thresholds.
 - **Proficiency assessment:** Build capacity model and check under load.
@@ -1187,6 +1281,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 65 — Performance Measurement
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `40`, `62`, `64`
 - **Learning objective:** Produce trustworthy performance evidence.
 - **Proficiency assessment:** Run load tests and publish reproducible bottleneck analysis.
@@ -1206,6 +1301,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 66 — Machine Learning Foundations
 
 - **Target:** Broad architectural literacy (`L`)
+- **Seniority signal:** Staff+
 - **Prerequisites:** `06`, `08`, `29`
 - **Learning objective:** Understand model training evaluation and failure modes.
 - **Proficiency assessment:** Train baseline model and analyze generalization and errors.
@@ -1223,6 +1319,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 67 — LLM Fundamentals
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `66`
 - **Learning objective:** Explain model constraints and select suitable inference options.
 - **Proficiency assessment:** Benchmark models on task quality latency and cost.
@@ -1236,10 +1333,12 @@ Each item below is deliberately a module-level specification. Add individual les
   - **67.4** Decoding sampling and determinism
   - **67.5** Embeddings and representations
   - **67.6** Model comparison capability limits
+  - **67.7** Local and self-hosted inference (Ollama, llama.cpp, vLLM; quantization; when self-hosting beats an API for cost, latency, or data residency — and when it doesn't)
 
 #### 68 — AI Application Engineering
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `21`, `27`, `67`
 - **Learning objective:** Build AI features with measurable behavior and bounded tool use.
 - **Proficiency assessment:** Create RAG and tool use app with labeled evaluation set.
@@ -1257,6 +1356,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 69 — AI Production Systems
 
 - **Target:** Strong working proficiency (`W`)
+- **Seniority signal:** Senior
 - **Prerequisites:** `53`, `59`, `67`, `68`
 - **Learning objective:** Operate AI features safely and cost effectively.
 - **Proficiency assessment:** Build eval and fallback workflow with failure injection.
@@ -1274,6 +1374,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 70 — AI-Assisted Software Development
 
 - **Target:** Deep mastery (`D`)
+- **Seniority signal:** Senior — the fastest-rising hiring signal of 2026; see 70.9 for tool selection
 - **Prerequisites:** `10`, `12`, `13`, `40`, `43`, `49`
 - **Learning objective:** Use agents effectively while retaining accountability for correctness.
 - **Proficiency assessment:** Deliver complex feature with traceable spec tests review and measured outcomes.
@@ -1289,12 +1390,14 @@ Each item below is deliberately a module-level specification. Add individual les
   - **70.6** AI-assisted debugging
   - **70.7** Sandboxing permissions and prompt injection defenses
   - **70.8** Productivity quality and rework measurement
+  - **70.9** Choosing a coding-agent toolchain (Claude Code, Codex/Copilot, Cursor; agentic CLI vs IDE-embedded assistants; self-hosted models for sensitive codebases) and articulating the tradeoff in an interview
 
 ### Product & Collaboration
 
 #### 71 — Requirements & Product Thinking
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `30`
 - **Learning objective:** Translate ambiguous customer problems into actionable outcomes.
 - **Proficiency assessment:** Write product brief MVP spec and success criteria.
@@ -1312,6 +1415,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 72 — Software Project Execution
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `13`, `71`
 - **Learning objective:** Plan and guide deliverable increments with explicit risks.
 - **Proficiency assessment:** Create roadmap backlog milestone and risk plan.
@@ -1329,6 +1433,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 73 — Product Analytics & Experimentation
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `06`, `29`, `71`
 - **Learning objective:** Measure product outcomes and avoid misleading conclusions.
 - **Proficiency assessment:** Design an event schema and controlled experiment plan.
@@ -1346,6 +1451,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 74 — Technical Communication
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `30`, `33`
 - **Learning objective:** Explain constraints decisions and tradeoffs to varied audiences.
 - **Proficiency assessment:** Present same proposal to engineers and stakeholders.
@@ -1363,6 +1469,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 75 — Cross-Functional Engineering
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `71`, `72`, `74`
 - **Learning objective:** Build alignment across functions without hiding engineering constraints.
 - **Proficiency assessment:** Facilitate prioritization meeting and document decisions.
@@ -1382,6 +1489,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 76 — Technical Leadership
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `30`, `33`, `74`, `75`
 - **Learning objective:** Lead complex engineering decisions and implementation alignment.
 - **Proficiency assessment:** Facilitate design review and publish decision package.
@@ -1399,6 +1507,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 77 — Mentorship & Team Development
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `13`, `74`
 - **Learning objective:** Develop others through actionable feedback and support.
 - **Proficiency assessment:** Perform mentoring simulation and follow-up plan.
@@ -1416,6 +1525,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 78 — Engineering Management Fundamentals
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `72`, `75`, `77`
 - **Learning objective:** Understand people management constraints and team effectiveness.
 - **Proficiency assessment:** Draft quarterly team plan and hiring onboarding scenario.
@@ -1433,6 +1543,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 79 — Engineering Economics
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `30`, `47`, `64`, `71`
 - **Learning objective:** Evaluate technical choices against business value and risk.
 - **Proficiency assessment:** Build three-year alternative cost and sensitivity model.
@@ -1450,6 +1561,7 @@ Each item below is deliberately a module-level specification. Add individual les
 #### 80 — Engineering Strategy
 
 - **Target:** Leadership development (`G`)
+- **Seniority signal:** Staff+/EM
 - **Prerequisites:** `34`, `71`, `76`, `79`
 - **Learning objective:** Align technical direction with long range business outcomes.
 - **Proficiency assessment:** Present 12-month roadmap with tradeoffs milestones and metrics.
@@ -1582,3 +1694,4 @@ For a website-backed curriculum, progress should eventually be user-specific app
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-15 | 1.0.0 | Established 16 domains, 80 stable module IDs, detailed subtopics, prerequisites, objectives, assessments, roadmap, and living-document conventions. |
+| 2026-10-17 | 1.1.0 | Added a **Seniority signal** per module (Core/Senior/Staff+/Staff+/EM), distinct from the proficiency tier, plus a domain-level summary table. Added subtopic 67.7 (local/self-hosted LLM inference) and 70.9 (choosing a coding-agent toolchain: Claude Code, Codex, self-hosted models). Observability & Reliability (domain 11, modules 53–57) reviewed and confirmed already comprehensive — no gap found. |

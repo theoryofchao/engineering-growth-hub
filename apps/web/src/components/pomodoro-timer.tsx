@@ -33,6 +33,24 @@ function formatClock(totalSeconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+// Floats in a fixed screen position (not the page flow) so it stays
+// visible while scrolling through a lesson, instead of only being
+// visible at the top of the page where it was originally embedded.
+// Anchored bottom-LEFT deliberately: the notes panel (NotesPanel) is a
+// full-height flyout always anchored to the right, so a right-anchored
+// widget here would get hidden behind it whenever notes are open. Left
+// is never occupied by anything else fixed in this app, so this avoids
+// needing any cross-component "is the modal open" coordination.
+function FloatingWidget({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-x-4 bottom-4 z-40 sm:inset-x-auto sm:left-4 sm:bottom-4 sm:w-72">
+      <div className="rounded-lg border border-zinc-300 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/95">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function PomodoroTimer({
   learningSessionId,
   modeMinutes,
@@ -175,27 +193,28 @@ export function PomodoroTimer({
 
   if (state.phase === "loading") {
     return (
-      <p role="status" aria-live="polite" className="text-sm text-zinc-500 dark:text-zinc-400">
-        Loading timer…
-      </p>
+      <FloatingWidget>
+        <p role="status" aria-live="polite" className="text-sm text-zinc-500 dark:text-zinc-400">
+          Loading timer…
+        </p>
+      </FloatingWidget>
     );
   }
 
   if (state.phase === "error") {
     return (
-      <div
-        role="alert"
-        className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200"
-      >
-        <p className="font-medium">Timer error.</p>
-        <p className="text-sm">{state.message}</p>
-      </div>
+      <FloatingWidget>
+        <div role="alert">
+          <p className="font-medium text-red-800 dark:text-red-200">Timer error.</p>
+          <p className="text-sm text-red-700 dark:text-red-300">{state.message}</p>
+        </div>
+      </FloatingWidget>
     );
   }
 
   if (state.phase === "idle") {
     return (
-      <div className="rounded-lg border border-zinc-300 px-4 py-3 dark:border-zinc-700">
+      <FloatingWidget>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Start a {modeMinutes}-minute focus session for this lesson.
         </p>
@@ -206,27 +225,26 @@ export function PomodoroTimer({
         >
           Start {modeMinutes}-min session
         </button>
-      </div>
+      </FloatingWidget>
     );
   }
 
   if (state.phase === "completed") {
     return (
-      <div
-        role="status"
-        className="rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200"
-      >
-        <p className="font-medium">
-          Session complete — {formatClock(state.session.elapsed_seconds)} studied.
-        </p>
-        <button
-          type="button"
-          onClick={() => setState({ phase: "idle" })}
-          className="mt-2 rounded-lg border border-green-400 px-3 py-1.5 text-sm font-medium hover:bg-green-100 dark:border-green-700 dark:hover:bg-green-900"
-        >
-          Start another session
-        </button>
-      </div>
+      <FloatingWidget>
+        <div role="status">
+          <p className="font-medium text-green-800 dark:text-green-200">
+            Session complete — {formatClock(state.session.elapsed_seconds)} studied.
+          </p>
+          <button
+            type="button"
+            onClick={() => setState({ phase: "idle" })}
+            className="mt-2 rounded-lg border border-green-400 px-3 py-1.5 text-sm font-medium hover:bg-green-100 dark:border-green-700 dark:hover:bg-green-900"
+          >
+            Start another session
+          </button>
+        </div>
+      </FloatingWidget>
     );
   }
 
@@ -235,49 +253,48 @@ export function PomodoroTimer({
   const timeIsUp = displaySeconds >= targetSeconds;
 
   return (
-    <div
-      role="status"
-      className="rounded-lg border border-zinc-300 px-4 py-3 dark:border-zinc-700"
-    >
-      <p className="text-3xl font-semibold tabular-nums text-black dark:text-zinc-50">
-        {formatClock(displaySeconds)}
-        <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
-          / {modeMinutes}:00
-        </span>
-      </p>
-
-      {timeIsUp && (
-        <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
-          Time&apos;s up! Take a {session.break_minutes}-minute break, or keep going.
+    <FloatingWidget>
+      <div role="status">
+        <p className="text-3xl font-semibold tabular-nums text-black dark:text-zinc-50">
+          {formatClock(displaySeconds)}
+          <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+            / {modeMinutes}:00
+          </span>
         </p>
-      )}
 
-      <div className="mt-3 flex gap-2">
-        {session.status === "active" ? (
-          <button
-            type="button"
-            onClick={() => sendAction(session.id, "pause")}
-            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
-          >
-            Pause
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => sendAction(session.id, "resume")}
-            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
-          >
-            Resume
-          </button>
+        {timeIsUp && (
+          <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
+            Time&apos;s up! Take a {session.break_minutes}-minute break, or keep going.
+          </p>
         )}
-        <button
-          type="button"
-          onClick={() => sendAction(session.id, "complete")}
-          className="rounded-lg bg-black px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-200"
-        >
-          Finish session
-        </button>
+
+        <div className="mt-3 flex gap-2">
+          {session.status === "active" ? (
+            <button
+              type="button"
+              onClick={() => sendAction(session.id, "pause")}
+              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            >
+              Pause
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => sendAction(session.id, "resume")}
+              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            >
+              Resume
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => sendAction(session.id, "complete")}
+            className="rounded-lg bg-black px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-200"
+          >
+            Finish session
+          </button>
+        </div>
       </div>
-    </div>
+    </FloatingWidget>
   );
 }

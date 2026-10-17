@@ -91,6 +91,18 @@ describe("PomodoroTimer", () => {
     await waitFor(() => expect(screen.getByText("Resume")).toBeInTheDocument());
   });
 
+  it("renders as a fixed-position floating widget, not inline page content", async () => {
+    render(<PomodoroTimer learningSessionId={42} modeMinutes={25} />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Start 25-min session")).toBeInTheDocument(),
+    );
+
+    const widget = screen.getByText("Start 25-min session").closest("div.fixed");
+    expect(widget).not.toBeNull();
+    expect(widget).toHaveClass("fixed");
+  });
+
   it("shows a completion summary after finishing", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, init?: RequestInit) => {
       if (init?.method === "PATCH") {
