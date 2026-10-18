@@ -1,0 +1,101 @@
+{
+  "title": "Choosing a Toolchain: Claude Code, Codex, and Self-Hosted Models",
+  "duration_minutes": 25,
+  "sequence": 5,
+  "access_tier": "free",
+  "objective": "Compare agentic coding tools and self-hosted models on concrete selection criteria, and explain the tradeoff the way a senior engineer would defend it in review or an interview.",
+  "content_blocks": [
+    {
+      "heading": "Agentic CLI vs. IDE-Embedded Assistant",
+      "body": "Coding-agent tools split into two product shapes, and conflating them leads to the wrong comparison. Agentic CLI tools — Claude Code, Codex CLI — run in a terminal, can read and edit across an entire repository, execute commands, and operate semi-autonomously on a task you hand off and come back to. IDE-embedded assistants — Cursor, Copilot — live inside the editor, stay tightly in the loop with every keystroke, and are built for inline completion and small, local edits rather than repo-wide delegation.\n\nNeither shape is strictly better; they're built for different jobs. A multi-file refactor or a 'implement this spec end to end' task fits the agentic-CLI model from earlier lessons in this module — plan, delegate, verify. A tight loop of 'finish this line' or 'rename this variable everywhere in view' fits the IDE-embedded model. Many engineers use both, for different parts of the same day."
+    },
+    {
+      "heading": "What Actually Differs Between Claude Code and Codex",
+      "body": "Both Claude Code and Codex CLI are agentic terminal tools, which makes them easy to treat as interchangeable — and easy to pick between on hype rather than evidence. The differences that actually matter for a real task: which model is doing the reasoning (and how it performs on *your* codebase's language and patterns, not a benchmark's), how each tool manages context and repository indexing at scale, what its permission and approval model looks like (what it's allowed to run without asking), and what surrounding primitives it gives you for the workflow from earlier lessons — repository context files, hooks, delegated subagents, and the equivalent.\n\nNone of that is settled by a single demo video or a strong opinion from one blog post. It's settled by running the same representative task — ideally one with a known-good outcome — through each tool on the actual codebase in question, with the same plan-review-verify discipline applied to both.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Two engineers disagree about which agentic CLI tool is 'better' after each tried a different task once. What's the most defensible way to settle which fits their team?",
+          "definition": {
+            "options": [
+              "Run the same real task through each tool on their own codebase",
+              "Pick whichever tool a well-known blog post or conference demo recommends",
+              "Default to whichever tool currently has more GitHub stars or social buzz",
+              "Let whichever engineer happens to type the fastest choose for the team"
+            ],
+            "correct_index": 0,
+            "explanation": "Brand reputation and a single anecdote don't transfer across codebases or tasks; the only comparison that generalizes is running an equivalent real task through each option against the repo it will actually be used on."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Where Self-Hosted Models Enter the Picture",
+      "body": "Running an open-weight model locally or on owned infrastructure — via Ollama, llama.cpp, or vLLM — is a real option, not a hobbyist curiosity. The legitimate reasons to do it: a data-residency or contractual obligation that code can never leave a given network boundary, an air-gapped environment with no outbound network access at all, cost at a volume high enough that owned hardware beats per-token API pricing, or wanting full control over model versioning and uptime.\n\nThe honest 2026 reality check: open-weight coding models have closed much of the gap on bounded, well-specified tasks, but still generally lag frontier hosted models on long, ambiguous, multi-file agentic work — exactly the work this module has spent the most time on. Self-hosting is usually the right call for a narrow, well-defined use case operating under a hard constraint, not a wholesale replacement for a frontier hosted agent on everything.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A fintech team is contractually barred from sending any code to a third-party API. What does this constraint actually imply for their coding-agent choice?",
+          "definition": {
+            "options": [
+              "Accept the risk and use a hosted frontier model anyway, since speed matters more than the policy",
+              "Start with a self-hosted model, even though it may lag a frontier model on hard tasks",
+              "Conclude that no AI-assisted coding workflow is possible at all under a constraint like this one",
+              "Use the hosted model only for test code, since the rule technically applies to production only"
+            ],
+            "correct_index": 1,
+            "explanation": "A hard data-residency constraint is exactly the case self-hosting exists for: the team trades some capability on complex, ambiguous tasks for compliance with a requirement that isn't negotiable. The other options either ignore the constraint or invent an exception the scenario doesn't support."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Decision Framework, Not a Favorite",
+      "body": "Choosing a coding-agent toolchain is a build-vs-buy decision like any other — the same discipline from module 79's economics content applies here. Four axes actually decide it: data sensitivity (is there a hard constraint ruling a hosted API out entirely), task shape (bounded and well-specified vs. open-ended multi-file delegation), budget and volume (per-token cost at the team's actual usage vs. the overhead of running and maintaining owned infrastructure), and the team's appetite for operating that extra infrastructure at all.\n\nNotice what's missing from that list: which tool is currently trending, and which one a conference keynote demoed. Those inputs produce a toolchain that was right for someone else's constraints, not a reasoned answer to this team's own.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Which pair of factors most determines whether a self-hosted model is a reasonable substitute for a frontier hosted agent on a given task?",
+          "definition": {
+            "options": [
+              "The engineer's own personal preference and how polished the tool's marketing copy happens to look",
+              "How bounded the task is, and whether a cost or compliance rule blocks the hosted API",
+              "Whether the codebase happens to already be written in TypeScript, Python, or something else",
+              "How many spare GPUs the team happens to already own sitting unused somewhere in a closet"
+            ],
+            "correct_index": 1,
+            "explanation": "Task shape (bounded vs. open-ended) and a hard constraint (compliance or cost) are what actually predict fit; language choice and leftover hardware don't settle the question on their own."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "What This Signals in an Interview",
+      "body": "Interviewers increasingly probe past 'I used Claude Code' or 'I used Copilot' for whether a candidate can explain *why* a tool fit a specific situation, what guardrails they put around it — a test-as-check, a scoped permission, the plan-then-review discipline from earlier lessons — and what they'd change next time. Naming a tool is table stakes in 2026; it signals nothing about judgment on its own.\n\nThe stronger answer is concrete and falsifiable: a specific task, a specific boundary placed on the agent, and a specific mistake caught before it shipped. That's also, not coincidentally, the same evidence this whole module has been building toward — accountability for correctness, not enthusiasm about the tool.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "In an interview, which answer about AI-assisted development is the stronger signal of seniority?",
+          "definition": {
+            "options": [
+              "\"I use Claude Code for absolutely everything — it's basically a 10x multiplier.\"",
+              "\"I just let the agent decide on its own which tool fits best for each task.\"",
+              "\"I scoped a bounded task, reviewed the diff against the plan, and caught a bug it missed.\"",
+              "\"I avoid AI coding tools entirely, so I can always be sure the code is correct.\""
+            ],
+            "correct_index": 2,
+            "explanation": "Naming a tool and a multiplier is table stakes; describing a concrete task boundary, a verification step, and a real mistake caught is what distinguishes judgment from repeating marketing language."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "There is no universal winner between Claude Code, Codex, IDE-embedded assistants, and self-hosted models — and treating it as a brand loyalty question wastes the one advantage a deliberate choice actually gives: being able to defend it. Decide on data constraints, task shape, and cost, the same way you'd justify any other infrastructure choice. Then be able to say, specifically, why that choice fit the problem — and what you'd watch for if the problem changed."
+    }
+  ]
+}

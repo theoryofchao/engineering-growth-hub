@@ -1,0 +1,15 @@
+{
+  "domain": {
+    "name": "Frontend Engineering",
+    "description": "Deep mastery of browser internals, rendering, and client application architecture."
+  },
+  "module": {
+    "title": "Browser Fundamentals"
+  },
+  "topic": {
+    "title": "Browser Rendering",
+    "slug": "browser-rendering",
+    "description": "How browsers turn HTML, CSS, and JS into pixels on screen.",
+    "proficiency_tier": "D"
+  }
+}

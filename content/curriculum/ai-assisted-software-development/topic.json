@@ -1,0 +1,15 @@
+{
+  "domain": {
+    "name": "AI & ML Engineering",
+    "description": "AI applications, evaluations, AI-assisted development"
+  },
+  "module": {
+    "title": "AI & ML Engineering"
+  },
+  "topic": {
+    "title": "AI-Assisted Software Development",
+    "slug": "70-ai-assisted-software-development",
+    "description": "Use agents effectively while retaining accountability for correctness.",
+    "proficiency_tier": "D"
+  }
+}

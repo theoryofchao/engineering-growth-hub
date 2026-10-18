@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { HealthStatus } from "@/components/health-status";
+import { TierLegend } from "@/components/tier-legend";
 import { TopicList } from "@/components/topic-list";
 
 export default function Home() {
@@ -24,6 +25,8 @@ export default function Home() {
             Dashboard
           </Link>
         </div>
+
+        <TierLegend />
 
         <TopicList />
 

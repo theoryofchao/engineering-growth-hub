@@ -1,0 +1,116 @@
+{
+  "title": "The Productivity Reality Check: What '10x' Claims Actually Hold Up?",
+  "duration_minutes": 25,
+  "sequence": 2,
+  "access_tier": "free",
+  "objective": "Evaluate productivity claims about AI coding tools against measured evidence, and identify which task types show real gains versus which show self-reporting bias.",
+  "content_blocks": [
+    {
+      "heading": "The \"10x Engineer\" Claim vs. the Data",
+      "body": "Marketing and anecdote both lean hard on '10x engineer' framing — blog posts titled 'I built a whole app in a weekend,' demo videos of a feature going from idea to merged PR in minutes. Those stories are true as far as they go: for a certain kind of task, in a certain kind of codebase, that speed is real.\n\nThe measured evidence across broader populations of developers and tasks tells a much more modest, uneven story — and the gap between what people predict, what they feel, and what gets measured is itself one of the most important findings in this whole area. It says something about how unreliable gut-feel productivity estimates are, with or without AI involved."
+    },
+    {
+      "heading": "The METR Randomized Trial",
+      "body": "The METR randomized controlled trial (2025) is the most carefully designed study in this space: experienced open-source developers completed real tasks in codebases they already knew well — not toy benchmarks — with AI assistance for half the tasks and without it for the other half, randomly assigned.\n\nBefore starting, they predicted AI would make them about 24% faster. After finishing, they *felt* about 20% faster. The measured result, from actual task-completion timestamps: they were 19% *slower* with AI assistance.\n\nThat's not a rounding error — predicted and felt both pointed one direction, and the stopwatch pointed the other. A February 2026 follow-up, run with more developers and a wider range of tasks, found smaller but still mixed results: roughly 18% faster for experienced developers returning to the study, about 4% faster for developers new to it — with confidence intervals wide enough in both cases to include zero, meaning the data can't rule out 'no effect at all.'\n\nWhy would experienced developers predict and feel a speedup that didn't happen? The leading explanation from the study itself: time spent reading, understanding, and correcting AI-generated code in an already-familiar codebase doesn't register the same way as time spent typing — it feels like review, not work, even though it consumes just as many minutes.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "In METR's 2025 randomized trial, experienced developers predicted AI would make them 24% faster and felt 20% faster after finishing. What did the actual measurement show?",
+          "definition": {
+            "options": [
+              "19% faster, closely matching what developers had predicted beforehand",
+              "19% slower, the opposite of what was predicted",
+              "No measurable difference in either direction was found",
+              "Over 10x faster, confirming the most optimistic predictions"
+            ],
+            "correct_index": 1,
+            "explanation": "The measured result was 19% slower, despite developers predicting and feeling faster — a striking perception gap that shows up again in later follow-up studies and large-scale survey data."
+          }
+        },
+        {
+          "type": "multiple_choice",
+          "sequence": 2,
+          "prompt": "The February 2026 METR follow-up found modest gains for experienced returning developers and smaller gains for new developers. What made both results hard to treat as solid evidence of a real speedup?",
+          "definition": {
+            "options": [
+              "Both studies measured only self-reported time, not actual task completion",
+              "Confidence intervals were wide enough to include zero in both cases",
+              "The follow-up used a completely different and incomparable task format",
+              "Only developers who already believed AI helps were included in it"
+            ],
+            "correct_index": 1,
+            "explanation": "Wide confidence intervals that include zero mean the data can't rule out 'no real effect' — a small positive number with that much uncertainty isn't strong evidence of a genuine speedup, regardless of its sign."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Pattern Holds at Scale",
+      "body": "This isn't a one-study fluke. Large-scale survey data shows the same perception gap, just measured differently: DORA- and DX-style surveys, which ask developers to self-report, find 80%+ reporting productivity gains from AI tools. Measured telemetry from the same kinds of organizations — pull request lead time, throughput, cycle time — tends to land closer to 10% improvement, and some studies report defect rates rising alongside the speed gains, meaning part of the 'throughput' increase is work that has to be redone.\n\nThe consistent shape across every data source: self-report runs several times higher than instrumented measurement. That's not proof AI tools don't help — it's a reason to be specifically skeptical of any claim based on how fast something *felt*, including your own, and to prefer sources that measured actual outcomes.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "DORA/DX-style surveys find 80%+ of developers self-report productivity gains from AI tools, while measured telemetry across the same kinds of organizations tends to show closer to 10%. What does this gap suggest?",
+          "definition": {
+            "options": [
+              "The telemetry tools are undercounting real gains due to technical limits",
+              "Self-reported productivity feelings are a poor substitute for measured outcomes",
+              "Developers in telemetry studies use AI tools less than survey respondents",
+              "The two data sources are measuring genuinely unrelated things entirely"
+            ],
+            "correct_index": 1,
+            "explanation": "The consistent pattern across every data source in this space — self-report running several times higher than instrumented measurement — is the core reason to distrust gut-feel productivity claims, your own included."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why the Perception Gap?",
+      "body": "Two mechanisms explain most of the gap between feeling fast and measuring fast. First: reviewing and debugging AI-written code takes real, measurable time, especially in a codebase complex or unfamiliar enough that catching a subtle mistake requires actually understanding the surrounding context — and that review time doesn't feel like 'coding time' even though it's required before the work is actually done.\n\nSecond: the *feeling* of progress — code appearing on screen quickly, a plausible-looking diff — isn't the same thing as *time to a correct, reviewed, merged change*. A fast first draft that needs three rounds of correction can easily lose to a slower first draft that needed none, and the slower-feeling path is the one that was actually faster end to end.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A developer finishes a task in less wall-clock time using AI assistance, but spent several of those minutes catching and fixing a subtle bug the AI introduced. Why might they still report feeling faster?",
+          "definition": {
+            "options": [
+              "Bug-fixing time is always faster than writing code from scratch",
+              "Review and correction time doesn't register the same as 'coding' time",
+              "The AI's code is never actually wrong once it compiles cleanly",
+              "Feeling faster and being faster are mathematically the same measurement"
+            ],
+            "correct_index": 1,
+            "explanation": "This is the core mechanism behind the perception gap: time spent reviewing and correcting doesn't feel like 'work' the way typing does, even though it's required time before the task is actually finished."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Where the Gains Are Real",
+      "body": "The evidence does show consistent, real gains in specific categories: boilerplate and scaffolding (generating a new CRUD endpoint that follows an existing pattern exactly), test generation (writing the tedious-but-mechanical cases around a function whose behavior is already decided), working in an unfamiliar language or library (where the alternative is reading documentation from scratch), and greenfield prototyping (no existing constraints to violate).\n\nGains shrink or reverse in large, unfamiliar, or architecturally complex codebases — exactly where senior and staff engineers spend most of their time, and exactly where METR's study measured a slowdown. The pattern is consistent: AI assistance helps most where the task is well-specified and the codebase context needed to do it correctly is small. It helps least where doing the task correctly requires holding a lot of system-wide context in your head — context an agent doesn't have unless you've explicitly given it.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Based on where the evidence shows real, consistent AI productivity gains, which task is the best candidate?",
+          "definition": {
+            "options": [
+              "Refactoring a core authentication module used throughout a large codebase",
+              "Generating a new CRUD endpoint that follows an existing pattern",
+              "Debugging an intermittent race condition in a distributed job queue",
+              "Redesigning a service's architecture to support a new scaling requirement"
+            ],
+            "correct_index": 1,
+            "explanation": "Boilerplate that follows an existing, well-defined pattern is exactly the category with the most consistent measured gains — the opposite of large, architecturally complex, system-wide-context-heavy work like the other three options."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Practical Takeaway",
+      "body": "Treat productivity claims about AI tools the way you'd treat any other engineering claim: ask for the measurement methodology, not the anecdote. 'It felt faster' and 'I shipped a demo in a weekend' are both true statements that tell you almost nothing about whether a team's velocity on real, ongoing work actually improved.\n\nThe honest expectation, based on the best current evidence, is a modest, task-dependent improvement — concentrated in boilerplate, tests, and unfamiliar territory — not a blanket multiplier, and definitely not '10x' for the kind of work that dominates a senior engineer's week."
+    }
+  ]
+}

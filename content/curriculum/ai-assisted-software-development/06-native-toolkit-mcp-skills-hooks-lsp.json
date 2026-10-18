@@ -1,0 +1,137 @@
+{
+  "title": "Claude Code's Native Toolkit: MCP, Skills, Hooks, and Context Hygiene",
+  "duration_minutes": 25,
+  "sequence": 6,
+  "access_tier": "free",
+  "objective": "Explain what Claude Code's MCP, Skills, Hooks, and LSP features actually do, when each is (and isn't) worth using, and why single-purpose chats measurably outperform long mixed ones.",
+  "content_blocks": [
+    {
+      "heading": "Beyond the Workflow Habits: Claude Code's Built-In Enforcement",
+      "body": "Earlier lessons in this module covered habits — separating planning from implementation, writing a CLAUDE.md that onboards an agent the way you'd onboard a new hire, sandboxing permissive agents. Those are things a disciplined engineer does. This lesson covers something different: the specific product features Claude Code ships that turn some of those habits into something closer to infrastructure than willpower.\n\nA widely-circulated community guide to Claude Code — compiled from Anthropic's own best-practices docs and independent practitioner write-ups, not a single person's opinion — converges on the same small set of primitives for this: MCP servers for giving an agent new tools, Skills for packaging reusable expertise without bloating every session's context, Hooks for rules that actually can't be skipped, the Language Server Protocol (LSP) for code understanding that goes beyond text search, and a context-hygiene habit (`/clear`) for keeping a long working session from degrading.\n\nNone of these replace the plan-review-verify discipline from earlier lessons. They're the tooling that makes that discipline cheaper to practice consistently."
+    },
+    {
+      "heading": "MCP Servers: Giving the Agent New Tools (Then Watching the Token Bill)",
+      "body": "The Model Context Protocol (MCP) is how Claude Code connects to things outside its own reasoning: a GitHub account, a Postgres database, a browser it can drive with Playwright, or Context7 — a server that fetches a library's *current* documentation instead of relying on whatever was true as of the model's training cutoff. Installing one is a single command, e.g. `claude mcp add context7`, and from then on the agent can call it like any other tool.\n\nThe catch practitioners converge on: every connected MCP server's tool definitions sit in context on every turn, whether or not that session ever uses them — a real, ongoing token cost, not a one-time setup cost. For a tool you'll call once (check one API response, fetch one file), a plain `curl` or CLI command is often cheaper and faster than round-tripping through MCP. MCP earns its cost when a tool gets called repeatedly within a session — querying a database across many turns of the same conversation, say — where the fixed context cost is paid once and amortized across many calls.\n\nThe practical rule: add an MCP server because a specific, repeated need justifies its permanent presence in context, not because a 'recommended servers' list made it sound useful.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A developer needs to check the response of one specific API endpoint, a single time, as part of debugging a one-off issue. What's the more sensible choice?",
+          "definition": {
+            "options": [
+              "Install and configure an MCP server for that API before making the call",
+              "Use curl or the CLI directly, since this is a one-off call",
+              "Avoid checking the API at all and infer the response from documentation",
+              "Ask a teammate to manually check the response and report back"
+            ],
+            "correct_index": 1,
+            "explanation": "MCP's fixed context cost is worth paying for tools called repeatedly within a session; a single one-off call is exactly the case practitioners point to CLI/curl as cheaper and faster, per the guide's own 'when NOT to use MCP' caveat."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Skills: Expertise That Loads Only When It's Needed",
+      "body": "Slash commands and Skills now share one schema: a Skill is a folder with a `SKILL.md` file — frontmatter (name, description) plus the full instructions, checklists, or scripts for some specific piece of expertise, like running a security audit or writing commit messages in a team's preferred format.\n\nThe reason this is a separate mechanism from just writing everything into CLAUDE.md is progressive disclosure: at startup, Claude Code loads only every Skill's name and description — a few dozen tokens each — not its full body. The full content loads only when a conversation actually triggers that Skill, and any extra resource files the Skill references load only if the Skill itself decides it needs them.\n\nThat staged loading is the whole point. A rule of thumb from the guide: if an instruction applies to something like 80% of conversations in a project, it belongs directly in CLAUDE.md, paid for on every turn because it's needed on every turn. If it applies to a narrow slice — under roughly 20% — it belongs in a Skill, so the other 80%+ of sessions that never need it don't pay for it either.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team wants Claude Code to follow a detailed, 40-line checklist, but only for the roughly 1-in-10 conversations that involve a security-sensitive change. Where should that checklist live?",
+          "definition": {
+            "options": [
+              "Directly in CLAUDE.md, since all instructions should be in one file",
+              "In a Skill, so sessions that never need it don't pay its context cost",
+              "In a comment inside the security-sensitive code it applies to",
+              "Nowhere written down — just mention it when a relevant session comes up"
+            ],
+            "correct_index": 1,
+            "explanation": "This is exactly the progressive-disclosure tradeoff Skills exist for: a narrow-applicability checklist (roughly 20% or fewer of conversations) belongs in a Skill, loaded in full only when triggered, rather than taxing every single session's context the way a CLAUDE.md entry would."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Hooks: The Difference Between a Suggestion and a Rule",
+      "body": "A CLAUDE.md instruction is read by the model and followed... most of the time. It's a suggestion the model weighs against everything else in context, which means a sufficiently unusual situation can override it, the same way a new hire might forget a written policy under pressure. A hook is different: it's a shell command or script that Claude Code *always* runs at a specific point — before a tool call, after one, or when the agent tries to stop — with no dependence on the model remembering or choosing to follow it.\n\nA concrete example: a `PreToolUse` hook configured to match the Read, Edit, and Write tools can run a script that checks the file path being touched against a list of sensitive filenames (`.env`, `secrets.json`, `id_rsa`) and blocks the operation outright if it matches — regardless of what the model's reasoning concluded about whether reading that file was fine this time.\n\nThe hook's exit code is what Claude Code actually reacts to: `0` means the operation proceeds normally; `1` surfaces an error to the human only, with no effect on the agent's next action; `2` blocks the operation entirely and feeds the hook's stderr output back to the model as the reason, so the agent can actually adjust course instead of just failing silently.\n\nThe tradeoff for this reliability: hooks require someone to write and maintain a script, and a badly written one can block legitimate work just as readily as it blocks a mistake.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A security-sensitive instruction currently lives only in CLAUDE.md: \"never read .env files.\" What's the main weakness of leaving it there instead of also enforcing it as a hook?",
+          "definition": {
+            "options": [
+              "CLAUDE.md instructions take effect only after the agent finishes its work",
+              "The model can override or miss the instruction in an unusual situation",
+              "CLAUDE.md files cannot contain any security-related instructions at all",
+              "Hooks and CLAUDE.md instructions always duplicate each other's effect"
+            ],
+            "correct_index": 1,
+            "explanation": "A CLAUDE.md rule is a suggestion weighed against everything else in the model's context — reliable most of the time, but not deterministic. A hook performs the same check as code that runs unconditionally, which is the whole reason the guide treats it as a stronger enforcement layer."
+          }
+        },
+        {
+          "type": "multiple_choice",
+          "sequence": 2,
+          "prompt": "A PreToolUse hook blocks an Edit attempt and exits with code 2. What happens next?",
+          "definition": {
+            "options": [
+              "The edit proceeds anyway, and the exit code is logged for later review",
+              "The edit is blocked, and the hook's stderr is returned to the model",
+              "The edit is blocked, and only the human sees an error with no agent feedback",
+              "Claude Code crashes the session and requires a manual restart to continue"
+            ],
+            "correct_index": 1,
+            "explanation": "Exit code 2 specifically blocks the operation and routes the hook's stderr back to the agent, so it can register why and adjust — that feedback loop is what distinguishes exit code 2 from exit code 1, which only shows the human an error with no effect on the agent."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "LSP: Understanding Code Instead of Just Searching Its Text",
+      "body": "Before native Language Server Protocol (LSP) support, Claude Code's understanding of a codebase's structure came mostly from reading files and grepping for text matches — functional, but blind to the actual semantic relationships between symbols. LSP support changes that: go-to-definition, find-references, hover information, and live diagnostics all become tools the agent can call directly, the same capabilities an IDE gives a human developer.\n\nThe practical difference shows up most on exactly the kind of task earlier lessons flagged as risky to delegate: renaming or refactoring something with many call sites. Finding every real reference to a symbol semantically, across an entire codebase, is a different (and much more reliable) operation than grepping for a string that might also match a comment, a similarly-named variable, or an unrelated file. One frequently cited figure claims roughly a 900x speedup for this kind of cross-codebase lookup versus a manual grep-based search — a number worth treating the way this module's second lesson taught: as an unverified, uninstrumented claim from a single source, not a measured result to repeat as fact.\n\nSupported languages include Python, TypeScript, Go, Rust, Java, and several others; it's built in as of a late-2025 Claude Code release.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An agent needs to find every real call site of a shared function before renaming it, in a large codebase with other similarly-named symbols nearby. Why is LSP's find-references better suited to this than a text search?",
+          "definition": {
+            "options": [
+              "Text search is faster but LSP is more thorough for this specific case",
+              "LSP resolves symbols semantically; text search can match false hits",
+              "LSP and text search return identical results for this kind of task",
+              "Text search only works on markdown and documentation, not source code"
+            ],
+            "correct_index": 1,
+            "explanation": "This is the precise failure mode semantic search avoids: a grep for a function name can also match comments, similarly-named variables, or unrelated files, while LSP's find-references resolves actual symbol usage — exactly the reliability a rename task (flagged as risky in an earlier lesson) needs."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "One Task, One Chat: Why /clear Earns Its Keep",
+      "body": "A cited arXiv study on multi-turn conversations found an average 39% performance drop when a task's full instructions arrive spread across several turns instead of up front in one — the model's output gets measurably worse the longer and more piecemeal a conversation's instruction-giving gets. Separate research on 'context rot' adds a related finding: recall accuracy over a conversation's own earlier content degrades as the context window fills, even well before any hard length limit is hit.\n\nNeither finding is about Claude Code specifically — they're properties of how these models handle long, mixed context in general — which is exactly why the practical response is procedural rather than a model setting: finish one task, then run `/clear` before starting an unrelated one, instead of letting a single chat accumulate an entire day's worth of unrelated work.\n\nThe signal that it's time: the current task is genuinely done (not just paused), or the next task doesn't need anything from the current conversation's history to succeed. Continuing to add unrelated work to an already-long chat is the conversational equivalent of the token bloat MCP servers caused earlier in this lesson — paying an ongoing cost for context that no longer helps, and in this case, measurably hurts.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A developer just finished shipping an unrelated feature in a long-running chat and is about to start debugging a completely separate bug. What does the context-rot and multi-turn research suggest they should do first?",
+          "definition": {
+            "options": [
+              "Keep working in the same chat, since more context only helps the model",
+              "Run /clear before starting the new, unrelated task",
+              "Switch models mid-conversation to reset the context window",
+              "Repeat the original feature's instructions again to refresh the model's memory"
+            ],
+            "correct_index": 1,
+            "explanation": "Both cited findings point the same direction: performance degrades as unrelated, piecemeal context accumulates, so the practical response is to clear it once a task is genuinely finished rather than letting an unrelated new task inherit a long, irrelevant history."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Common Thread",
+      "body": "MCP, Skills, Hooks, LSP, and `/clear` aren't five unrelated features. Each one takes a habit this module already argued for — give the agent the right tools, keep its context minimal and relevant, make a rule actually unskippable, understand code instead of guessing at it, don't let unrelated work pile up — and turns it into something enforced by the product rather than remembered by the person running it.\n\nThat distinction matters for the same reason a test suite matters more than a mental checklist: a habit a person has to remember to apply will eventually get skipped under deadline pressure; a hook that blocks a bad command, or a Skill that only loads when actually relevant, doesn't have that failure mode. None of this removes the engineer from the loop — a badly configured hook or an unnecessary MCP server creates its own problems — but it does mean the discipline from earlier lessons now has infrastructure backing it up, not just good intentions."
+    }
+  ]
+}

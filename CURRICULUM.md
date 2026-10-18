@@ -1391,6 +1391,7 @@ Each item below is deliberately a module-level specification. Add individual les
   - **70.7** Sandboxing permissions and prompt injection defenses
   - **70.8** Productivity quality and rework measurement
   - **70.9** Choosing a coding-agent toolchain (Claude Code, Codex/Copilot, Cursor; agentic CLI vs IDE-embedded assistants; self-hosted models for sensitive codebases) and articulating the tradeoff in an interview
+  - **70.10** Claude Code's native tooling (MCP servers, Skills, Hooks, LSP) and single-purpose-chat context hygiene
 
 ### Product & Collaboration
 

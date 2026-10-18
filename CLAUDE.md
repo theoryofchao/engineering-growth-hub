@@ -7,6 +7,7 @@ Build an exercise-driven software engineering and technical leadership learning 
 - `docs/PRODUCT.md` — product requirements, curriculum, exercises, Pomodoro, leadership, future monetization.
 - `docs/ARCHITECTURE.md` — stack, boundaries, data model, security, deployment.
 - `docs/ROADMAP.md` — prioritized vertical slices and acceptance criteria.
+- `content/curriculum/README.md` — when authoring a learning session's content, follow its sizing rule (blocks per session, body length, exercises per block) rather than guessing; see ADR 0013.
 
 ## Technical direction
 - Monorepo: `apps/web` (Next.js App Router, React, TypeScript, Tailwind, shadcn/ui) and `apps/api` (Python, Flask, SQLAlchemy, Alembic/Flask-Migrate, Pydantic). PostgreSQL; Docker Compose; pytest, Vitest, Playwright; OpenAPI client typing.

@@ -1,0 +1,150 @@
+{
+  "title": "Scaling Up: Loops, Worktrees, and What a Real Company's Playbook Looks Like",
+  "duration_minutes": 25,
+  "sequence": 4,
+  "access_tier": "free",
+  "objective": "Explain how unattended agent loops and parallel worktree workflows work and when each is (and isn't) appropriate, and describe a documented example of a real engineering organization's internal usage.",
+  "content_blocks": [
+    {
+      "heading": "The Ralph Wiggum Loop: An Agent Running Itself",
+      "body": "In mid-2025, developer Geoffrey Huntley described a technique he'd been using: re-run the exact same prompt file against a coding agent, over and over, in a plain loop — no orchestration framework, no special tooling, originally just a Bash `while true` loop reading a single markdown file. He named it after the Simpsons character Ralph Wiggum, and the name stuck in the community that picked it up.\n\nEach iteration starts with a completely fresh context window — the agent has zero memory of the previous iteration, except for whatever it wrote to disk and committed to git. The prompt file itself typically says something like 'read PROGRESS.md, do the next unfinished item, update PROGRESS.md, commit.' His widely cited demonstration ran this loop unattended for an extended stretch and produced a working programming language, compiler included — a result nobody would attempt to hand-hold through a single long conversation, but which a sequence of small, independently-verified steps could reach.\n\nAnthropic later packaged a supported version of the same idea directly into Claude Code: a `/loop` command built on a 'Stop' hook, which intercepts the agent's attempt to end the session and returns it to the same instruction until an explicit completion condition is met, rather than requiring a hand-rolled shell loop.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "The Ralph Wiggum loop re-runs the same prompt file against an agent repeatedly, each time with a completely fresh context window. Why does the technique rely on saving progress to files and git commits instead of conversation memory?",
+          "definition": {
+            "options": [
+              "Because git operations run measurably faster than in-memory updates",
+              "Because each fresh context means unsaved progress is simply gone",
+              "Because Claude Code cannot maintain long conversations under any circumstances",
+              "Because external storage is required before any subagents can run"
+            ],
+            "correct_index": 1,
+            "explanation": "The fresh-context-per-iteration design is the whole mechanism: durability has to come from outside the conversation, which is exactly what makes an unattended multi-hour run both possible and inspectable afterward."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why External State, Not Memory?",
+      "body": "This is the detail that makes the technique work at all: because every iteration starts with a clean slate, anything the agent hasn't written to a file or committed to git is simply gone by the next loop — there's no implicit memory to fall back on. That's not a limitation to work around; it's the design. It forces every unit of progress to be durable and independently inspectable, which is exactly the property you want from a process running unattended for hours without anyone watching it.\n\nIt also has a useful side effect: because progress lives entirely in git history and files on disk, a human can check in on a Ralph loop at any point — read the latest commit, see exactly what changed and why, interrupt it if something's gone wrong — without needing to reconstruct the agent's reasoning from a long conversation transcript. The audit trail *is* the state, not a separate thing kept alongside it.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Midway through an 8-hour Ralph loop run, a developer wants to check whether the agent is making sensible progress. What can they inspect to find out?",
+          "definition": {
+            "options": [
+              "Nothing — the loop's internal state can't be inspected until it finishes",
+              "The git commit history, since progress is committed there each time",
+              "The agent's conversation memory, which persists continuously across all iterations",
+              "A separate dashboard that Claude Code generates automatically for loop runs"
+            ],
+            "correct_index": 1,
+            "explanation": "Because the design deliberately keeps no memory between iterations, git history and files on disk ARE the complete, inspectable record of progress — there's no separate dashboard or persistent conversation to check, and that's intentional."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "When a Loop Is a Good Idea (and When It's Reckless)",
+      "body": "Huntley's compiler run worked because 'does the compiler compile and pass its own test suite' is a crisp, automatable, unambiguous check — there's no judgment call about whether the result is good, just a pass/fail signal the loop can run against itself after every change. An unattended loop is only ever as safe and as useful as its completion check. Hand it an ambiguous goal with no hard pass/fail signal — 'make the codebase better' or 'improve performance' with no specific target — and it won't fail loudly. It will confidently loop for hours toward something that satisfies no test except its own judgment of 'looks done to me,' exactly the kind of self-assessment this whole lesson has been warning against.\n\nThe practical filter: before considering a loop, write down the exact command that will tell you, mechanically, whether a given iteration succeeded. If you can't write that command, the task isn't ready to be looped — not because the task is unimportant, but because there's no way for the loop to know it's going in the right direction without a human checking in constantly, which defeats the entire point of running it unattended.\n\nTry this tonight: think of one task in your own backlog with a crisp, automatable \"done\" check — a specific failing test that should pass, a lint rule that should go clean, a build that should succeed. Write down what that check actually is. If you can't name one, that task isn't a loop candidate yet, no matter how tedious it is.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A developer wants to run an unattended loop with the goal \"refactor this module to be cleaner and more maintainable.\" Why is this a poor candidate, independent of how good the agent is?",
+          "definition": {
+            "options": [
+              "Refactoring tasks are too simple to benefit from an unattended loop",
+              "There's no mechanical pass/fail check for whether code is \"cleaner\"",
+              "Unattended loops can only operate on test files, never source code",
+              "The module would need to already have 100% test coverage first"
+            ],
+            "correct_index": 1,
+            "explanation": "\"Cleaner and more maintainable\" has no mechanical check — it's a judgment call, which means the loop has no reliable signal for whether a given iteration actually moved toward the goal. The task needs a crisp, automatable completion check before it's loop-ready."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Parallelizing with Git Worktrees",
+      "body": "Running two agents on two different features at once, in the same working directory, is a bad idea for a simple reason: both agents can read and write the same files at the same time, and their edits can clobber each other mid-task — one agent's half-finished change gets silently overwritten or corrupted by the other's, often without either agent noticing until something breaks.\n\nThe fix practitioners converged on — and that Claude Code now supports directly via `claude --worktree <name>` — is giving each agent its own git worktree: a separate working directory, backed by the same repository, checked out on its own branch. Each agent operates in complete filesystem isolation from the others; there's no way for one to even see the other's in-progress changes until they're committed and merged.\n\nSeveral practitioner write-ups describe a companion pattern worth adopting alongside this: a `TASKS.md` file, tracked in git at the repo root, listing what each parallel agent (and the human) is currently working on — a lightweight coordination mechanism that prevents two agents from independently picking up the same task without either knowing. The same write-ups recommend committing after each discrete unit of work rather than batching everything into one giant commit at the end, specifically because small, frequent commits make the resulting diffs far easier for a human to actually review — a large diff spanning hours of parallel work is close to unreviewable, while a sequence of small commits tells a story.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Two agents are both working in the same directory on unrelated features. Agent A is halfway through editing utils.py when Agent B's task also touches utils.py and overwrites Agent A's in-progress changes. What's the direct cause of this failure?",
+          "definition": {
+            "options": [
+              "The two features were not actually independent of each other",
+              "Both agents shared the same working directory and could overwrite files",
+              "One of the two agents had a significant bug in its logic",
+              "The repository was missing branch protection rules for the main branch"
+            ],
+            "correct_index": 1,
+            "explanation": "This is specifically the filesystem-isolation problem worktrees solve — the features might genuinely be independent, but sharing one working directory means both agents can touch the same file simultaneously regardless. Separate worktrees give each agent its own isolated directory, so this specific failure can't happen even if the tasks turn out to overlap."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Know the Ceiling",
+      "body": "This doesn't scale without limit. Practitioner reports converge on a practical ceiling somewhere around two to five parallel sessions for a single developer — past that point, the coordination overhead of tracking what each agent is doing, reviewing multiple incoming diffs, and resolving the occasional unexpected conflict eats whatever time the parallelism was supposed to save. Token cost also multiplies directly with every parallel session running — five agents running simultaneously cost roughly five times what one does, which matters for both budget and for how much of a model provider's rate limits get consumed at once.\n\nWorktree isolation only helps when the underlying work is actually independent, which is worth checking explicitly rather than assuming. Two agents touching genuinely separate files — different services, different modules with no shared dependencies — parallelize cleanly. Two agents whose work overlaps on the same shared surface, even if they're nominally 'different tasks,' will produce merge conflicts that cost more human time to untangle than running the same two tasks one after another would have cost in wall-clock time. The question to ask before splitting work across agents isn't 'are these two different tasks' — it's 'would two humans doing these two tasks need to coordinate with each other before either could finish.'",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "You have four tasks today: (1) write unit tests for a function that's already finished, (2) rename a function that's called from dozens of places across the codebase, (3) add a brand-new, self-contained API endpoint, (4) write documentation for a stable, unchanging feature. Which is the worst candidate for running as a parallel, isolated-worktree agent alongside the others?",
+          "definition": {
+            "options": [
+              "Task 1 — writing tests for an already-finished function",
+              "Task 2 — renaming a function with many call-sites",
+              "Task 3 — a new, fully self-contained API endpoint",
+              "Task 4 — writing docs for an unchanging feature"
+            ],
+            "correct_index": 1,
+            "explanation": "Task 2 touches shared surface area that overlaps with whatever else is in flight, which is exactly the 'tightly coupled work' case where worktree isolation costs more in merge-conflict resolution than it saves in parallel wall-clock time. The other three are naturally independent of each other."
+          }
+        },
+        {
+          "type": "multiple_choice",
+          "sequence": 2,
+          "prompt": "A developer runs five Claude Code agents in parallel on five independent tasks, intending to review all five diffs at the end of the day in one sitting. What's the most likely problem with this plan?",
+          "definition": {
+            "options": [
+              "Five agents cannot technically run at the same time at all",
+              "Reviewing five diffs at once loses the benefit of frequent commits",
+              "Independent tasks always produce unreviewable, tangled merge conflicts regardless anyway",
+              "Token costs only multiply when the tasks are not fully independent"
+            ],
+            "correct_index": 1,
+            "explanation": "Batching review to the end of the day defeats the point of small, frequent commits per discrete unit of work — the practitioner pattern of committing often exists specifically so diffs stay reviewable as they land, not so they pile up into one large review session."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "What This Looks Like Inside a Real Company",
+      "body": "Anthropic published a case study — \"How Anthropic teams use Claude Code\" — based on interviews across the company, not limited to the engineering org, which makes it a useful sample of what delegation actually looks like once it spreads beyond people who build developer tools for a living.\n\nTwo concrete examples stand out. When a Kubernetes cluster stopped scheduling new pods, an infrastructure team fed screenshots of their monitoring dashboards directly into Claude Code to diagnose the outage — it turned out to be pod IP exhaustion, a root cause that required correlating several different metrics, not something obvious from a single error message. Separately, the finance team — people without an engineering background — learned to write their recurring data workflows as plain-text files describing the steps in order, then load those into Claude Code to actually execute them, replacing what had been manual spreadsheet work.\n\nA conference talk by the Claude Code team separately reported that an internal review system called 'Claude Tag' handles roughly 65% of pull requests for one specific product-engineering team — with a hard rule attached: changes to Claude Code's own core still require a human code owner's explicit sign-off, no matter how the change was produced. The pattern across every example here is the same one from earlier in this lesson, now visible at the scale of a whole company: delegate the parts of the work that have a clear, checkable shape; keep an explicit human gate on anything core or high-stakes, without exception.\n\nTry this tonight: write a 3-sentence plain-text description of one of your own recurring manual workflows — a status report you compile, a release checklist, a weekly data pull — specific enough that an agent could follow it step by step, the way Anthropic's finance team did.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Anthropic's internal \"Claude Tag\" system handles roughly 65% of PRs for one product-engineering team, but changes to Claude Code's own core still require human sign-off. What does this combination illustrate?",
+          "definition": {
+            "options": [
+              "Automated review is only ever trustworthy for low-stakes, peripheral work",
+              "High delegation and a human gate on core changes coexist deliberately",
+              "The 65% figure applies equally to every team at the company",
+              "Core changes are reviewed faster than peripheral ones at Anthropic"
+            ],
+            "correct_index": 1,
+            "explanation": "The point isn't 'delegate everything' or 'delegate nothing' — heavy delegation on well-scoped work and a strict human gate on core, high-stakes work are compatible choices made at the same time, matching the plan-and-verify discipline from earlier in this lesson, just applied at company scale."
+          }
+        }
+      ]
+    }
+  ]
+}

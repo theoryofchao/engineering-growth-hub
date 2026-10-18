@@ -1,0 +1,148 @@
+{
+  "title": "Real Setups: How Named Engineers Configure Their Agents",
+  "duration_minutes": 25,
+  "sequence": 3,
+  "access_tier": "free",
+  "objective": "Describe specific, named practitioners' documented agentic-coding setups (not generic advice), and apply at least one of their techniques to a real project tonight.",
+  "content_blocks": [
+    {
+      "heading": "Not Generic Advice — Specific People's Actual Setups",
+      "body": "Every 'top 10 Claude Code tips' listicle says roughly the same vague things — 'write clear prompts,' 'review the output,' 'use context files.' This lesson is different: every practice here is traceable to a specific person who wrote it down publicly, with their own reasoning, from real daily use — not a marketing post.\n\nTwo names come up repeatedly. Armin Ronacher created Flask and Jinja2 — two of the most widely used tools in the Python web ecosystem — and has written in detail about the agentic-coding setup he actually uses for daily work. Simon Willison created Datasette and has spent years publishing detailed, specific writing about using LLM tools for real engineering work, including a workshop handout specifically about setting up a codebase for coding agents. Both have been running these workflows daily for shipped work, not demos recorded for an audience."
+    },
+    {
+      "heading": "1. CLAUDE.md Is an Onboarding Doc, Not a Wishlist",
+      "body": "Ronacher's clearest point, from his \"Agentic Coding Recommendations\" post: a CLAUDE.md that's too long stops helping. Every line in it is a tax paid on the agent's context budget on every single session, whether or not that line turns out to matter for the current task. The test he applies is the same one you'd apply to a new hire's onboarding doc: is this a fact the agent needs to act correctly right now, or is it background the agent could discover itself by reading the code? If it's the latter, cut it.\n\nA concrete contrast: 'This project uses Python 3.11 and follows PEP 8' is nearly useless — the agent can tell the Python version from `pyproject.toml`, and style conventions are visible in every file it reads. 'Database migrations must go through `alembic revision --autogenerate`, never hand-written SQL, because we run multiple replicas and hand-written migrations have caused replication drift twice' is exactly the kind of line worth keeping — it's a rule the agent can't discover by reading code, and it explains *why*, which helps the agent apply the rule correctly in an edge case the line didn't explicitly cover.\n\nTry this tonight: open (or create) the CLAUDE.md / AGENTS.md for one of your own projects. For every line, ask \"would I actually notice if this were missing?\" Cut anything you can't answer yes to.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Which line is a better fit for a CLAUDE.md, by Ronacher's own test?",
+          "definition": {
+            "options": [
+              "\"This project uses TypeScript and generally follows standard formatting conventions\"",
+              "\"Never edit `generated/` — CI rebuilds it and discards your changes\"",
+              "\"We care deeply about code quality and maintainability in this codebase\"",
+              "\"The codebase is organized in a clear and logical way throughout\""
+            ],
+            "correct_index": 1,
+            "explanation": "Only this line is something the agent genuinely can't discover by reading the code — nothing in `generated/`'s contents signals that edits there are pointless. The others are either visible from the code itself or too vague to act on."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "2. Give the Agent a Debuggable Surface, Not a Guess",
+      "body": "A concrete example from the same Ronacher post: his sign-up flow sends confirmation emails, and in debug mode those emails are printed to stdout instead of actually being sent. His CLAUDE.md states this explicitly. So when an agent is testing a sign-up flow and needs the confirmation link to continue — the kind of step that would otherwise require a human to go check an inbox and paste a link into the agent's chat — it checks the log instead. It doesn't guess, and it doesn't stall waiting on a person.\n\nThis generalizes well beyond email: any place where an agent needs feedback from a system it can't directly observe — a background job's result, a webhook's payload, an async task's completion — benefits from the same pattern. If there's a log, a status endpoint, or a file the outcome gets written to, the agent can close the loop on its own. If the only way to observe the outcome is a human checking a UI, the agent is stuck waiting every single time, turning what should be an autonomous task back into a supervised one.\n\nOne sentence of CLAUDE.md turned a manual hand-off into something the agent can complete end-to-end, without that session ever needing a human to be the courier for a piece of information the system already had.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Armin Ronacher's CLAUDE.md includes a line noting that outgoing emails are logged to stdout in debug mode instead of actually sent. Why does that one line materially help an agent building a sign-up flow?",
+          "definition": {
+            "options": [
+              "It lets the agent read the real link from the log",
+              "It makes the email-sending code run noticeably faster in production overall",
+              "It's a required configuration flag for the email provider's own API",
+              "It prevents the agent from writing any email-related code at all"
+            ],
+            "correct_index": 0,
+            "explanation": "This is the exact mechanism from Ronacher's post: a debuggable surface (logs) turns a manual hand-off (\"paste me the link\") into something the agent can complete autonomously, because the information it needs is somewhere it can actually look."
+          }
+        },
+        {
+          "type": "multiple_choice",
+          "sequence": 2,
+          "prompt": "A team's background job system writes its results to a database table, but the agent has no documented way to query it. What's the most likely outcome when an agent needs to know if a job succeeded?",
+          "definition": {
+            "options": [
+              "The agent automatically discovers the database schema and queries it correctly",
+              "The agent stalls or guesses, with no reliable way to check",
+              "The background job system fails outright because the agent can't observe it",
+              "The agent silently skips verifying the job and reports success anyway"
+            ],
+            "correct_index": 1,
+            "explanation": "Without a documented, discoverable way to check an outcome — the same role CLAUDE.md's email-log line plays — the agent has no reliable path forward and either stalls or makes an unverified guess, exactly the failure mode a debuggable surface is meant to prevent."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "3. Let the Agent Verify Its Own UI and HTTP Changes",
+      "body": "Willison's workshop handout and blog posts on setting up a codebase for coding agents make a related point from the testing side: give the agent a way to interact with what it built, not just read the code it wrote. He lets agents drive a browser with Playwright or hit endpoints directly with curl, so a UI or API change gets checked against the actually-running application, not just \"this looks right based on reading the diff.\"\n\nThe difference in practice is significant: an agent that writes a new form field and then reads its own code to confirm the field exists is checking that it wrote *something*, not that the something *works* — it can't catch a field that's visually broken, a validation rule that silently fails, or an endpoint that returns the wrong status code for a valid request. An agent that takes a screenshot after the change, or curls the endpoint and checks the response, is checking the actual behavior a user or caller would experience.\n\nTry this tonight: next time you ask an agent for a UI or endpoint change, also explicitly ask it to verify the change itself — with a screenshot, a curl call, or a short Playwright script — before it tells you it's done. Compare how much you trust that result versus a plain \"done\" message with no verification attached.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An agent adds a new \"Submit\" button to a form, then reports the task is done after reading back its own code changes. What has it actually NOT verified?",
+          "definition": {
+            "options": [
+              "Whether the code it wrote matches standard formatting conventions",
+              "Whether the button actually renders correctly and works when clicked",
+              "Whether the surrounding code still compiles without any syntax errors",
+              "Whether the function name follows the project's naming conventions"
+            ],
+            "correct_index": 1,
+            "explanation": "Reading code back only confirms the agent wrote something resembling the intended change — it says nothing about whether the button actually renders, is clickable, or triggers the right behavior in the running app. That requires actually exercising it, e.g. with a screenshot or a Playwright script."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "4. One Place for Every Tool: The Makefile Pattern",
+      "body": "Ronacher documents his linters, tests, dev server, and log locations in a single Makefile, and points the agent — via CLAUDE.md — at it as the canonical entry point. The reasoning generalizes well beyond Make specifically: an agent, like a new teammate, shouldn't have to guess or ask which of five plausible test commands is the right one for this particular project, or whether `npm test` and `npm run test:unit` do different things.\n\nWithout a single documented entry point, an agent facing an ambiguous command set does one of two things, both bad: it picks one and hopes, silently running the wrong subset of tests and reporting false confidence, or it stops and asks, burning a round trip on something that should have been free. A `make test` that's always correct removes the ambiguity entirely — there's exactly one command, it's documented in exactly one place, and it's the same command whether a human or an agent runs it.\n\nThis same discoverability argument is why good onboarding documentation exists for humans at all — the Makefile pattern is really 'apply the same discipline you'd want for a new hire's first day, and point the agent at the same resource.'",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A project has three different test commands (`npm test`, `npm run test:ci`, `jest --config legacy.json`) with no documentation on which one a new contributor should use. What's the most likely consequence for an agent working in this codebase?",
+          "definition": {
+            "options": [
+              "The agent automatically detects and runs the single correct command",
+              "The agent may run the wrong tests and report false confidence",
+              "All three commands run identical test suites so it doesn't matter",
+              "The project's CI pipeline silently corrects whichever command the agent picks"
+            ],
+            "correct_index": 1,
+            "explanation": "Ambiguity doesn't resolve itself — without one documented entry point, an agent is likely to pick a plausible-looking command that doesn't actually run the full, correct suite, and has no way to know that's what happened."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "5. The Permissions Tradeoff: Speed vs. Blast Radius",
+      "body": "Ronacher runs Claude Code with permission prompts fully disabled (`--dangerously-skip-permissions`) — no confirmation before file edits, shell commands, or network calls. Read in isolation, that sounds reckless, and it would be, except for one detail he's explicit about: he only does this inside a sandboxed Docker container, specifically so that a wrong, buggy, or even maliciously-crafted command's blast radius is contained to a disposable environment that can simply be thrown away and recreated.\n\nSimon Willison makes the identical point independently, in a separate 2026 conversation on agentic engineering: asked what matters most for running agents with real autonomy, his answer is sandboxing. Two practitioners who don't work together, writing and speaking independently, arriving at the exact same conclusion from different starting points, is a stronger signal than either claim alone — it suggests this isn't a personal preference but something close to a hard requirement for the setup to be safe at all.\n\nThe practical version of this for most projects: Docker Compose — which this very project already uses for local development — gives a natural sandbox boundary: a container that can read and write its own filesystem and talk to its own services, but can't touch the host machine or anything outside the compose network unless explicitly configured to. Running an agent with relaxed permissions *inside* that boundary is a meaningfully different risk profile than running it the same way directly on a developer's laptop.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Armin Ronacher runs Claude Code with all permission prompts disabled (--dangerously-skip-permissions). What makes this a defensible choice rather than a reckless one, according to both Ronacher and Simon Willison independently?",
+          "definition": {
+            "options": [
+              "The flag is safe by default and needs no extra precaution",
+              "It's only ever used against read-only, non-production codebases anyway",
+              "It runs inside a sandbox, containing a bad command's damage",
+              "Claude Code quietly reviews every command before actually running it"
+            ],
+            "correct_index": 2,
+            "explanation": "Both practitioners, writing independently, land on the same precondition: skipping confirmation prompts is only reasonable inside a sandbox. Without that, the same setup is genuinely dangerous — full filesystem and shell access with no human checkpoint."
+          }
+        },
+        {
+          "type": "multiple_choice",
+          "sequence": 2,
+          "prompt": "A developer runs Claude Code with --dangerously-skip-permissions directly on their laptop, with no container or sandbox, reasoning they'll just watch the terminal output carefully. What's the main problem with this approach?",
+          "definition": {
+            "options": [
+              "Watching the terminal is just as effective as a real sandbox boundary",
+              "A bad command can act on the real filesystem before anyone reacts",
+              "Claude Code ignores the flag entirely unless a sandbox is detected",
+              "The approach is fine as long as the project has good tests"
+            ],
+            "correct_index": 1,
+            "explanation": "Watching output doesn't stop a command from already running — by the time a human reads and reacts to a harmful command's output, it has usually already executed against the real filesystem. A sandbox contains the blast radius structurally, before any human reaction time is needed."
+          }
+        }
+      ]
+    }
+  ]
+}
