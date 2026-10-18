@@ -1,0 +1,101 @@
+{
+  "title": "Framing the Problem: Requirements and Capacity Estimation",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Scope an ambiguous system design prompt into concrete functional and nonfunctional requirements, and produce defensible back-of-envelope capacity estimates before designing anything.",
+  "content_blocks": [
+    {
+      "heading": "Designed to Be Ambiguous",
+      "body": "A system design conversation — in an interview, or at the start of a real greenfield project — almost always starts from deliberate ambiguity. \"Design a URL shortener\" or \"design a notifications system\" with no further detail isn't an oversight in the prompt; it's the format. The engineers who struggle here usually aren't the ones who know fewer patterns — they're the ones who start designing before they've scoped what they're actually designing.\n\nThis session is the discipline for the first five to ten minutes, before a single box gets drawn: turning an ambiguous prompt into a small set of concrete requirements and numbers that every later decision can be checked against. Skipping straight to a diagram feels like progress in the moment, but it just moves the scoping work later, where it's more expensive to redo.\n\nThe three sessions in this short arc follow that same order deliberately: this one frames the problem, the next designs the API and data model against that frame, and the last stress-tests the result — each step depending on the one before it actually having happened."
+    },
+    {
+      "heading": "Functional vs. Nonfunctional Requirements",
+      "body": "Functional requirements describe what the system does — specific, user-facing capabilities like \"a user can post a message\" or \"a user can search recent orders.\" Nonfunctional requirements describe the quality attributes governing how it does that — latency, availability, consistency, durability, cost — and this is where almost all of the interesting design tradeoffs actually live.\n\nThe single highest-leverage move at the start of any design conversation is asking explicitly which nonfunctional requirements matter most for this particular system, rather than silently assuming \"fast and available\" applies the same way everywhere. The right priority genuinely differs by use case: a chat application can usually tolerate a message arriving a little late far better than it can tolerate messages arriving out of order, while a payments system will almost always prioritize never double-charging a customer over shaving a few milliseconds off checkout latency.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A design prompt says \"design a payment processing system.\" Which nonfunctional requirement should take clear priority over the others for this specific system?",
+          "definition": {
+            "options": [
+              "Strong consistency and exactly-once processing, even at some latency cost",
+              "The lowest possible latency, even if it occasionally double-charges a customer",
+              "Maximum write throughput, with consistency handled as a lower priority",
+              "Minimizing storage cost, since payment records are rarely re-read"
+            ],
+            "correct_index": 0,
+            "explanation": "A payment system's defining nonfunctional requirement is correctness of money movement — double-charging or dropping a payment is a much worse failure than a request taking an extra hundred milliseconds, which is why consistency dominates here in a way it might not for a different kind of system."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Back-of-Envelope Math That Actually Matters",
+      "body": "The standard technique: estimate daily or monthly active users, derive requests per second from that, then estimate storage growth and bandwidth from typical payload sizes. The exact numbers matter less than whether real estimation is visibly happening at all — an evaluator is checking whether you reach for concrete numbers, not whether you've memorized the one true answer.\n\nA few reference points are worth having ready regardless of the specific system: peak request rate, not average, is what actually has to be provisioned for, since a design that only survives the average load fails exactly when it matters most. Within one datacenter, a network round trip is typically low single-digit milliseconds; across regions, it's routinely fifty to a hundred-plus milliseconds — the same latency gap this course's earlier Tenant Context Service case study was built specifically to close with local caching instead of cross-region calls.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A system averages 2,000 requests per second across the day, but experiences predictable traffic spikes reaching 20,000 requests per second during peak hours. Which number should drive capacity provisioning?",
+          "definition": {
+            "options": [
+              "The 20,000 peak figure, since that's the load the system actually has to survive",
+              "The 2,000 average figure, since it reflects typical day-to-day load",
+              "The midpoint between average and peak, roughly 11,000 requests per second",
+              "Neither number matters until the system is already live and can be measured directly"
+            ],
+            "correct_index": 0,
+            "explanation": "A system provisioned for average load will fail precisely during the predictable peak — the number that actually determines whether the design survives real traffic is the peak, not the average, which is exactly why peak estimation gets asked for explicitly rather than assumed."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Number Is a Constraint, Not Trivia",
+      "body": "The actual payoff of estimation isn't the numbers themselves — it's what they rule out. \"Five hundred million daily active users\" rules out a single-database design before a single diagram gets drawn, the same way \"must survive an entire region going offline\" rules out a single-region design regardless of how well that region's own infrastructure performs. Treat every capacity number as something that eliminates part of the solution space, not as a fact to state and then move past.\n\nThis reframing changes what the estimation step is for: it's not a formality to get through before the \"real\" design work starts, it's the first real design decision, expressed as arithmetic instead of as a diagram. Two designers who estimate the same numbers and draw the same conclusions from them will tend to converge on compatible designs even if they never compare diagrams directly — which is a useful check on whether the numbers were actually used, rather than just recited.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A design prompt states the system must keep working even if an entire cloud region becomes unavailable. What does this requirement immediately rule out?",
+          "definition": {
+            "options": [
+              "Any design that relies on a single region with no cross-region failover",
+              "Any design that uses a relational database instead of a key-value store",
+              "Any design that includes a caching layer at any point in the request path",
+              "Any design that processes requests synchronously rather than asynchronously"
+            ],
+            "correct_index": 0,
+            "explanation": "Surviving a full region outage is a direct, mechanical constraint on topology — it rules out single-region designs specifically, regardless of what database, caching, or processing model is chosen within that topology."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Ninety-Second Version, Said Out Loud",
+      "body": "Senior-level system design isn't about getting these numbers right in private — it's narrating the scoping process out loud, in real time, so whoever is evaluating the design can see the reasoning that leads to each later decision, not just the decision in isolation. A design that jumps straight to \"I'll shard by tenant and put a queue in front of the write path\" without this preceding scoping step is, from the listener's side, indistinguishable between someone who reasoned their way there and someone who memorized a pattern that happens to fit.\n\nThe requirements and numbers stated in the first few minutes become the reference point for every tradeoff discussed afterward — a decision justified by \"because the requirement said X\" is defensible in a way a decision justified only by \"this is the standard approach\" isn't, and it's the difference an evaluator is actually listening for underneath the specific technology named.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Two engineers open a system design conversation differently: one immediately proposes a specific tech stack and architecture, the other spends the first two minutes stating requirements and rough scale numbers first. Which opening is the stronger signal, and why?",
+          "definition": {
+            "options": [
+              "The requirements-first opening, since later decisions have something to be checked against",
+              "The stack-first opening, since naming a specific technology early shows hands-on expertise",
+              "Neither opening matters much, since the final diagram is what actually gets evaluated",
+              "The stack-first opening, since it saves time that can be spent on deeper technical detail"
+            ],
+            "correct_index": 0,
+            "explanation": "A design justified by a stated requirement can be defended, questioned, and revised when the requirement changes; a design that jumps straight to a stack offers no way to tell whether the choice was reasoned or just familiar, which is exactly the distinction this framing step is meant to surface."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Reasonable, Stated, and Connected",
+      "body": "None of this estimation needs to be exact — it needs to be reasonable, explicitly stated, and connected to an actual design decision made later in the conversation. Skipping this step to \"save time for the real design\" is the single most common mistake at this stage, because every decision made without it ends up unanchored: defensible only by assertion rather than by the requirement that was supposed to drive it in the first place.\n\nThe next session in this arc picks up exactly here, turning these requirements and numbers into an actual API and data model — the first artifact where the scoping work done in this session either pays off or quietly gets ignored. If a later decision can't be traced back to something said in this first step, that's usually a sign the step was skipped rather than a sign it genuinely wasn't needed for this particular kind of system. Make a habit of checking for that trace before calling a design finished."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "domain": {
+    "name": "Software Architecture",
+    "description": "System design, quality attributes, evolutionary architecture"
+  },
+  "module": {
+    "title": "Software Architecture"
+  },
+  "topic": {
+    "title": "System Design Building Blocks",
+    "slug": "32-system-design-building-blocks",
+    "description": "Compose scalable architecture using well understood primitives.",
+    "proficiency_tier": "D"
+  }
+}

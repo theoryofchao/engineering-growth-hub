@@ -1,0 +1,122 @@
+{
+  "title": "Claude Code Fundamentals: Installation, the Mental Model, and Memory",
+  "duration_minutes": 25,
+  "sequence": 6,
+  "access_tier": "free",
+  "objective": "Explain Claude Code's core execution model and memory/permission precedence, and apply the habits that make early use safe and effective.",
+  "content_blocks": [
+    {
+      "heading": "Starting From the Actual Mechanism",
+      "body": "The earlier lessons in this module assumed day-to-day familiarity with running an agentic CLI — plan-review-verify, CLAUDE.md as an onboarding doc, sandboxed permissions. This session fills the gap underneath all of that: what Claude Code actually is, mechanically, and what its memory and permission model look like before the next session's deeper toolkit dive (MCP, Skills, Hooks, LSP) tries to build on top of it.\n\nThe barrier to trying this for real is lower than the depth of these lessons might suggest: installation is one command, and a first real task is achievable within minutes. That practical ease is worth separating from the conceptual depth — you don't need to understand everything in this session before touching the tool, but understanding it is what turns later features from feeling like magic into feeling like consequences of a model you actually have.\n\nA widely-used community guide to Claude Code frames this exact gap the same way: install, run a first task, then build up the mental model — not the reverse order of reading a mechanism first and never actually trying it."
+    },
+    {
+      "heading": "The Master Loop: What's Actually Happening Each Turn",
+      "body": "At its core, Claude Code is a single loop, not a pipeline of specialized stages: the model proposes a tool call, the harness executes it (subject to whatever permissions apply), the result goes back into the model's context, and this repeats until the model decides the task is done. There's no hidden planner model handing off to a separate executor model, no classifier routing a request before it reaches the model, no retrieval system deciding what context the model gets to see.\n\nThe toolset is deliberately small and general rather than one bespoke tool per use case: reading and editing files, running shell commands, searching by content or filename, delegating a piece of work to a subagent, tracking a task list. This reflects a stated design philosophy — \"less scaffolding, more model\" — that trusts the underlying model's judgment over hard-coded control flow.\n\nThat design choice is also why the earlier lessons' habits matter as much as they do: there's no separate orchestration layer quietly compensating for a thin CLAUDE.md or a missing way to verify the agent's own work. The loop is only as good as what you hand it each turn.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Claude Code's architecture is often summarized as \"a single loop, not a pipeline of specialized models.\" What does that design choice actually mean day to day?",
+          "definition": {
+            "options": [
+              "One model reasons, proposes tool calls, and incorporates results every turn",
+              "A planner model decides the steps before handing off to a separate execution model",
+              "Every tool call is validated by a dedicated classifier model before it runs",
+              "Tool results are retrieved through a RAG pipeline rather than returned to the model directly"
+            ],
+            "correct_index": 0,
+            "explanation": "The whole point of the Master Loop framing is the absence of extra stages: one model reasons and acts in a repeating loop, which is also why context quality (a good CLAUDE.md, a real way to verify output) carries so much weight — nothing else in the architecture is compensating for it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Context Is Finite, and It Shows Up as a Number",
+      "body": "A model's context window is always finite, even when it's large, and a long session's tool outputs and file reads accumulate against that budget. Claude Code surfaces this directly — a status indicator shows roughly how much of the window is in use — rather than hiding it until something breaks, and the tool compacts older context automatically as usage climbs toward a high-water mark.\n\nTwo deliberate interventions exist for when automatic compaction isn't enough on its own: compacting on request, which frees space while keeping the current task's thread intact, and clearing, which starts a genuinely empty session. These aren't interchangeable — compacting is for \"this task isn't done yet, but context is getting tight\"; clearing is for \"this task is actually finished.\" The earlier module's \"one task, one chat\" habit is this same constraint, just enforced by a person's judgment instead of only by the tool's automatic behavior.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Midway through a still-unfinished task, responses start getting shorter and the context-usage indicator has climbed past a point where the tool is actively compacting. What's the appropriate next step?",
+          "definition": {
+            "options": [
+              "Clear the session immediately, since high context usage always means start over",
+              "Compact to free up space, since the task itself isn't finished yet",
+              "Ignore the indicator entirely — it has no effect on output quality",
+              "Switch to a different model mid-task to reset the context window"
+            ],
+            "correct_index": 1,
+            "explanation": "Compacting and clearing solve different problems: compacting frees space while preserving the current task's thread, which is exactly what an unfinished task needs. Clearing discards everything, which is appropriate only once the task is actually done."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Memory and Settings: Two Places, One Priority Order",
+      "body": "Configuration lives at two broad levels: a project level, checked into the repository and shared with everyone who clones it, and a personal level, on your own machine, applying across every project you work in and never committed. A project-level CLAUDE.md and settings carry team-wide instructions and hooks; a personal-level CLAUDE.md and settings carry things specific to you — personal shortcuts, tool preferences — that shouldn't be forced on teammates. When both exist, the project level takes precedence, the same logic as a team's shared linter config overriding one person's personal editor settings.\n\nGetting this backwards has two different, equally real failure modes: committing something personal (a local file path, a reference to a personal credential) into the project-level file leaks it to every teammate who pulls the repo; and putting a genuinely team-wide rule only in your own personal config means it silently never applies to anyone else's sessions, including a new hire's first day.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team lead wants a rule — \"always run `make test`, never `pytest` directly\" — to apply to every engineer who works in this repository, including people who join later. Which file should it go in?",
+          "definition": {
+            "options": [
+              "The project-level CLAUDE.md, committed and shared with the team",
+              "Each engineer's personal-level CLAUDE.md, set up individually",
+              "A code comment placed near the test configuration file",
+              "Nowhere written down — just mention it verbally when it comes up"
+            ],
+            "correct_index": 0,
+            "explanation": "A rule meant to bind everyone who works in the repo, present and future, belongs in the committed project-level file — a personal-level file is invisible to teammates, and a verbal mention or stray comment doesn't reach a new hire's first session at all."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Permission Modes and Plan Mode: Choosing How Much Trust to Extend",
+      "body": "Claude Code doesn't have one fixed trust level; it's a spectrum. At one end, a manual mode asks for approval before every file edit and every command. Moving along the spectrum, some modes auto-accept edits but still prompt before running commands; at the far end, a fully automatic mode skips confirmation for both — appropriate only in a disposable, sandboxed environment, which is exactly what an earlier lesson's sandboxing discussion insisted has to sit underneath that end of the spectrum.\n\nPlan Mode sits apart from this spectrum rather than on it: it's a dedicated read-only state where the agent can explore and propose an approach but is structurally prevented from changing anything, regardless of what it proposes. That's a stronger guarantee than a manual mode that merely asks before every edit — it's the \"separate planning from implementation\" habit from this module's very first lesson, now built into the tool itself instead of something you have to enforce by remembering to say no.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An engineer wants an agent to investigate a complex, unfamiliar bug and propose a fix approach, with a structural guarantee that no file gets touched yet — not just a habit of reviewing before approving. Which mode actually guarantees that?",
+          "definition": {
+            "options": [
+              "Plan Mode — file changes aren't possible regardless of what's proposed",
+              "A fully automatic mode — fastest, with review happening afterward instead",
+              "A mode that auto-accepts edits but still prompts before running commands",
+              "Manual mode — every individual action requires its own approval"
+            ],
+            "correct_index": 0,
+            "explanation": "Manual mode still allows an edit to go through once approved; it relies on a human not slipping up. Plan Mode is structurally different — editing simply isn't possible in that state, which is a guarantee rather than a habit."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Two Habits Worth Automating Immediately",
+      "body": "A request structured as what the deliverable is, where it goes, how to build it, and how to verify it succeeded gives an agent a concrete, checkable target — the same \"give the agent a check it can run\" habit from this module's first lesson, just phrased as a request template rather than a principle. \"Add input validation to the login form, in `src/components/LoginForm.tsx`, using a schema with inline errors, verified by an empty email and an invalid format each showing an error\" leaves far less room for a wrong guess about scope than \"make the login form more robust.\"\n\nThe second habit is older than this tool and still the one most often skipped under time pressure: actually read the diff before accepting it, not just the one-line summary of what changed. An earlier lesson's warning about agent output reading fluently even when it's subtly wrong applies from the very first session you run, not just once you're doing advanced work — these aren't beginner-only habits to graduate out of, they're the same senior-engineer habits from this module's first lesson, just adopted as defaults from day one instead of learned after something goes wrong.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Which request gives an agent the clearest, most verifiable target on the first try?",
+          "definition": {
+            "options": [
+              "\"Add Zod validation to LoginForm.tsx with inline errors; verify empty/invalid email shows one\"",
+              "\"Make the login form noticeably more robust than it currently happens to be today, overall\"",
+              "\"Fix whatever validation issues happen to exist somewhere around the login area in general\"",
+              "\"Improve the forms across the whole application in general, wherever that's actually needed most\""
+            ],
+            "correct_index": 0,
+            "explanation": "Only this option specifies what to build, where, how, and how to check it worked — the other three leave scope, location, and success criteria all up to guesswork, the exact failure mode an earlier lesson warned causes an agent to confidently solve the wrong problem."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "What's Next",
+      "body": "With the mechanism, the memory precedence, and the permission spectrum in place, the next session goes deeper into Claude Code's own toolkit — MCP, Skills, Hooks, and LSP — the features that turn these fundamentals into something closer to enforced infrastructure. None of that will land without this session's foundation: a hook is just a script unless you understand what a \"tool call\" actually is in the first place, and a memory-precedence rule is trivia until you've felt a project-level CLAUDE.md actually override your own personal one.\n\nAnd further out, past the native toolkit, is the advanced session on composing all of this for the hardest problems and the highest-stakes environments — which only makes sense once the fundamentals here are no longer something you have to think about. Install it, run one real task through it this week, and the rest of this module will read very differently the second time through."
+    }
+  ]
+}

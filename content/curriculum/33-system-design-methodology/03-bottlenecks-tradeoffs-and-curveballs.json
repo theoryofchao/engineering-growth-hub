@@ -1,0 +1,101 @@
+{
+  "title": "Finding the Bottleneck, and Handling the Curveball",
+  "duration_minutes": 25,
+  "sequence": 3,
+  "access_tier": "free",
+  "objective": "Systematically identify the component most likely to fail or bottleneck in a proposed design, and adapt the design when a constraint changes instead of defending the original choice.",
+  "content_blocks": [
+    {
+      "heading": "A Complete Design Isn't a Stress-Tested One",
+      "body": "A design that looks complete is not the same as a design that's been stress-tested. The last part of this conversation — and often the most differentiating one — is actively trying to break your own design, and responding well when a constraint changes mid-conversation, whether that's an interviewer's hypothetical or reality's actual traffic growth after launch.\n\nThis session is about doing that deliberately rather than hoping no one asks, since the questions that follow a presented design are exactly where the earlier sessions' requirements and tradeoffs either hold up or don't. A design that's never been pushed on tends to have exactly one untested assumption quietly holding the whole thing together.\n\nThis is also where a design conversation stops rewarding memorized patterns and starts rewarding actual engineering judgment, which is why it's worth treating as a skill to practice deliberately rather than a set of questions to brace for."
+    },
+    {
+      "heading": "Walking the Request Path for Single Points of Failure",
+      "body": "Trace the exact path one request takes end to end, and ask at each hop two questions: what happens if this component is slow, and what happens if it's completely unavailable. A component with no replica, no fallback, and no timeout configured is a single point of failure regardless of how reliable it is in normal operation.\n\nA dependency with 99.99% availability is still a complete outage for every request that depends on it during the small fraction of time it's down, if nothing else in the design can serve those requests in the meantime. Reliability in the common case and resilience to the uncommon case are two different properties, and a design can have plenty of the first while having none of the second.\n\nThis is exactly the walk this course's Tenant Context Service case study described doing in practice: every hop on that service's request path was checked for what happens if it's slow and what happens if it's down, well before any real outage forced the question.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A proposed design has exactly one instance of a component on the critical path for every request, with no replica and no fallback configured. What's the concrete risk, independent of how reliable that component is in practice?",
+          "definition": {
+            "options": [
+              "Every request fails during any outage of that component, however rare the outage is",
+              "No real risk exists as long as the component's measured reliability is high enough",
+              "The risk only applies if the component is also the slowest part of the request path",
+              "Single points of failure are only a concern in distributed systems, not single services"
+            ],
+            "correct_index": 0,
+            "explanation": "A single point of failure's danger isn't about how often it fails — it's about what happens on the (rare) occasions it does: with nothing to fall back on, every dependent request fails too, regardless of how impressively high that component's normal-case reliability is."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Finding the Actual Bottleneck",
+      "body": "The bottleneck is the component with the worst combination of highest request volume, highest per-request cost, and least ability to scale horizontally — not necessarily the most interesting or most recently discussed part of the design. A stateful, hard-to-shard component, like a single-writer database or a global sequence generator, is a far more likely bottleneck than a stateless application server, which can simply be replicated behind a load balancer as traffic grows.\n\nThis is a deliberate search, not a guess: walk every component and ask whether it can absorb 10x the current load by adding more of itself, or whether it has some inherent ceiling that more replicas don't fix. The earlier caching and rate-limiting sessions in this course exist largely to push that ceiling further out, not to eliminate it entirely — a bottleneck pushed further out is still a bottleneck, just a less urgent one. Knowing which component it is now is cheaper than discovering it during an incident later.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A design includes a stateless API layer behind a load balancer, and a single-writer relational database that every write passes through. As load grows, which is the more likely bottleneck?",
+          "definition": {
+            "options": [
+              "The single-writer database, which can't be replicated the same way",
+              "The stateless API layer, since it receives every request first in line",
+              "Both are equally likely, since both handle every request in sequence",
+              "Neither, as long as the load balancer itself is sized correctly for it"
+            ],
+            "correct_index": 0,
+            "explanation": "A stateless layer scales by adding more identical instances; a single-writer database has no equivalent escape valve for write volume, which is exactly why it's the more likely bottleneck as load grows, regardless of how well the stateless layer happens to be sized."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Naming the Alternative You Rejected",
+      "body": "Naming a specific alternative that was considered, and explaining concretely why it was rejected for this particular set of requirements, is a stronger signal than presenting one design as if it were the only option on the table. \"I considered eventual consistency here, but rejected it because the requirement explicitly said a user must never see their own just-submitted order as missing\" demonstrates the actual tradeoff reasoning the earlier sessions in this arc exist to build.\n\nThis matters because most real design decisions in practice aren't between one good option and several obviously bad ones — they're between several genuinely reasonable options, and the skill being tested is whether the specific requirement that broke the tie can actually be named. A design presented with no visible alternatives at all usually means they were never seriously weighed in the first place, not that the chosen option was simply the only reasonable one.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Asked \"why did you choose strong consistency here instead of eventual consistency,\" which answer is the stronger signal?",
+          "definition": {
+            "options": [
+              "\"I considered eventual consistency, but the requirement rules it out here\"",
+              "\"Strong consistency is generally the safer and more correct default choice\"",
+              "\"Eventual consistency is an outdated pattern modern systems shouldn't use\"",
+              "\"I'm most familiar with strong consistency, so that's what I used here\""
+            ],
+            "correct_index": 0,
+            "explanation": "Naming the rejected alternative and the specific requirement that ruled it out shows the actual tradeoff reasoning behind the choice — the other answers assert a preference or default without connecting it back to anything this particular system actually requires."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Handling the Curveball",
+      "body": "A changed constraint delivered mid-conversation — ten times the stated scale, a new region, a stricter consistency requirement — is normal, not a sign the original design was wrong. It's testing whether the design can adapt incrementally, rather than requiring a restart from a blank page.\n\nThe strongest response identifies exactly which earlier decision breaks first under the new constraint, and proposes the smallest change that fixes it — the same \"smallest structure that solves the actual problem\" discipline from elsewhere in this course, now applied under real-time pressure instead of with the luxury of reflection. Starting the whole design over from scratch signals that nothing in the original design was actually load-bearing in the first place.\n\nThis is also where the earlier bottleneck analysis pays for itself directly: a component already identified as the likely ceiling is almost always the first thing that breaks once the constraint actually changes.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Partway through presenting a design, the interviewer says \"now assume ten times the original traffic.\" What's the strongest way to respond?",
+          "definition": {
+            "options": [
+              "Identify the specific component that breaks first, and fix only that",
+              "Discard the entire design and start over from a completely blank page",
+              "Insist the original design already handles any traffic without changes",
+              "Change a component chosen at random, since any change shows adaptability"
+            ],
+            "correct_index": 0,
+            "explanation": "A targeted response — naming exactly what breaks and fixing only that — shows the earlier design was reasoned, not arbitrary; discarding everything or refusing to change anything both suggest the original reasoning wasn't really tied to the stated constraints at all."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "One Skill, Three Angles",
+      "body": "This three-session arc — framing, designing, and now stress-testing — is really one skill practiced from three angles: making every design decision traceable back to a specific, stated requirement, so it can be defended, revisited, and changed the moment that requirement changes. That traceability, not familiarity with any particular pattern, is the entire difference between reciting a design and actually doing the engineering behind it.\n\nThe building-blocks topic earlier in this course (caching, rate limiting, multitenancy) supplies the vocabulary; this arc supplies the method for deciding, out loud, which of that vocabulary actually belongs in a given design and why. Neither one is much use without the other — vocabulary without method produces jargon, and method without vocabulary produces vague, unfalsifiable designs that sound reasonable but don't actually commit to anything checkable."
+    }
+  ]
+}

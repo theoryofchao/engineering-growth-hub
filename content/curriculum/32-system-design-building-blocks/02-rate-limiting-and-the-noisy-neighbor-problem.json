@@ -1,0 +1,101 @@
+{
+  "title": "Rate Limiting, Throttling, and the Noisy Neighbor Problem",
+  "duration_minutes": 25,
+  "sequence": 2,
+  "access_tier": "free",
+  "objective": "Design rate limiting and resource isolation so one tenant's traffic spike can't degrade service for everyone else, and explain why autoscaling alone doesn't solve it.",
+  "content_blocks": [
+    {
+      "heading": "One Tenant's Spike, Everyone Else's Incident",
+      "body": "In a single-tenant system, a traffic spike is your own problem. In a multi-tenant system serving many customers from shared infrastructure, one tenant's spike becomes every other tenant's incident unless something actively prevents it — a direct consequence of the same shared capacity that makes multi-tenancy cost-efficient in the first place cutting the other way under load.\n\nThis is the \"noisy neighbor\" problem, and it's not a rare edge case — it's the default outcome of shared infrastructure unless specific controls are built in to contain it. The rest of this session is three layers of control for exactly that: limiting request rate, isolating shared resources, and bounding how far autoscaling alone is trusted to help.\n\nEach layer catches a failure mode the others miss, which is exactly why a system that only implements one of them tends to discover the gap during an actual incident rather than in design review."
+    },
+    {
+      "heading": "Token Bucket and Leaky Bucket",
+      "body": "Two standard rate-limiting algorithms solve slightly different problems. A token bucket allows controlled bursts: tokens accumulate up to a cap, and each request consumes one, so a client that's been quiet can burst briefly before being throttled. A leaky bucket enforces a strictly constant output rate, smoothing any burst into a steady trickle regardless of how requests arrived.\n\nA rejected request (commonly surfaced as an HTTP 429) isn't a bug — it's the bucket being empty or full, working exactly as designed. Choosing between the two is a real design decision: token bucket fits workloads with legitimate bursts (a bulk upload, a batch job kicking off); leaky bucket fits workloads where a steady, predictable rate matters more than permitting any burst at all, such as protecting a downstream system that genuinely can't absorb spikes regardless of their size.\n\nBoth are typically enforced at the edge — an API gateway or load balancer — specifically so a request that's going to be rejected gets rejected before it ever reaches application or database capacity.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A service needs to allow a user to occasionally upload a large batch of files in one short burst, while still capping their sustained average load over time. Which algorithm fits this requirement better?",
+          "definition": {
+            "options": [
+              "Token bucket, since accumulated tokens allow a brief, bounded burst",
+              "Leaky bucket, since it allows unlimited bursts as long as the average stays low",
+              "Neither — bursts of any kind should always be rejected immediately",
+              "Both are functionally identical, so the choice doesn't matter"
+            ],
+            "correct_index": 0,
+            "explanation": "A token bucket's accumulated tokens are exactly what permits a short legitimate burst while still capping sustained throughput — a leaky bucket would smooth that same burst into a steady trickle instead, which is the wrong fit here."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Scoping the Limit: Global Isn't Enough",
+      "body": "Global, per-user, per-tenant, and per-tier limits solve different problems, and only per-tenant or per-tier scoping actually prevents the noisy-neighbor case: a global limit still lets one tenant consume the entire shared budget, starving everyone else while technically staying \"within limits\" for the system as a whole.\n\nThe industry-standard pattern is per-tenant token buckets enforced at the API gateway, before a request ever reaches shared backend capacity. Atlassian's own publicly documented point-based rate limits are scoped this way deliberately — factoring in the calling app's identity, the tenant, and the product tier specifically so one badly-behaved integration's impact stays contained to that integration rather than spreading to every other customer on the platform.\n\nPer-tier scoping adds a further dimension on top of per-tenant: a higher-paying tier can reasonably get a larger bucket, but the isolation property — one tenant's usage can't eat into another's — has to hold regardless of which tier either one is on.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A system enforces only one global rate limit for its entire API, with no per-tenant scoping. A single tenant's buggy integration starts sending far more traffic than normal. What happens to other tenants?",
+          "definition": {
+            "options": [
+              "They can be starved too, since one tenant's usage isn't isolated from another's",
+              "They're fully protected, since the limit caps total system load regardless of source",
+              "They automatically get a larger share of the remaining global budget left over",
+              "Nothing changes for them, because global limits always scale per tenant implicitly"
+            ],
+            "correct_index": 0,
+            "explanation": "A global limit only protects the system's aggregate capacity — it does nothing to stop one tenant from consuming most of that shared budget, which is exactly the gap per-tenant or per-tier scoping is designed to close."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Isolating Resources, Not Just Requests",
+      "body": "Rate limiting controls how fast requests arrive; it doesn't stop a handful of requests that are each individually within the limit from exhausting a shared resource — a connection pool, a worker queue, a thread pool — if those requests happen to be unusually expensive. Bulkheading addresses this directly: splitting pools and queues by tenant or tier so one tenant's exhausted slice can't starve another's, even when both are technically compliant on paper.\n\nFor the small number of tenants that persistently push past what bulkheading alone can absorb, the real-world escape valve is migrating them to dedicated nodes or clusters entirely — accepting the operational cost of partial isolation rather than continuing to engineer around a shared-resource problem that keeps recurring.\n\nThe name comes from ship design for exactly this reason: a bulkhead contains flooding to one compartment instead of letting it sink the whole vessel, which is precisely the property being borrowed here for a shared backend.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A tenant stays within its rate limit, but sends a small number of unusually expensive queries that exhaust a shared database connection pool, degrading service for other tenants. What does this scenario demonstrate?",
+          "definition": {
+            "options": [
+              "Rate limiting doesn't prevent exhaustion from expensive-but-compliant calls",
+              "The rate limit was set too low and simply needs to be raised",
+              "This can only ever happen once a tenant has already exceeded its own rate limit",
+              "Connection pools are never a shared resource in a multi-tenant system"
+            ],
+            "correct_index": 0,
+            "explanation": "The requests are within the rate limit, yet the shared pool still gets exhausted — this is precisely the gap bulkheading closes, since rate limiting governs request frequency, not how much of a shared resource each request consumes."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Autoscaling Doesn't Replace This",
+      "body": "Scaling up application instances doesn't help if the shared backing store — a database, a downstream service — can't absorb the resulting connection and query volume. More application replicas just means more concurrent connections hammering the same bottleneck, which can make an incident worse rather than better: production systems have seen exactly this, where autoscaling the consumer side overloaded a database that had no corresponding way to scale its own connection handling.\n\nAn upper bound on scaling, set by what the actual bottleneck resource can absorb, has to be part of the design rather than an afterthought — autoscaling solves for compute capacity, not for every resource a request chain depends on. Connection pooling and pool-size limits are usually the first concrete place this bound gets enforced in practice, since a pool with a hard cap fails fast and visibly instead of letting an unbounded number of connections pile up against a database that was never sized for them.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team facing a traffic spike lets their service autoscale freely. The incident gets worse, not better, shortly after scaling up. What's the most likely explanation?",
+          "definition": {
+            "options": [
+              "The replicas overwhelmed a shared resource that couldn't scale the same way",
+              "Autoscaling always resolves overload incidents regardless of the bottleneck",
+              "The new replicas were misconfigured copies of the original service",
+              "Traffic spikes are unrelated to how many replicas are currently running"
+            ],
+            "correct_index": 0,
+            "explanation": "More replicas means more concurrent connections and queries against whatever they share — if that shared resource (often a database) can't absorb the increase, scaling the compute layer alone makes the real bottleneck worse."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Three Layers of the Same Discipline",
+      "body": "Rate limiting, bulkheading, and bounded autoscaling aren't competing solutions — they're three layers of the same discipline: contain the blast radius of one consumer's behavior so it costs that consumer, not everyone sharing the platform. A multi-tenant system needs all three, because no single one of them covers every way a shared resource can be overwhelmed — a request-rate problem, a resource-exhaustion problem, and a backing-store-capacity problem are three different failure modes that happen to look similar from the outside.\n\nThe next session's case study shows all three operating together inside one real, publicly documented multi-tenant service, alongside the caching discipline from the previous session — and shows what happens when even well-chosen, well-tested defaults still aren't enough once real production load actually arrives, and what the team actually changed in response."
+    }
+  ]
+}

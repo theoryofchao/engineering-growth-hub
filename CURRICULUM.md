@@ -1392,6 +1392,8 @@ Each item below is deliberately a module-level specification. Add individual les
   - **70.8** Productivity quality and rework measurement
   - **70.9** Choosing a coding-agent toolchain (Claude Code, Codex/Copilot, Cursor; agentic CLI vs IDE-embedded assistants; self-hosted models for sensitive codebases) and articulating the tradeoff in an interview
   - **70.10** Claude Code's native tooling (MCP servers, Skills, Hooks, LSP) and single-purpose-chat context hygiene
+  - **70.11** Claude Code fundamentals (installation, the Master Loop mental model, memory/settings precedence, permission modes and Plan Mode)
+  - **70.12** Advanced Claude Code: composition patterns (Trinity, multi-agent delegation, iterative critique), sandbox/security defaults, and CI/CD hardening
 
 ### Product & Collaboration
 

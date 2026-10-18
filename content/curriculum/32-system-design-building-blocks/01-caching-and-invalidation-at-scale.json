@@ -1,0 +1,101 @@
+{
+  "title": "Caching and Invalidation at Scale",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Choose a caching layer and invalidation strategy for a given latency/consistency tradeoff, and explain concrete caching failure modes from a real production system.",
+  "content_blocks": [
+    {
+      "heading": "The First Lever, With Its Own Risk Attached",
+      "body": "Caching is usually the first lever reached for when latency or load becomes a problem — it's cheaper than scaling the origin, and it works. But it introduces a risk the origin alone doesn't have: a cache can confidently serve the wrong answer, fast, which is a worse failure mode than serving the right answer slowly. A slow origin is an obvious, visible problem; a stale cache often looks completely healthy until someone notices the data is wrong.\n\nThis session is about the two problems that make caching hard in practice — invalidation and thundering herd — grounded in a real production system's account of hitting both, rather than treating caching as a single lever you either pull or don't. Both problems show up regardless of which specific cache technology is in use, which is why they're worth understanding as patterns rather than as quirks of one particular tool — the same pattern recognition this course has valued everywhere else, just applied to infrastructure instead of code."
+    },
+    {
+      "heading": "Where Caching Lives",
+      "body": "Caching happens at several layers, each with a different latency/consistency tradeoff: client-side (fastest, but only helps that one client), CDN/edge (great for content shared across everyone, useless for per-user data), application-level — in-process or a shared store like Redis — and database-level (query caches, buffer pools, closest to the source of truth and hardest to get wrong).\n\nThe general rule: the closer a cache sits to the request's origin, the bigger the latency win per hit, but the harder it is to keep consistent across many instances that each have their own copy. A CDN caching a logged-out marketing page is low-risk; an in-process cache holding a user's current subscription tier is high-risk if it's wrong even briefly.\n\nA shared application-level cache (Redis, Memcached) sits in between: every instance sees the same value, so it avoids the multi-copy consistency problem an in-process cache has, at the cost of an extra network hop that a purely in-process cache doesn't pay.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team needs to cache two different things: a globally shared terms-of-service page, and a per-user permissions flag that changes rarely but must never be stale for more than a second or two. Which pairing of cache layers fits best?",
+          "definition": {
+            "options": [
+              "CDN/edge for the page; an actively-invalidated store for the flag",
+              "CDN/edge for both, since CDNs can safely cache any kind of content",
+              "An in-process cache for both, since it's the fastest option available",
+              "No caching for either — permissions-sensitive data should never be cached"
+            ],
+            "correct_index": 0,
+            "explanation": "A CDN is ideal for identical content served to everyone, but a per-user permissions flag needs a cache that can be actively invalidated the moment it changes — the layer has to match what the data actually requires, not just whichever is fastest."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Invalidation: Time-Based vs. Event-Based",
+      "body": "Two fundamental invalidation strategies exist. Time-based (TTL) is simple — a cached value expires after a fixed window — but it means the cache can serve stale data for up to that whole window, by design. Event-based invalidation sends an explicit message when the underlying data changes, which is fresher but depends on that message actually being delivered.\n\nA real example grounds this: Atlassian's engineering team has written publicly about their Tenant Context Service, a system that maps each customer to the shard and database holding their data. Its node-local caches could hold an entry for over an hour, yet real changes still propagated to every cache within low single-digit seconds — because invalidation rode on a dedicated publish-subscribe channel instead of relying on the TTL to eventually catch up. The old line about cache invalidation being one of the two hard problems in computer science has a concrete answer here: don't rely on TTL alone for anything that must be correct quickly.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A tenant's subscription has just been downgraded, which must take effect within seconds everywhere. A separate, rarely-changing display setting can safely be wrong for a few minutes. Which invalidation approach fits each one?",
+          "definition": {
+            "options": [
+              "Event-based invalidation for the subscription; a long TTL for the setting",
+              "A long TTL for both, since both values change rarely in practice",
+              "Event-based invalidation for both, regardless of urgency either way around",
+              "No caching for the subscription value, or for the display setting at all"
+            ],
+            "correct_index": 0,
+            "explanation": "The urgency of a given piece of data, not how often it changes on average, is what should decide the invalidation strategy — a subscription downgrade needs to propagate fast, while a cosmetic setting tolerates a TTL window just fine."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Cache Stampede: When Everyone Misses at Once",
+      "body": "When a popular cache key expires, many concurrent requests can miss simultaneously and all hammer the origin at the same moment — a thundering herd that can take down the very system the cache was protecting. The standard mitigations are request coalescing (only one of the simultaneous misses actually queries the origin; the rest wait for its result), jittered expiry (spreading TTLs slightly so keys don't all expire in the same instant), and background refresh (recomputing a popular value before it expires, so requests never see a miss at all).\n\nThe same Tenant Context Service case study hit this concretely: switching its caching library specifically added background refresh and blocked concurrent requests for the same stale key from each independently re-fetching. That one change measurably improved p99 latency — the tail, not the average — which is exactly the symptom a stampede produces: most requests are fine, but a cluster of unlucky ones pile up behind a cold cache.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A caching library upgrade adds background refresh and coalesces concurrent requests for the same expired key. Why would this specifically move p99 latency more than average latency?",
+          "definition": {
+            "options": [
+              "It directly fixes the tail case where requests pile up behind a cold miss",
+              "Average and p99 latency always move by the same amount for any caching change",
+              "Background refresh makes every request faster by a fixed, constant amount",
+              "p99 latency is unrelated to cache misses and reflects only network conditions"
+            ],
+            "correct_index": 0,
+            "explanation": "A stampede is a tail phenomenon — most requests hit a warm cache and are unaffected either way, while a cluster of simultaneous misses behind an expired key produces the outsized pile-up that shows up specifically in the slowest percentiles."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Cheapest Hit Is the One That Never Leaves the Process",
+      "body": "The same case study's biggest latency win came from a dedicated cache that runs as a sidecar alongside each calling service — reading from a long-lived local cache (invalidated within seconds via the same publish-subscribe mechanism, even with an hour-plus TTL as a backstop) and querying multiple regions in parallel, taking the first valid response rather than waiting on one region at a time.\n\nThe reported result: client-observed p99 latency around 0.7 milliseconds, roughly an order of magnitude faster than a direct network round trip to the underlying service, with reliability described as close to 100% once the sidecar was rolled out. The general pattern travels well past this one case: for anything called on nearly every request, the fastest possible version of that call is one that never actually leaves the calling process, and investing in the client side of an interface can matter as much as the service behind it.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A client calls multiple regions in parallel for a lookup and uses whichever response arrives first, instead of calling one region and waiting. Why does this specifically help tail latency?",
+          "definition": {
+            "options": [
+              "It removes the slowest region's response time from the result",
+              "It guarantees every region responds at exactly the same speed",
+              "It reduces the total number of network calls made overall",
+              "It only helps average latency, with no effect on the tail"
+            ],
+            "correct_index": 0,
+            "explanation": "Calling in parallel and taking the first response means an occasional slow or degraded region no longer sets the pace for that request — exactly the kind of occasional outlier that drags down tail latency when calls are made sequentially."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Caching Is a Cost, Not a Default",
+      "body": "None of this is free. Every caching layer is a new place for a specific class of bug to hide — a stale read, an invalidation race, a memory-pressure eviction at the worst possible moment — and each one adds to the number of places a correctness bug can originate from. The same judgment this course keeps returning to applies here directly: don't add a caching layer for a latency or load problem you haven't actually measured, and match the invalidation strategy to how quickly a given piece of data actually needs to be correct, not to whichever approach is simplest to wire up.\n\nThe next two sessions build directly on this one: rate limiting and resource isolation (next) exist partly to protect the origin a cache is already shielding, and the tenant-metadata case study after that leans on this exact caching discipline — including the same stampede-prevention mechanism — to hit its own latency targets."
+    }
+  ]
+}

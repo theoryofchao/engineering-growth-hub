@@ -1,0 +1,105 @@
+{
+  "title": "Multitenancy at Scale: A Real Tenant Context Service",
+  "duration_minutes": 25,
+  "sequence": 3,
+  "access_tier": "free",
+  "objective": "Compare tenant-isolation models by their tradeoffs, and trace how a real production tenant-metadata service evolved under real latency, availability, and scale pressure.",
+  "content_blocks": [
+    {
+      "heading": "How Much Do Tenants Share?",
+      "body": "Multi-tenancy means many customers share infrastructure instead of each getting their own deployment — the dominant cost-efficient model for SaaS at scale. Every design decision in a multi-tenant system traces back to one question: how much do tenants share, and how much is kept separate?\n\nThis session's case study is Atlassian's own publicly documented account of a service built to answer exactly that question for Jira and Confluence Cloud — a genuinely useful one to know in detail, not just as an abstract example. It also pulls together the previous two sessions' caching and rate-limiting discipline into one real system, rather than leaving them as separate, unconnected techniques, and ends with the general lesson that travels furthest beyond this one specific case.\n\nIt's also exactly the kind of story worth having ready for a system-design interview: not a textbook pattern recited from memory, but a real system, with real numbers, that actually shipped."
+    },
+    {
+      "heading": "Three Isolation Models",
+      "body": "Shared-schema puts every tenant in one database, isolated only by a tenant_id column in every table — cheapest and highest density, but weakest blast-radius containment: a bug in one query's WHERE clause can leak another tenant's row. Schema-per-tenant gives each tenant its own schema inside a shared database instance — better isolation, still bounded by that one database's total capacity. Database-per-tenant (a \"silo\" model) gives each tenant a fully separate database, often grouped into shards that share underlying compute — the strongest isolation, and the easiest story for per-tenant backup, migration, and compliance, at the highest operational cost per tenant.\n\nReal systems often land at the database-per-tenant end specifically when compliance, backup granularity, or blast-radius containment matter more than raw density — not because it's unconditionally \"best.\" Atlassian's own Jira architecture has stayed on a database-per-tenant model through its cloud migration for exactly these reasons.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A SaaS product serves customers with strict regulatory requirements for per-customer data export, deletion, and backup isolation. Which tenant-isolation model best fits that specific requirement?",
+          "definition": {
+            "options": [
+              "Database-per-tenant, since each tenant's data is already physically separate",
+              "Shared-schema, since a single database is simplest to back up as a whole",
+              "Schema-per-tenant is always the correct default regardless of the requirement",
+              "Isolation model choice has no bearing on compliance or backup requirements"
+            ],
+            "correct_index": 0,
+            "explanation": "Compliance needs like per-customer export, deletion, and backup granularity map directly onto physical separation — a database-per-tenant model gives that for free, where a shared schema would require extra engineering to achieve the same guarantee."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Problem a Centralized Tenant Map Solves",
+      "body": "Once services are built statelessly and tenant data is split across many databases or shards, two questions need answering on nearly every request: which shard or database holds this specific tenant's data, and which regional endpoint should handle this tenant's traffic at all. Duplicating that mapping logic into every service that needs an answer means the same bug gets introduced — and has to be fixed — in however many places copied it.\n\nAtlassian's Tenant Context Service centralizes that mapping instead: one service, organized by which consuming product is asking, that every other service calls to resolve a tenant's database credentials, regional routing, active product entitlements, and related metadata — with access scoped so, for instance, Jira's calls never receive Confluence's database credentials.\n\nThat per-consumer access scoping matters as much as the routing itself: centralizing a lookup is only a safe idea if centralizing it doesn't also centralize access to everything every product could ever need.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A platform has a dozen services, each independently maintaining its own copy of tenant-to-database routing logic. A routing bug is discovered. What does centralizing that logic into one dedicated service primarily guard against?",
+          "definition": {
+            "options": [
+              "The same bug needing to be found and fixed in every duplicated copy",
+              "Any possibility of a routing bug ever occurring in the first place",
+              "The need for any service to ever call another service over the network",
+              "Tenants being able to access each other's data under any circumstances"
+            ],
+            "correct_index": 0,
+            "explanation": "Centralizing shared logic doesn't make bugs impossible — it ensures a fix only has to happen once, in one place, instead of being rediscovered and reapplied across every service that duplicated the same logic independently."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Requirements Unusually Extreme for an Internal Service",
+      "body": "A service that sits on the path of nearly every request to nearly every product has requirements far more extreme than a typical internal service: Atlassian's published figures for the Tenant Context Service target tens of thousands of requests per second at the lowest achievable latency, deployment across every region the products operate in, and an availability target in the four-to-five-nines range — because an outage in this one service stalls requests to everything built on top of it.\n\nThose requirements, not a preference for complexity, are what justified a materially more sophisticated architecture than a straightforward \"query a database\" design would need: a CQRS pattern over a managed key-value store, fed by a durable event stream, with independent regional deployments that could fail over to each other.\n\nData integrity mattered just as much as speed — context data was treated as something that must never become permanently corrupted, which is why the write path (a single source-of-truth catalogue service) was kept deliberately separate from the many optimized read paths serving actual lookups.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why would a centralized tenant-lookup service need a dramatically higher availability target than an average feature's backing service?",
+          "definition": {
+            "options": [
+              "It sits on the request path for nearly every product, so its outage stalls everything built on it",
+              "Centralized services are always held to the same availability target as everything else",
+              "Higher availability targets are set arbitrarily, independent of what a service's outage would affect",
+              "Availability targets only matter for services that store data, not ones that route requests"
+            ],
+            "correct_index": 0,
+            "explanation": "Availability targets should scale with blast radius: a service called on nearly every request to nearly every product fails disproportionately more things when it's down, which is exactly why its own target is set far higher than a typical service's."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "What Actually Broke Under Real Load",
+      "body": "Even a well-chosen managed database wasn't magic under real load: at a few thousand requests per second per region, Atlassian's team saw occasional errors and double-digit-millisecond latency spikes from a managed key-value store that was still operating entirely within its own documented service-level agreement. The fix wasn't a bigger database — it was removing most requests from the database's path entirely, through local caching invalidated via a lightweight publish-subscribe channel, the same pattern covered in this arc's earlier caching session.\n\nThe same shape of problem repeated at the load-balancer layer (a routing algorithm change traded lower p99 latency for a different reliability profile) and in how calling services made requests in the first place. The common thread: every managed building block performed exactly as documented, and the gap was in how those pieces were composed together, not in any one piece being broken.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A managed database is producing occasional latency spikes under heavy load, but a review confirms it's still operating fully within its documented SLA. What does this situation actually call for?",
+          "definition": {
+            "options": [
+              "Changing how the system uses the database, not blaming the database itself",
+              "Filing a support ticket, since a compliant service should never spike at all",
+              "Replacing the database with a different vendor's product immediately",
+              "Ignoring the spikes entirely, since compliance means no action is needed"
+            ],
+            "correct_index": 0,
+            "explanation": "A component performing within its documented limits isn't broken — the gap is almost always in how it's being used under load, and the actual fix here was reducing direct calls to it via caching, not replacing or blaming the database."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Payoff: Pushing the Cache to the Client",
+      "body": "The largest latency win came from a dedicated cache running as a sidecar alongside each calling service — a long-lived local cache invalidated within seconds via the same publish-subscribe mechanism even with an hour-plus TTL as backstop, querying multiple regions in parallel and taking the first valid response. The reported result: client-observed p99 latency around 0.7 milliseconds, roughly an order of magnitude faster than a direct network round trip, with reliability described as nearly 100% since that rollout.\n\nThe lesson generalizes well past tenant metadata specifically: for anything called on nearly every request, the fastest possible version of that call never leaves the calling process at all, and investing in the client side of an interface can matter as much as the service behind it — a point worth having ready, concretely, for exactly the kind of system-design conversation this case study is good preparation for."
+    },
+    {
+      "heading": "The Pieces Compound",
+      "body": "Isolation model, rate limiting, and caching from earlier in this arc aren't independent decisions in a real multi-tenant system — they compound. A database-per-tenant isolation model is exactly what made a centralized tenant-to-database mapping necessary in the first place; and the caching and resilience patterns from the previous two sessions are what made that mapping service fast and reliable enough to sit on every single request path without becoming the whole platform's bottleneck. Naming the tradeoff behind each piece — not just the pattern's name — is what turns \"I've read about this\" into something defensible in a real design conversation.\n\nThat's also the most concrete, checkable form this whole arc's skill takes: given any one piece — isolation model, rate limit scope, cache layer — can you say which of the other two it depends on, and why changing it would force a change somewhere else in the system?"
+    }
+  ]
+}

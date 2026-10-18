@@ -1,13 +1,13 @@
 {
   "title": "Claude Code's Native Toolkit: MCP, Skills, Hooks, and Context Hygiene",
   "duration_minutes": 25,
-  "sequence": 6,
+  "sequence": 7,
   "access_tier": "free",
   "objective": "Explain what Claude Code's MCP, Skills, Hooks, and LSP features actually do, when each is (and isn't) worth using, and why single-purpose chats measurably outperform long mixed ones.",
   "content_blocks": [
     {
       "heading": "Beyond the Workflow Habits: Claude Code's Built-In Enforcement",
-      "body": "Earlier lessons in this module covered habits — separating planning from implementation, writing a CLAUDE.md that onboards an agent the way you'd onboard a new hire, sandboxing permissive agents. Those are things a disciplined engineer does. This lesson covers something different: the specific product features Claude Code ships that turn some of those habits into something closer to infrastructure than willpower.\n\nA widely-circulated community guide to Claude Code — compiled from Anthropic's own best-practices docs and independent practitioner write-ups, not a single person's opinion — converges on the same small set of primitives for this: MCP servers for giving an agent new tools, Skills for packaging reusable expertise without bloating every session's context, Hooks for rules that actually can't be skipped, the Language Server Protocol (LSP) for code understanding that goes beyond text search, and a context-hygiene habit (`/clear`) for keeping a long working session from degrading.\n\nNone of these replace the plan-review-verify discipline from earlier lessons. They're the tooling that makes that discipline cheaper to practice consistently."
+      "body": "Earlier lessons in this module covered habits — separating planning from implementation, writing a CLAUDE.md that onboards an agent the way you'd onboard a new hire, sandboxing permissive agents — and the last session covered the mechanics of running Claude Code at all: installation, the Master Loop, memory precedence, permission modes. This lesson covers something different: the specific product features Claude Code ships that turn some of those habits into something closer to infrastructure than willpower.\n\nA widely-circulated community guide to Claude Code — compiled from Anthropic's own best-practices docs and independent practitioner write-ups, not a single person's opinion — converges on the same small set of primitives for this: MCP servers for giving an agent new tools, Skills for packaging reusable expertise without bloating every session's context, Hooks for rules that actually can't be skipped, the Language Server Protocol (LSP) for code understanding that goes beyond text search, and a context-hygiene habit (`/clear`) for keeping a long working session from degrading.\n\nNone of these replace the plan-review-verify discipline from earlier lessons. They're the tooling that makes that discipline cheaper to practice consistently."
     },
     {
       "heading": "MCP Servers: Giving the Agent New Tools (Then Watching the Token Bill)",

@@ -1,0 +1,101 @@
+{
+  "title": "Designing the API, Data Model, and Communicating the Design",
+  "duration_minutes": 25,
+  "sequence": 2,
+  "access_tier": "free",
+  "objective": "Design a coherent API and data model from stated requirements, and communicate a system design clearly enough that someone else could actually implement from it.",
+  "content_blocks": [
+    {
+      "heading": "The Contract Everything Else Depends On",
+      "body": "With scope and scale established, the next concrete artifact is the API and data model — the contract that every later component (services, storage, scaling strategy) has to satisfy. Getting this wrong early is expensive precisely because so much downstream design quietly depends on it being right, and a mistake here tends to surface only once client code has already been written against it.\n\nThis session treats the API and data model as the second real design decision in the conversation, right after scope and scale, rather than as implementation detail to defer until later. Treating it as an afterthought is one of the most common ways an otherwise well-scoped design still ends up hard to build correctly.\n\nThe same discipline from the previous session applies here too: every choice in this session should be traceable back to a requirement or a capacity number already established, not just to what feels like the conventional way to build an API."
+    },
+    {
+      "heading": "An API Is a Contract, Not an Afterthought",
+      "body": "Resource-oriented endpoints built around real nouns are easier to extend over time than one endpoint that tries to do everything through a single flexible payload. Idempotency matters specifically for any operation that can safely be retried: a client that times out and automatically retries a request should never cause a duplicate charge or a duplicate post, which is exactly the problem an idempotency-key pattern — the same one production payment systems rely on — exists to solve.\n\nPagination has to be designed in from the start for any collection that can grow without bound, because retrofitting it after a client has already shipped against an unpaginated endpoint is a breaking change, not a minor improvement. Each of these is a small decision made early that avoids a much larger, harder-to-reverse decision later.\n\nVersioning deserves the same early attention: deciding up front how a breaking change to this API will be rolled out to existing clients is far cheaper than discovering, after the fact, that every client needs to change at exactly the same moment.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A payment-submission endpoint has no idempotency key. A client's request succeeds on the server, but the response is lost to a network timeout, so the client automatically retries the same request. What happens?",
+          "definition": {
+            "options": [
+              "The payment is processed a second time, since nothing marks this as a retry",
+              "The server automatically detects and ignores the duplicate request every time",
+              "The retry is rejected outright, since payment endpoints reject all retries",
+              "Nothing happens differently, since timeouts never actually reach the server"
+            ],
+            "correct_index": 0,
+            "explanation": "Without an idempotency key, the server has no way to recognize that an incoming request is a retry of one it already processed — it looks like a brand-new payment, which is exactly the double-charge risk an idempotency key is designed to close."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Data Model Follows the Access Pattern",
+      "body": "The right question isn't \"what's the most normalized way to represent this data\" — it's \"what are the three or four most frequent queries this system needs to answer quickly, and what schema makes exactly those queries cheap.\" This is the same reasoning the earlier tenant-isolation session applied to choosing between shared-schema and database-per-tenant: the access pattern, not an abstract ideal of correctness, decides the schema.\n\nA system optimized for write-heavy, append-only access (an event log) ends up looking nothing like one optimized for read-heavy, point-lookup access (a cache-backed profile store), even when both are nominally storing \"the same kind of data\" in the abstract. Designing the schema before naming the dominant access pattern gets this backwards.\n\nThis is also where the earlier capacity estimate pays off directly: a read-heavy system with a 100-to-1 read/write ratio justifies denormalizing data for fast reads at the cost of more complex writes, a tradeoff that wouldn't make sense for a system with the opposite ratio.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A system looks up a single user's profile by user ID on 99% of requests, with occasional admin reports that scan across every user. What should the primary schema and indexing be optimized around?",
+          "definition": {
+            "options": [
+              "Fast point lookups by user ID, since that's the dominant access pattern",
+              "Fast full-table scans, since the admin reports are the more complex query",
+              "An equal balance between both patterns, regardless of relative frequency",
+              "Neither pattern — schema design should be independent of query frequency"
+            ],
+            "correct_index": 0,
+            "explanation": "Schema and indexing decisions should follow the dominant access pattern — optimizing for the rare admin scan at the expense of the 99%-common point lookup would make the common case slower to help the uncommon one, exactly backwards from what the traffic actually calls for."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Diagrams Exist to Answer a Question",
+      "body": "A system design diagram exists to let someone else trace a single request through the system and understand what happens at each hop — not to look impressive. The useful minimum is boxes for each major component, arrows labeled with what's actually flowing between them (a request, an event, a batch job), and enough annotation to answer \"what happens if this particular box goes down\" just by looking at the picture.\n\nA diagram that can't answer that question isn't finished yet, no matter how polished it looks. This is a concrete, checkable bar for \"done\" that goes well beyond \"I drew all the components I was planning to mention.\"\n\nA genuinely useful diagram also tends to look a little uneven — some areas dense with detail because they're load-bearing, others left as a single box because they're not where the interesting tradeoffs live. That unevenness is a feature, not a sign the diagram is unfinished.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A system design diagram is visually polished, with every component clearly labeled, but doesn't indicate what happens if any single component fails. By the standard this session sets, is that diagram finished?",
+          "definition": {
+            "options": [
+              "No — it should answer a failure-mode question just by looking at it",
+              "Yes — visual polish and complete labeling are the only bar it needs to meet",
+              "Yes, as long as every planned component got included somewhere",
+              "No, but only because labeled arrows matter more than failure information"
+            ],
+            "correct_index": 0,
+            "explanation": "Polish and complete labeling aren't the bar this session sets — a diagram's actual job is letting someone trace a request and reason about failure at each hop, and one that can't answer \"what if this box is down\" is missing the thing it exists for."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Narrating While You Draw",
+      "body": "In a live conversation, the strongest approach builds the diagram progressively, out loud, with one sentence of reasoning attached to each component as it's added. \"I'm putting a queue here because the write and the downstream processing have different latency requirements\" is a complete, defensible unit of design reasoning on its own.\n\nSilently drawing a complete diagram and presenting it only at the end gives the listener no way to course-correct a wrong turn early — if the very first component chosen was the wrong one, the rework needed at the end is far larger than it would have been if that choice had been questioned out loud two minutes in, while it was still cheap to change.\n\nThis is uncomfortable for engineers used to working alone until a solution is polished, which is exactly why it's worth deliberately practicing instead of assuming it'll happen naturally under pressure. The practiced version feels less like a performance and more like thinking out loud, which is exactly the effect it's meant to have on whoever's listening.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "One engineer builds a design silently and reveals the complete diagram at the end. Another narrates each component with a reason as it's added. Which approach allows an early wrong turn to be caught sooner?",
+          "definition": {
+            "options": [
+              "The narrate-as-you-go approach, since each choice is visible as it happens",
+              "The silent, reveal-at-the-end approach, since it avoids interrupting the process",
+              "Both are equivalent, since the final diagram contains the same information",
+              "Neither approach affects when a mistake is caught, only how it looks after"
+            ],
+            "correct_index": 0,
+            "explanation": "An early mistake is cheapest to fix the moment it's made — narrating each decision as it happens gives a listener the chance to flag it immediately, while a silent reveal at the end means a bad first choice is only caught after everything built on top of it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Most Expensive Mistake to Make Late",
+      "body": "The API and data model are the artifacts everything else in the design gets built against, which is exactly why getting them wrong is the most expensive mistake to make late — not because they're the hardest part technically, but because every other component downstream has silently assumed they're already correct. A flawed queue choice can often be swapped out later with contained cost; a flawed data model usually can't be, without touching nearly everything built on top of it.\n\nThe final session in this arc assumes exactly this artifact exists, and spends its time trying to break it — walking the request path for single points of failure, and finding where the design actually bottlenecks under real load, rather than where it merely looks complex. That's a deliberately adversarial step, and it's the one most designs skip once the diagram finally looks finished — which is exactly backwards, since a finished-looking diagram is precisely when it's worth asking what it's actually missing."
+    }
+  ]
+}

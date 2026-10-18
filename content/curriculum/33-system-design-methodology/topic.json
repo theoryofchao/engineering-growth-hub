@@ -1,0 +1,15 @@
+{
+  "domain": {
+    "name": "Software Architecture",
+    "description": "System design, quality attributes, evolutionary architecture"
+  },
+  "module": {
+    "title": "Software Architecture"
+  },
+  "topic": {
+    "title": "System Design Methodology",
+    "slug": "33-system-design-methodology",
+    "description": "Lead a system design discussion from ambiguity to decision.",
+    "proficiency_tier": "D"
+  }
+}

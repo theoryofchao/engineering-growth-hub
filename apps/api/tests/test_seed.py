@@ -47,7 +47,7 @@ def test_seed_all_imports_full_curriculum_map(app):
 
         ai_topic = Topic.query.filter_by(slug="70-ai-assisted-software-development").first()
         assert ai_topic is not None
-        assert len(ai_topic.learning_sessions) == 6
+        assert len(ai_topic.learning_sessions) == 8
 
         # Sessions 3/4 pin their exercises to specific slides, not the session.
         setups_session = next(

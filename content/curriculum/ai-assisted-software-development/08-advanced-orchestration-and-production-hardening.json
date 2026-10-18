@@ -1,0 +1,101 @@
+{
+  "title": "Advanced Claude Code: Orchestration, the Trinity, and Production Hardening",
+  "duration_minutes": 25,
+  "sequence": 8,
+  "access_tier": "free",
+  "objective": "Apply composition patterns (the Trinity, parallel delegation, iterative critique) to problems that actually warrant the extra structure, and harden a Claude Code setup for CI/CD and production use without over-trusting its defaults.",
+  "content_blocks": [
+    {
+      "heading": "When Fundamentals Aren't Enough",
+      "body": "By this point in the module: the mechanism (the fundamentals session), workflow discipline (the first five sessions), and Claude Code's native toolkit (the previous session). This session is for the harder tail of the distribution — tasks complex enough that a single plan-review-verify pass genuinely isn't sufficient, and environments (CI, production, security-sensitive repositories) where the defaults assumed so far need to be deliberately hardened rather than trusted as-is.\n\nNone of what follows is for routine work. Reaching for it on a one-line fix is the same mistake in the opposite direction as writing a multi-page design document to rename a variable — the judgment of when the extra structure earns its cost is the actual skill this session teaches, not the techniques themselves.\n\nEach pattern below is drawn from documented, named practices rather than invented for this course, and each comes with the same caveat: it solves a real problem for a specific, narrower slice of work than it might look like it covers."
+    },
+    {
+      "heading": "The Trinity: Escalating Depth for Genuinely Hard Problems",
+      "body": "One documented pattern for the hardest problems combines three things in sequence: safe, read-only exploration first (Plan Mode, from the fundamentals session), then the model's own deepest reasoning setting, then a structured, explicit step-by-step reasoning pass rather than reasoning left implicit. The combination is aimed squarely at problems where getting it wrong is expensive — an architectural decision, a legacy system modernization, a gnarly intermittent bug — not at routine work.\n\nThe guide that documents this pattern is explicit about the other direction too, with its own worked example: stacking all three for a one-line typo fix is overkill, full stop. Each layer of depth costs real time and tokens; the combination earns its keep specifically when the cost of a wrong first guess (a bad architectural call, a botched legacy migration) would cost far more than the extra analysis time, and not otherwise.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team is deciding whether to use Claude Code's deepest combination of planning and reasoning tools — explore first, think hardest, reason step by step — on four different tasks today. For which one is that combination actually overkill?",
+          "definition": {
+            "options": [
+              "Fixing a one-line typo in a code comment",
+              "Debugging an intermittent, hard-to-reproduce production issue",
+              "Deciding how to modernize a legacy authentication system",
+              "Making an architectural decision that affects multiple services"
+            ],
+            "correct_index": 0,
+            "explanation": "The pattern is reserved for problems where a wrong first guess is genuinely expensive — architecture, legacy migrations, hard bugs. A one-line typo fix carries essentially no such risk, so the extra depth only costs time without buying anything back."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Composition Patterns: Parallel Agents, Not Serial Guesswork",
+      "body": "For genuinely independent subtasks, running several agents in parallel — one designing an API, one auditing its security, one planning its test suite — is the same delegation idea from an earlier lesson, just applied to more than two tasks at once; the same test still applies: would two humans doing these pieces need to coordinate before either could finish? If not, they're safe to parallelize.\n\nA second pattern, sometimes called 'revving the engine,' runs several explicit rounds of implement, critique, then improve on the same piece of work, rather than accepting a first draft — appropriate when the output quality matters enough to justify the extra passes. Combining everything — deep planning, multiple specialized agents, structured reasoning, iterative critique, and a final review pass — is reserved for the highest-stakes work specifically because each additional technique adds real cost for a shrinking marginal gain once the easy wins are already captured.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A finished API design gets reviewed by three agents in parallel: one checking architecture fit, one checking security, one planning the test suite. Is this safe to parallelize, by the \"would two humans need to coordinate first\" test from an earlier lesson?",
+          "definition": {
+            "options": [
+              "Yes — none of the three reviews depends on the others' output",
+              "No — security review should always happen before architecture review",
+              "No — agents can never safely review the same design at once",
+              "Yes, but only if all three agents use the same underlying model"
+            ],
+            "correct_index": 0,
+            "explanation": "Each review reads the same already-finished design and produces its own independent output; none needs to wait on or incorporate what another one concludes, which is exactly the genuine-independence test from the earlier delegation lesson."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Sandbox's Defaults Aren't What You'd Guess",
+      "body": "A sandboxed Claude Code setup typically separates two independent layers: filesystem (writes constrained to the working directory and a session temp folder, but reads allowed across the whole machine by default) and network (no domain pre-approved; outbound traffic runs through a proxy that doesn't terminate TLS). The counter-intuitive part is the filesystem layer's default: directories like SSH keys and cloud credentials are not specially blocked by any built-in denylist — what actually protects them is an explicit configuration naming which files and environment variables count as credentials.\n\nThis extends an earlier lesson's hook-based `.env` protection directly: a hook can enforce one specific rule, but the sandbox's own default read posture is permissive unless someone has configured it otherwise. Assuming 'it's sandboxed, so my keys are safe' without checking that configuration exists is a concrete, specific mistake, not a hypothetical edge case.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A developer assumes that because Claude Code runs inside a sandbox, their cloud credentials directory is automatically protected from being read. Is that assumption correct?",
+          "definition": {
+            "options": [
+              "No — the default read policy covers the whole machine by default",
+              "Yes — the sandbox always blocks reads to any credentials directory by default",
+              "Yes, but only on Windows; other operating systems have no such protection",
+              "No — the sandbox blocks all file reads everywhere, including the project's own files"
+            ],
+            "correct_index": 0,
+            "explanation": "The filesystem layer restricts writes to the working directory, but reads are permissive across the whole machine by default — credentials are protected only once something explicitly names those files or variables as sensitive, not automatically."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "CI/CD: Headless Mode, and Verifying Claims Instead of Assuming They Still Hold",
+      "body": "Production and CI usage takes a different shape than every earlier lesson's interactive terminal session: a non-interactive, headless mode that takes a prompt, runs to completion without asking for approval at each step, and can emit machine-readable output for a pipeline to parse — distinct from, and requiring more upfront care than, a human watching and approving each action in real time.\n\nA concrete, documented example of this module's running skepticism theme: a vendor can announce a billing or policy change effective on a specific date, then pause it before it takes effect — and the only way to know which is currently true is to check the current state directly, not to trust whichever announcement was read first or repeated most often. The same discipline applies to specific CLI flags and command names generally: useful to know, but specific enough to verify against current documentation before a CI pipeline depends on them, rather than hard-coding whatever a guide — including this one — said was true on a particular date.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team read that a vendor announced a billing policy change for CI/CD usage, taking effect on a specific date. Months later, they're setting a budget around that announcement. What should they do first?",
+          "definition": {
+            "options": [
+              "Verify the policy's current state first — announcements can be paused or reversed",
+              "Trust the original announcement, since vendors never reverse a policy once announced",
+              "Assume whichever blog post they read most recently is automatically current",
+              "Skip checking entirely, since billing policy never affects a CI/CD budget"
+            ],
+            "correct_index": 0,
+            "explanation": "An announced policy isn't the same as a currently-enforced one — this module has already taught that claims (productivity numbers, unverified benchmarks) need checking against current, specific evidence, and a paused billing change is the same lesson applied to operations instead of marketing."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Structure Is a Cost, Not a Default",
+      "body": "The running theme across every pattern in this session — the Trinity, parallel agents, iterative critique, hardened sandboxing, verified-not-assumed claims — is the same principle stated explicitly elsewhere in this course's source material: choose the smallest structure that actually solves the problem in front of you. More agents, more reasoning passes, more verification steps are not free; they cost time, tokens, and attention. The judgment of when that cost is actually warranted — not the techniques themselves — is what separates deliberate use of these patterns from reaching for the biggest available hammer on every task, including the ones that never needed one.\n\nThat judgment call is also the clearest signal of seniority this whole module keeps returning to: not which pattern someone can name in an interview, but whether they can say — concretely, about one real task — why it did or didn't warrant the extra structure, and what they'd watch for if the stakes changed."
+    }
+  ]
+}
