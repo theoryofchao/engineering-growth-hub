@@ -1,0 +1,101 @@
+{
+  "title": "Wiring Dependencies and Drawing Transaction Lines",
+  "duration_minutes": 25,
+  "sequence": 2,
+  "access_tier": "free",
+  "objective": "Use dependency injection to swap an infrastructure adapter without touching domain code, and decide where a transaction boundary should sit when a single ACID transaction stops being enough.",
+  "content_blocks": [
+    {
+      "heading": "Two Questions Every Boundary Raises",
+      "body": "Session 1 established that a domain core shouldn't depend on infrastructure, and that invariants belong on the objects they protect. Two practical questions follow immediately once you try to build that for real: first, if the domain only knows about a port interface, who actually constructs the concrete adapter and hands it to the domain -- and second, when a use case touches multiple objects at once, where does one unit of work end?\n\nThe first question is dependency injection. The second is a transaction boundary. Neither is exotic -- both are things most backend code already does informally, usually by accident -- but doing them deliberately is what makes the boundaries from session 1 actually hold up under a real change, like swapping a storage adapter without breaking the tests written against the domain, or coordinating a write across two objects without quietly losing consistency between them if one half fails."
+    },
+    {
+      "heading": "Dependency Injection: Inverting Who Calls Whom",
+      "body": "Without dependency injection, a domain service that needs to save an Order typically constructs its own repository: `new PostgresOrderRepository()`, called from inside the service. That line hard-wires the service to Postgres specifically -- there's no way to run the service against a test double without either hitting a real database or patching the class at runtime.\n\nDependency injection inverts that: the service declares what it needs as a constructor parameter typed to the port interface (`OrderRepository`, not `PostgresOrderRepository`), and something outside the service -- a test, a small composition root at app startup, or a DI framework -- decides which concrete implementation to hand it. The service itself never asks \"which database am I talking to\"; it just calls the interface's methods. This is exactly what makes \"replace a storage adapter while preserving tested domain behavior\" possible: the domain's tests already run against a fake or in-memory adapter injected the same way, so swapping the real adapter later doesn't touch a single domain test.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A domain service currently does `this.repo = new PostgresOrderRepository()` inside its own constructor. What's the main problem with testing this service?",
+          "definition": {
+            "options": [
+              "Every test exercising the service also exercises a real Postgres connection",
+              "The service will run noticeably slower than one written without a repository",
+              "Postgres-backed services cannot be covered by any form of automated testing",
+              "The service's public methods become impossible to call from a test file"
+            ],
+            "correct_index": 0,
+            "explanation": "Constructing the concrete adapter internally means a test has no way to substitute a fake -- it either needs a real database or has to resort to patching internals. Injecting the repository as a constructor parameter lets a test hand in an in-memory fake instead, with no change to the service's code."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Ports Are Interfaces, Adapters Are Implementations",
+      "body": "It's worth being precise about the vocabulary, because it maps directly onto how you'd enforce it in review. A port is an interface the domain defines and depends on -- `OrderRepository`, `PaymentGateway`. An adapter is a concrete class that implements a port by talking to something specific outside the domain -- `StripePaymentGateway`, `PostgresOrderRepository`. The domain only ever holds a reference typed as the port; it's DI's job (the previous block) to decide which adapter actually gets injected at runtime.\n\nShopify's Wedge tool enforces a version of this rule mechanically: its stated rule is that \"calls are ok only to things that are explicitly public\" -- a component's internals are off-limits, and only its declared public interface (its port, in this vocabulary) is callable from outside. That's the same idea as hexagonal ports applied at the level of a whole component instead of a single class: define what's allowed in, and make everything else a build-time or CI-time violation instead of a code-review nitpick.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A new adapter class implements the `OrderRepository` port by calling a third-party fulfillment API instead of a database. Does this fit the ports-and-adapters pattern?",
+          "definition": {
+            "options": [
+              "Yes -- a port only specifies behavior; any adapter honoring the interface qualifies",
+              "No -- adapters must always wrap a database, never an external API",
+              "No -- a port can only ever have exactly one adapter implementing it",
+              "Yes, but only if the fulfillment API is called synchronously, never in the background"
+            ],
+            "correct_index": 0,
+            "explanation": "A port is a contract about behavior, not about what's on the other side of it. Any adapter that correctly implements the interface's methods is valid, whether it's backed by a database, a third-party API, or an in-memory fake used in tests."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Transactions: What \"One Unit of Work\" Means",
+      "body": "A database transaction groups a set of writes so they either all succeed or all roll back together -- the classic example is moving money: debit one account and credit another inside the same transaction, so a crash between the two steps can never leave the system with money that vanished or appeared from nowhere. The transaction boundary is the answer to \"where does this one unit of work begin and end?\"\n\nThe rule of thumb that keeps transactions useful: a transaction boundary should never span a network call to something outside your own database -- never hold a transaction open while waiting on another service's HTTP response, a message queue publish, or a third-party API. Doing so ties your database's lock duration to someone else's latency and failure modes, which turns a brief network hiccup into a database-wide slowdown. If a use case needs to coordinate a database write with an external call, that's a sign the transaction boundary needs to be drawn smaller than the whole use case, not larger.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A checkout flow opens a database transaction, writes the order row, then calls an external shipping API before committing, holding the transaction open the whole time. What's the main risk?",
+          "definition": {
+            "options": [
+              "A slow or failing shipping API call holds database locks for as long as it takes to respond",
+              "The order row will be written twice if the shipping API call happens to succeed quickly",
+              "Database transactions cannot technically remain open across any kind of function call at all",
+              "This pattern is completely safe as long as the shipping API is only accessed over HTTPS"
+            ],
+            "correct_index": 0,
+            "explanation": "Holding a transaction open across a network call to another system ties your database's row/table locks to that system's latency. A slow shipping API doesn't just delay one request -- it holds locks that can block every other transaction touching the same rows."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "When One Transaction Isn't Enough",
+      "body": "Once a domain operation genuinely spans two separately-owned stores or services -- debit a wallet in one service, grant access in another -- there's no single ACID transaction available to wrap both, because a transaction can't span two different databases, let alone two different services with their own deploys and failure modes. This is the point where \"draw the transaction boundary smaller\" from the previous block turns into a design decision, not just an optimization: each service commits its own local transaction, and the two are kept consistent through a different mechanism (events, a saga, or an idempotent retry of a failed second step) rather than a single all-or-nothing commit.\n\nThis module won't build that mechanism in depth -- that's the Distributed Systems module's job -- but recognizing the moment a design has silently assumed single-transaction consistency across a boundary it doesn't actually have is exactly the kind of mistake a senior review should catch early, before it ships as a rare, hard-to-reproduce data-inconsistency bug.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A design debits a wallet in Service A and grants access in Service B, with a comment reading \"both happen in the same transaction.\" What should a reviewer flag?",
+          "definition": {
+            "options": [
+              "A single database transaction cannot span two separately-owned services",
+              "Wallet debits should never be implemented as database transactions",
+              "Service B should always be merged into Service A to avoid this problem",
+              "This is correct as written, as long as both services use the same database engine"
+            ],
+            "correct_index": 0,
+            "explanation": "Even if both services happen to use the same database engine, they don't share a connection or a transaction log -- there is no mechanism that makes a write in Service A and a write in Service B atomic together. The design needs an explicit consistency strategy across that boundary, not an assumed one."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Dependency injection and transaction boundaries are both, in the end, about being deliberate instead of accidental. DI makes \"what does this code depend on\" an explicit, swappable decision instead of a hard-coded `new` buried three lines into a constructor. A transaction boundary makes \"where does consistency actually get guaranteed\" an explicit line on a diagram instead of an assumption nobody wrote down -- and, per the previous block, an explicit decision about which boundaries a single commit is never allowed to cross.\n\nBoth habits point at the same senior-level skill: being able to look at a design and say precisely what's guaranteed, by what, and where that guarantee stops -- rather than discovering the answer later, in production, when it stops holding. That's a far cheaper place to find the gap than an incident review, and it's the difference between a design doc a reviewer can actually push back on and one that just restates what the code happens to do."
+    }
+  ]
+}

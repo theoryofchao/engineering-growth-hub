@@ -1,0 +1,101 @@
+{
+  "title": "Boundaries and the Domain They Protect",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Explain why architectural boundaries exist, which direction dependencies should point across them, and what a domain model actually protects once those boundaries are in place.",
+  "content_blocks": [
+    {
+      "heading": "The Bug That Isn't a Bug",
+      "body": "Shopify's engineering team has described what happens when a codebase has no enforced boundaries: the code that calculated shipping rates lived right alongside the code that handled checkout, and \"there was very little stopping them from calling each other.\" Over years and more than a thousand contributors, that freedom calcified into extremely high coupling -- changing tax logic could silently change shipping results in ways that weren't obvious why, and small, unrelated changes triggered test failures nobody could explain without tracing half the system by hand.\n\nNone of that was a single bug. Every individual change was reasonable in isolation. The failure was architectural: nothing in the system said which parts were allowed to know about which other parts, so over time everything learned about everything. This session is about the boundaries that prevent that -- what they look like, which direction they should point, and what they're actually protecting."
+    },
+    {
+      "heading": "Layers, Ports, and the Direction Dependencies Point",
+      "body": "A layered architecture (UI, application, domain, infrastructure) is the first boundary most engineers learn, but layering alone doesn't say which way dependencies should point -- and getting that backwards is exactly how a domain model ends up importing a database driver. Hexagonal architecture (also called ports and adapters) makes the direction explicit: the domain core defines ports -- interfaces describing what it needs (\"a place to save an Order\") -- and infrastructure code provides adapters that implement those ports (a Postgres repository, an in-memory fake for tests). The domain never imports the adapter; the adapter imports the domain's port interface and conforms to it.\n\nThe payoff shows up exactly when something has to change: swap Postgres for DynamoDB, and only the adapter changes. The domain code, and every test written against the port, doesn't move. That's the concrete version of \"separate business rules from infrastructure\" -- not an aesthetic preference, a specific rule about which direction imports are allowed to point.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "In a hexagonal architecture, a domain service needs to persist an Order. Which design keeps the dependency direction correct?",
+          "definition": {
+            "options": [
+              "The domain defines a port interface; a Postgres adapter implements it",
+              "The domain imports the Postgres driver directly for simplicity",
+              "The Postgres adapter defines the interface the domain must match",
+              "Both the domain and the adapter import a shared database schema module"
+            ],
+            "correct_index": 0,
+            "explanation": "Ports are owned by the domain; adapters implement them from the outside. If the adapter or the schema dictated the interface instead, infrastructure concerns would leak back into the domain -- the exact coupling hexagonal architecture exists to prevent."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "What a Boundary Actually Buys You",
+      "body": "Boundaries aren't free, so it's worth being precise about what they purchase. Shopify's own account is specific: before their reorganization, a developer joining the shipping team \"would need to understand how order creation and payment processing works\" before shipping their first feature, because everything was intertwined. After introducing enforced component boundaries -- organizing code by business domain (orders, shipping, billing) instead of technical layer, and building an in-house tool called Wedge to flag any call that crossed a boundary without going through a declared public interface -- that onboarding cost dropped, because a shipping developer only needed to understand shipping's own public API.\n\nThe same enforcement made a later change tractable that would have been very risky before it: swapping out a legacy tax engine for a new one. That's the general shape of the payoff -- not that boundaries make the first version faster to build (they usually don't), but that they make the tenth change to a mature system safe to attempt at all.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "According to Shopify's own account, what specifically got easier once components had enforced public interfaces?",
+          "definition": {
+            "options": [
+              "Swapping a legacy tax engine, because other components no longer depended on its internals",
+              "Shipping the very first version of the product to customers noticeably faster than ever before",
+              "Eliminating the need for any automated tests across every component in the codebase",
+              "Removing the need for a shared domain vocabulary between any of the engineering teams"
+            ],
+            "correct_index": 0,
+            "explanation": "Shopify reports that prior isolation work is specifically what made replacing the tax engine feasible. Boundaries don't speed up a first build -- their payoff shows up later, when a component can change internally without every caller needing to change with it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Domain Modeling: Who Enforces the Rules",
+      "body": "A domain model is the code that represents the business concepts a system is actually about -- an Order, a Shipment, a Subscription -- and an invariant is a rule that must always hold true for one of those concepts: an Order can't ship with zero items; a Subscription can't be both canceled and active at once. The question that decides whether a domain model is doing real work is simple: who's responsible for enforcing that rule?\n\nIn a well-drawn domain model, the object enforces its own invariants. An Order's method for adding a line item refuses to leave the order in an invalid state; nothing external has to remember to check. Compare that to a model that's just a bag of public fields with no behavior -- callers can set `order.items = []` and nothing stops them, because the rule lives nowhere except in the memory of whichever engineer wrote the original form-validation code. The first version makes invalid states unrepresentable near the data; the second makes them possible everywhere and relies on every caller remembering not to create one.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A `Subscription` must never be both `canceled` and `active` at the same time. Where should that rule be enforced for the strongest guarantee?",
+          "definition": {
+            "options": [
+              "Inside the Subscription object's own state-changing methods",
+              "In every route handler that might change a subscription's status",
+              "In a database CHECK constraint only, with no code-level enforcement",
+              "In a frontend form that disables the conflicting checkbox"
+            ],
+            "correct_index": 0,
+            "explanation": "Enforcing the rule inside the domain object itself means every caller gets the guarantee automatically, with no reliance on remembering to check. A route-handler-only check has to be duplicated everywhere a subscription's status changes, and a frontend-only check doesn't stop a direct API call or another service from violating it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Anemic Domain Model Trap",
+      "body": "The most common way domain modeling fails isn't dramatic -- it's an anemic domain model: classes named after real business concepts (Order, Invoice, Account) that hold only data, with all the actual decision-making logic living in separate \"service\" classes or route handlers that operate on them from outside. It looks organized -- there's an Order class right there -- but the Order can't protect its own invariants, because it has no behavior to enforce them with.\n\nThe practical symptom is duplication: the same validation (\"an order needs at least one item\") gets rewritten in the checkout service, the admin-edit service, and the bulk-import script, because none of them can rely on the Order object to refuse an invalid state on its own. Every new caller is a new chance to forget the rule. The fix isn't more classes -- it's moving the behavior that enforces an invariant onto the object whose invariant it is, so there's exactly one place that can get it wrong.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A codebase has an `Order` class with only data fields, plus a separate `OrderValidationService` that checks order validity before every save. What's the main risk of this split?",
+          "definition": {
+            "options": [
+              "Any code path that modifies an Order without calling the validation service can create an invalid one",
+              "Services are always slower than methods defined directly on a class, regardless of implementation details",
+              "This pattern can never be unit tested in isolation from a database under any circumstances",
+              "It makes the Order class completely impossible to use outside of the service layer entirely"
+            ],
+            "correct_index": 0,
+            "explanation": "Enforcement that lives outside the object it protects only works if every caller remembers to invoke it. A new script, a bulk-edit path, or a future developer unaware of the convention can modify the Order directly and silently skip validation -- the exact duplication-and-drift risk anemic domain models invite."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Boundaries and domain models are two sides of the same discipline: a boundary decides which direction dependencies are allowed to point between parts of a system, and a domain model decides who's responsible for keeping one of those parts internally consistent. Neither one pays off on day one -- Shopify's own conclusion was that \"no architecture is often the best architecture in the early days of a system,\" and over-designing boundaries before you understand the domain is its own failure mode. A boundary drawn around the wrong seam is worse than no boundary at all, because it's actively harder to redraw later than it would have been to draw correctly from nothing.\n\nWhat they both buy you, once the domain is understood well enough to draw them correctly, is the same thing, paid out later: the ability to change one part of a mature system -- swap a storage engine, replace a tax calculation, add a new order type -- without having to re-verify every other part by hand. That's the actual target of this module: not architecture for its own sake, but architecture that makes the tenth change cheap instead of terrifying."
+    }
+  ]
+}

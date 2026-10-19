@@ -1,0 +1,101 @@
+{
+  "title": "Splitting Services and Changing Behavior Safely",
+  "duration_minutes": 25,
+  "sequence": 3,
+  "access_tier": "free",
+  "objective": "Judge whether a module boundary actually needs to become a separate deployable service, and use configuration and feature flags to change behavior without redeploying or re-architecting.",
+  "content_blocks": [
+    {
+      "heading": "The Decomposition Question Nobody Asks Early Enough",
+      "body": "\"Should this become its own service?\" usually gets asked for the wrong reason -- a module feels big, or a team wants its own deploy pipeline -- rather than because the module actually needs the thing a separate service provides: independent scaling, independent failure isolation, or a genuinely different release cadence. Asking late, after the split, is expensive: undoing a service split means renegotiating an API contract that other teams already depend on.\n\nSegment's own public account of their microservices migration is a useful corrective here: they moved to microservices partly to fix limited fault isolation in their monolith, but later consolidated much of it back, because, in their own words, implementing microservices incorrectly or using them as a band-aid without fixing root flaws in the system left them unable to do new product development. The lesson isn't \"microservices are wrong\" -- it's that the decision has to be justified by something concrete, not by a module simply feeling large."
+    },
+    {
+      "heading": "Shopify's Choice: Modular Monolith Over Microservices",
+      "body": "Facing exactly this question at a much larger scale -- a Rails codebase worked on by more than a thousand developers over a decade -- Shopify's team explicitly considered microservices and rejected them as the primary fix. Separate services would mean separate deploy pipelines and infrastructure per component, data that's harder to access across boundaries, network latency and new failure points on every cross-component call, and large refactors needing coordinated deploys across services.\n\nInstead they built a modular monolith: one codebase, one deployment unit, but with boundaries between components enforced by tooling (Wedge) rather than left to convention. They got most of the benefit people reach for microservices to get -- enforced isolation, safer change -- without paying for a second axis of operational complexity. Martin Fowler's caution, which Shopify's own writeup cites, frames why: \"designing a complex system of microservices before you have domain expertise is a risky move,\" because you're guessing at service boundaries before you've learned where the real seams in the domain are.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why did Shopify choose a modular monolith over splitting into microservices, according to their own account?",
+          "definition": {
+            "options": [
+              "They enforced component isolation with tooling, avoiding the cost of separate deploy pipelines",
+              "Microservices were not technically possible at all for a codebase built on Ruby on Rails",
+              "A modular monolith requires no enforcement tooling whatsoever, unlike a microservices-based setup",
+              "Their codebase was considered too small at the time for service boundaries to matter much"
+            ],
+            "correct_index": 0,
+            "explanation": "Shopify's codebase was unusually large, not small, which is exactly why operational overhead mattered: microservices would have added separate pipelines, cross-service latency, and coordinated-deploy risk. A modular monolith got them enforced isolation (via Wedge) without that added cost."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "When a Service Boundary Earns Its Network Hop",
+      "body": "A module boundary (Shopify's components; this project's own service layer) and a network service boundary solve different problems, and conflating them is how teams end up with network calls they didn't need. A module boundary is enough when the goal is isolation and clarity of ownership within one deploy. A separate network service earns its cost when at least one of these is concretely true: the component needs to scale independently of the rest (a video-transcoding worker under completely different load than the web tier), it needs failure isolation at the process level (a flaky third-party integration shouldn't be able to take down checkout), or it has a release cadence or technology requirement genuinely incompatible with the rest of the deploy.\n\n\"The team wants to own its own repo\" is not on that list -- that's an organizational preference a module boundary with clear ownership can usually satisfy just as well, at a fraction of the operational cost a network hop adds to every call.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A background video-transcoding job runs under completely different, spiky load from the rest of a web app, and a crash in it currently takes down the whole process. Is this a reasonable candidate for a separate service?",
+          "definition": {
+            "options": [
+              "Yes -- it needs independent scaling and failure isolation the rest of the app doesn't",
+              "No -- video transcoding jobs should always stay in-process for the best performance",
+              "No -- only teams with a strong preference for owning their own repo justify a split",
+              "Yes, but only if the rest of the application is split into services at the exact same time"
+            ],
+            "correct_index": 0,
+            "explanation": "Independent scaling needs and failure isolation are exactly the concrete justifications that earn a service boundary's network-hop cost -- unlike team ownership preferences alone, which a module boundary can usually satisfy without that cost."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Feature Flags: Changing Behavior Without a Deploy",
+      "body": "Many changes that feel like they need a service split, or at least a risky deploy, really just need a way to change behavior conditionally at runtime -- that's what a feature flag is. A release flag lets a finished feature ship dark and turn on later without a new deploy. An ops flag is an emergency kill switch for a risky code path. A permissioning flag scopes a feature to specific accounts (beta users, internal staff). An experiment flag splits traffic for an A/B test.\n\nThe operational cost is real and easy to underestimate: every flag is a fork in behavior that both paths need to keep working, and flags that outlive their purpose (\"temporary\" rollout flags still being checked two years later) accumulate as flag debt -- dead code wearing a conditional. A flag earns its keep when it lets you decouple *deploying* code from *activating* it; it stops earning its keep the moment nobody remembers why it still exists.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team ships a risky new pricing calculation behind an ops feature flag, defaulted off. What's the main benefit of this approach over deploying the change directly?",
+          "definition": {
+            "options": [
+              "The new behavior can be turned off instantly if something goes wrong, without a rollback deploy",
+              "Feature flags make automated testing of the new pricing logic completely unnecessary from now on",
+              "The flag permanently removes any need to ever deploy this particular code again",
+              "Flags guarantee that the new calculation is fully correct before anyone else sees it"
+            ],
+            "correct_index": 0,
+            "explanation": "An ops flag's value is in decoupling deploy from activation -- if the new logic misbehaves, flipping the flag off is immediate and doesn't require a rollback deploy. It doesn't substitute for testing or guarantee correctness; it just makes recovery from a bad change fast."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Config as a Boundary Too",
+      "body": "Configuration -- database URLs, API keys, timeout values, which environment a service is running in -- is a boundary in the same spirit as the ones earlier in this module: it separates what the code does from the specific environment it happens to be running in right now, so the same build can run in development, staging, and production without a code change between them. The twelve-factor app principle for this is strict config/code separation: config lives in environment variables (or an equivalent external source), never hard-coded, and never committed alongside the code it configures.\n\nThe failure mode to watch for is config drift: environments quietly diverging because a setting was changed by hand in one place and never recorded anywhere, so nobody can say with confidence what's actually configured in production versus what the repo implies. Treating config changes with the same discipline as code changes -- reviewed, versioned, applied consistently -- is what keeps \"it works in staging\" from becoming a recurring surprise.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A production incident is traced to a timeout value that was changed by hand on the production server months ago and never recorded anywhere else. What does this illustrate?",
+          "definition": {
+            "options": [
+              "Config drift: an environment's real settings diverged silently from what's documented or versioned",
+              "That timeout values should never be made configurable at all under any circumstances",
+              "That this specific incident could only ever happen with environment variables, never with config files",
+              "That feature flags should have been used instead of configuration values in this case"
+            ],
+            "correct_index": 0,
+            "explanation": "This is the textbook config-drift failure: a setting changed outside of any reviewed, versioned process, so the running system's actual configuration silently diverged from what anyone could see by reading the repo. The fix is process (treat config changes like code changes), not avoiding configurability."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Service decomposition and configuration sit at opposite ends of the same question this whole module has been asking: how much does a given change actually cost, and is there a cheaper way to get the same outcome? Splitting into a new service is one of the most expensive ways to solve an isolation or scaling problem -- worth it when the justification is concrete (independent scaling, failure isolation, a genuinely incompatible release cadence), a bad trade when the real problem was organizational and a module boundary with clear ownership would have done just as well.\n\nConfig and feature flags are usually the cheaper tool: they let behavior change without a deploy, a rollback, or a renegotiated API contract between services. The senior-level judgment this module is really testing isn't whether you know these patterns exist -- it's whether you reach for the cheapest one that actually solves the problem in front of you, instead of the most architecturally interesting one, and whether you can tell the difference under time pressure, not just in hindsight."
+    }
+  ]
+}

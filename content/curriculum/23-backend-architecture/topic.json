@@ -1,0 +1,15 @@
+{
+  "domain": {
+    "name": "Backend & APIs",
+    "description": "Service architecture, API contracts, identity, job processing"
+  },
+  "module": {
+    "title": "Backend Architecture"
+  },
+  "topic": {
+    "title": "Backend Architecture",
+    "slug": "23-backend-architecture",
+    "description": "Separate business rules from infrastructure and isolate change.",
+    "proficiency_tier": "D"
+  }
+}
