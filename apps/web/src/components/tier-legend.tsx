@@ -1,6 +1,9 @@
 const TIER_ORDER = ["D", "W", "L", "G"] as const;
 
-const TIER_INFO: Record<(typeof TIER_ORDER)[number], { label: string; meaning: string; evidence: string }> = {
+const TIER_INFO: Record<
+  (typeof TIER_ORDER)[number],
+  { label: string; meaning: string; evidence: string }
+> = {
   D: {
     label: "Deep mastery",
     meaning: "Implement, diagnose, optimize, and defend it independently.",
@@ -54,11 +57,10 @@ export function TierLegend() {
       </dl>
 
       <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-500">
-        This is <span className="font-medium">depth of mastery</span>, not difficulty or
-        seniority — a topic can target Deep mastery and still be foundational. As a starting
-        priority: get Deep mastery and Working proficiency topics solid first, since most
-        Architectural literacy and Leadership topics assume those underlying systems are already
-        familiar.
+        This is <span className="font-medium">depth of mastery</span>, not difficulty or seniority —
+        a topic can target Deep mastery and still be foundational. As a starting priority: get Deep
+        mastery and Working proficiency topics solid first, since most Architectural literacy and
+        Leadership topics assume those underlying systems are already familiar.
       </p>
     </details>
   );

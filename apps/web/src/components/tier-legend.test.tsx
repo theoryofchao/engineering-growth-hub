@@ -38,6 +38,8 @@ describe("TierLegend", () => {
     render(<TierLegend />);
 
     expect(screen.getByText(/not difficulty or/)).toBeInTheDocument();
-    expect(screen.getByText(/get Deep mastery and Working proficiency topics solid first/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/get Deep mastery and Working proficiency topics solid first/),
+    ).toBeInTheDocument();
   });
 });

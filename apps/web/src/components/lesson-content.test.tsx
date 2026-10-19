@@ -21,7 +21,9 @@ function baseLessonResponse(overrides: Partial<Record<string, unknown>> = {}) {
     ],
     access_tier: "free",
     topic: { id: 1, title: "Browser Rendering", slug: "browser-rendering" },
-    topic_sessions: [{ id: 1, title: "Critical Rendering Path", sequence: 1, duration_minutes: 25 }],
+    topic_sessions: [
+      { id: 1, title: "Critical Rendering Path", sequence: 1, duration_minutes: 25 },
+    ],
     exercises: [],
     ...overrides,
   };
@@ -53,9 +55,7 @@ describe("LessonContent", () => {
 
     render(<LessonContent sessionId={1} />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Critical Rendering Path")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Critical Rendering Path")).toBeInTheDocument());
     expect(screen.getByText("Browser Rendering")).toBeInTheDocument();
     expect(screen.getByText("25 minutes")).toBeInTheDocument();
     expect(screen.queryByText("Check your understanding")).not.toBeInTheDocument();
@@ -80,9 +80,7 @@ describe("LessonContent", () => {
 
     render(<LessonContent sessionId={1} />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Check your understanding")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Check your understanding")).toBeInTheDocument());
     expect(
       screen.getByText("Which step is skipped by background-color changes?"),
     ).toBeInTheDocument();
@@ -130,9 +128,7 @@ describe("LessonContent", () => {
 
     render(<LessonContent sessionId={1} />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Critical Rendering Path")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Critical Rendering Path")).toBeInTheDocument());
     expect(screen.queryByText("Lessons in this topic")).not.toBeInTheDocument();
   });
 
@@ -181,22 +177,16 @@ describe("LessonContent", () => {
 
     render(<LessonContent sessionId={999} />);
 
-    await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent("Lesson not found."),
-    );
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Lesson not found."));
   });
 
   it("renders an error state when the API is unreachable", async () => {
-    (fetch as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error("Failed to fetch"),
-    );
+    (fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Failed to fetch"));
 
     render(<LessonContent sessionId={1} />);
 
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Could not load the lesson.",
-      ),
+      expect(screen.getByRole("alert")).toHaveTextContent("Could not load the lesson."),
     );
   });
 });

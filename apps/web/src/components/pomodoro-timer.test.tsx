@@ -36,21 +36,15 @@ describe("PomodoroTimer", () => {
   it("shows a start button when no session is stored", async () => {
     render(<PomodoroTimer learningSessionId={42} modeMinutes={25} />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Start 25-min session")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Start 25-min session")).toBeInTheDocument());
   });
 
   it("starts a session and shows the running timer", async () => {
-    (fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
-      jsonResponse(activeSession()),
-    );
+    (fetch as ReturnType<typeof vi.fn>).mockImplementation(() => jsonResponse(activeSession()));
 
     render(<PomodoroTimer learningSessionId={42} modeMinutes={25} />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Start 25-min session")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Start 25-min session")).toBeInTheDocument());
 
     fireEvent.click(screen.getByText("Start 25-min session"));
 
@@ -82,9 +76,7 @@ describe("PomodoroTimer", () => {
     await waitFor(() => expect(screen.getByText("Pause")).toBeInTheDocument());
 
     fetchMock.mockImplementationOnce(() =>
-      jsonResponse(
-        activeSession({ id: 7, status: "paused", elapsed_seconds: 10 }),
-      ),
+      jsonResponse(activeSession({ id: 7, status: "paused", elapsed_seconds: 10 })),
     );
     fireEvent.click(screen.getByText("Pause"));
 
@@ -94,9 +86,7 @@ describe("PomodoroTimer", () => {
   it("renders as a fixed-position floating widget, not inline page content", async () => {
     render(<PomodoroTimer learningSessionId={42} modeMinutes={25} />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Start 25-min session")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Start 25-min session")).toBeInTheDocument());
 
     const widget = screen.getByText("Start 25-min session").closest("div.fixed");
     expect(widget).not.toBeNull();
@@ -115,16 +105,12 @@ describe("PomodoroTimer", () => {
 
     render(<PomodoroTimer learningSessionId={42} modeMinutes={25} />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Start 25-min session")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Start 25-min session")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Start 25-min session"));
 
     await waitFor(() => expect(screen.getByText("Finish session")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Finish session"));
 
-    await waitFor(() =>
-      expect(screen.getByText(/Session complete/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Session complete/)).toBeInTheDocument());
   });
 });

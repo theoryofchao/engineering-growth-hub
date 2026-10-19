@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
+import { useElapsedDisplay } from "@/hooks/use-elapsed-display";
 import { API_BASE_URL } from "@/lib/config";
 
 type StudySessionStatus = "active" | "paused" | "completed";
@@ -20,7 +21,7 @@ type State =
   | { phase: "loading" }
   | { phase: "error"; message: string }
   | { phase: "idle" }
-  | { phase: "running"; session: StudySession; displaySeconds: number }
+  | { phase: "running"; session: StudySession }
   | { phase: "completed"; session: StudySession };
 
 function storageKey(learningSessionId: number): string {
@@ -59,22 +60,26 @@ export function PomodoroTimer({
   modeMinutes: number;
 }) {
   const [state, setState] = useState<State>({ phase: "loading" });
-  const fetchedAtRef = useRef<number>(0);
+  const isActivelyRunning = state.phase === "running" && state.session.status === "active";
+  const { displaySeconds, setBaseline } = useElapsedDisplay(isActivelyRunning);
 
-  const applySession = useCallback((session: StudySession) => {
-    if (session.status === "completed") {
-      try {
-        localStorage.removeItem(storageKey(session.learning_session_id));
-      } catch {
-        // ignore storage access errors (private mode, etc.)
+  const applySession = useCallback(
+    (session: StudySession) => {
+      if (session.status === "completed") {
+        try {
+          localStorage.removeItem(storageKey(session.learning_session_id));
+        } catch {
+          // ignore storage access errors (private mode, etc.)
+        }
+        setState({ phase: "completed", session });
+        return;
       }
-      setState({ phase: "completed", session });
-      return;
-    }
 
-    fetchedAtRef.current = Date.now();
-    setState({ phase: "running", session, displaySeconds: session.elapsed_seconds });
-  }, []);
+      setBaseline(session.elapsed_seconds);
+      setState({ phase: "running", session });
+    },
+    [setBaseline],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -93,10 +98,10 @@ export function PomodoroTimer({
       }
 
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/v1/study-sessions/${storedId}`,
-          { signal: controller.signal, cache: "no-store" },
-        );
+        const response = await fetch(`${API_BASE_URL}/api/v1/study-sessions/${storedId}`, {
+          signal: controller.signal,
+          cache: "no-store",
+        });
 
         if (!response.ok) {
           try {
@@ -120,25 +125,6 @@ export function PomodoroTimer({
     restore();
     return () => controller.abort();
   }, [learningSessionId, applySession]);
-
-  const isActivelyRunning = state.phase === "running" && state.session.status === "active";
-
-  useEffect(() => {
-    if (!isActivelyRunning) return;
-
-    const interval = setInterval(() => {
-      setState((current) => {
-        if (current.phase !== "running") return current;
-        const elapsedSinceFetch = (Date.now() - fetchedAtRef.current) / 1000;
-        return {
-          ...current,
-          displaySeconds: current.session.elapsed_seconds + elapsedSinceFetch,
-        };
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isActivelyRunning]);
 
   async function start() {
     try {
@@ -170,14 +156,11 @@ export function PomodoroTimer({
 
   async function sendAction(sessionId: number, action: "pause" | "resume" | "complete") {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/v1/study-sessions/${sessionId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action }),
-        },
-      );
+      const response = await fetch(`${API_BASE_URL}/api/v1/study-sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
 
       if (!response.ok) {
         throw new Error(`API responded with status ${response.status}`);
@@ -248,7 +231,7 @@ export function PomodoroTimer({
     );
   }
 
-  const { session, displaySeconds } = state;
+  const { session } = state;
   const targetSeconds = modeMinutes * 60;
   const timeIsUp = displaySeconds >= targetSeconds;
 

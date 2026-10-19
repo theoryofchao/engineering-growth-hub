@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-import { API_BASE_URL } from "@/lib/config";
+import { useFetch } from "@/hooks/use-fetch";
 
 type TopicProgress = {
   topic_id: number;
@@ -17,11 +15,6 @@ type Dashboard = {
   total_study_seconds: number;
   topics: TopicProgress[];
 };
-
-type State =
-  | { phase: "loading" }
-  | { phase: "error"; message: string }
-  | { phase: "success"; data: Dashboard };
 
 const STATUS_LABELS: Record<string, string> = {
   not_started: "Not started",
@@ -39,34 +32,7 @@ function formatHoursMinutes(totalSeconds: number): string {
 }
 
 export function DashboardSummary() {
-  const [state, setState] = useState<State>({ phase: "loading" });
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function load() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/dashboard/summary`, {
-          signal: controller.signal,
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          throw new Error(`API responded with status ${response.status}`);
-        }
-
-        const data = (await response.json()) as Dashboard;
-        setState({ phase: "success", data });
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        const message = error instanceof Error ? error.message : "Unknown error";
-        setState({ phase: "error", message });
-      }
-    }
-
-    load();
-    return () => controller.abort();
-  }, []);
+  const state = useFetch<Dashboard>("/api/v1/dashboard/summary");
 
   if (state.phase === "loading") {
     return (
@@ -76,14 +42,16 @@ export function DashboardSummary() {
     );
   }
 
-  if (state.phase === "error") {
+  if (state.phase === "error" || state.phase === "not-found") {
     return (
       <div
         role="alert"
         className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200"
       >
         <p className="font-medium">Could not load the dashboard.</p>
-        <p className="text-sm">{state.message}</p>
+        <p className="text-sm">
+          {state.phase === "error" ? state.message : "Dashboard endpoint not found"}
+        </p>
       </div>
     );
   }

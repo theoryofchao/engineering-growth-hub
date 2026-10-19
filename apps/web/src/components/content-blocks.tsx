@@ -2,9 +2,9 @@
 
 import { useRef, useState } from "react";
 
-import { API_BASE_URL } from "@/lib/config";
-import { Note, NotesPanel } from "@/components/notes-panel";
 import { ExerciseQuiz } from "@/components/exercise-quiz";
+import { Note, NotesPanel } from "@/components/notes-panel";
+import { useNoteDraft } from "@/hooks/use-note-draft";
 
 type ExerciseSummary = { id: number; type: string; prompt: string; options: string[] };
 
@@ -18,7 +18,6 @@ type Block = {
 };
 
 type ViewMode = "page" | "slide";
-type SaveState = { phase: "idle" } | { phase: "saving" } | { phase: "error"; message: string };
 
 function toggleButtonClass(active: boolean): string {
   return `rounded-md px-3 py-1 text-sm font-medium transition-colors ${
@@ -33,59 +32,25 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
   const [viewMode, setViewMode] = useState<ViewMode>("page");
   const [showBoundaries, setShowBoundaries] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
-  const [activeNoteBlockId, setActiveNoteBlockId] = useState<number | null>(null);
-  const [draft, setDraft] = useState("");
-  const [saveState, setSaveState] = useState<SaveState>({ phase: "idle" });
   const blockRefs = useRef(new Map<number, HTMLDivElement>());
 
-  const activeBlock = blocks.find((b) => b.id === activeNoteBlockId) ?? null;
-  const activeBlockIndex = activeBlock ? blocks.findIndex((b) => b.id === activeBlock.id) : -1;
-  const isDirty = activeBlock !== null && draft.trim() !== (activeBlock.note?.body ?? "").trim();
+  const {
+    activeBlock,
+    activeBlockIndex,
+    draft,
+    setDraft,
+    saveState,
+    switchTo: switchActiveBlock,
+    save: handleSave,
+    remove: handleDelete,
+  } = useNoteDraft(blocks, setBlocks);
 
   function scrollToBlock(blockId: number) {
     blockRefs.current.get(blockId)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  async function persistNote(blockId: number, body: string): Promise<Note> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/content-blocks/${blockId}/note`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
-    });
-    if (!response.ok) throw new Error(`API responded with status ${response.status}`);
-    return (await response.json()) as Note;
-  }
-
-  // The notes panel has its own Previous/Next, so switching which block
-  // is "active" happens often while it's open — including from inside
-  // the panel itself, not just by closing and reopening it. If there
-  // are unsaved edits, ask once, then proceed either way: the point is
-  // to let the reader keep moving, not to trap them on one section.
-  async function switchActiveBlock(newBlockId: number | null) {
-    if (activeBlock !== null && isDirty) {
-      const shouldSave = window.confirm(
-        "You have unsaved notes for this section. Save them before continuing?",
-      );
-      if (shouldSave) {
-        try {
-          const note = await persistNote(activeBlock.id, draft);
-          setBlocks((current) =>
-            current.map((b) => (b.id === activeBlock.id ? { ...b, note } : b)),
-          );
-        } catch {
-          window.alert("Could not save your note. Your changes will be discarded.");
-        }
-      }
-    }
-
-    setActiveNoteBlockId(newBlockId);
-    setSaveState({ phase: "idle" });
-    const newBlock = newBlockId === null ? null : blocks.find((b) => b.id === newBlockId);
-    setDraft(newBlock?.note?.body ?? "");
-  }
-
   async function goToSlide(newIndex: number) {
-    if (activeNoteBlockId !== null) {
+    if (activeBlock !== null) {
       await switchActiveBlock(blocks[newIndex].id);
     }
     setSlideIndex(newIndex);
@@ -106,39 +71,6 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
       const newBlockId = blocks[newIndex].id;
       await switchActiveBlock(newBlockId);
       scrollToBlock(newBlockId);
-    }
-  }
-
-  async function handleSave() {
-    if (activeBlock === null || draft.trim() === "") return;
-    setSaveState({ phase: "saving" });
-    try {
-      const note = await persistNote(activeBlock.id, draft);
-      setBlocks((current) => current.map((b) => (b.id === activeBlock.id ? { ...b, note } : b)));
-      setSaveState({ phase: "idle" });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      setSaveState({ phase: "error", message });
-    }
-  }
-
-  async function handleDelete() {
-    if (activeBlock === null) return;
-    setSaveState({ phase: "saving" });
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/v1/content-blocks/${activeBlock.id}/note`,
-        { method: "DELETE" },
-      );
-      if (!response.ok) throw new Error(`API responded with status ${response.status}`);
-      setBlocks((current) =>
-        current.map((b) => (b.id === activeBlock.id ? { ...b, note: null } : b)),
-      );
-      setDraft("");
-      setSaveState({ phase: "idle" });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      setSaveState({ phase: "error", message });
     }
   }
 

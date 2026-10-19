@@ -46,9 +46,7 @@ describe("DashboardSummary", () => {
 
     render(<DashboardSummary />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/No lessons started yet/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/No lessons started yet/)).toBeInTheDocument());
   });
 
   it("shows an error state when the request fails", async () => {

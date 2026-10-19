@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TopicList } from "./topic-list";
@@ -17,6 +17,10 @@ const domainsFixture = [
         proficiency_tier: "D",
         has_content: false,
         first_learning_session_id: null,
+        status: "not_started",
+        is_locked: false,
+        unmet_prerequisites: [],
+        dev_prerequisites_bypassed: false,
       },
     ],
   },
@@ -33,6 +37,32 @@ const domainsFixture = [
         proficiency_tier: "D",
         has_content: true,
         first_learning_session_id: 7,
+        status: "mastered",
+        is_locked: false,
+        unmet_prerequisites: [],
+        dev_prerequisites_bypassed: false,
+      },
+    ],
+  },
+  {
+    id: 3,
+    name: "Software Architecture",
+    description: "System design",
+    topics: [
+      {
+        id: 3,
+        title: "System Design Methodology",
+        slug: "33-system-design-methodology",
+        description: "...",
+        proficiency_tier: "D",
+        has_content: true,
+        first_learning_session_id: 9,
+        status: "not_started",
+        is_locked: true,
+        unmet_prerequisites: [
+          { id: 1, title: "Data Structures", slug: "01-data-structures", status: "not_started" },
+        ],
+        dev_prerequisites_bypassed: false,
       },
     ],
   },
@@ -59,7 +89,53 @@ describe("TopicList", () => {
     expect(screen.getByText("WIP")).toBeInTheDocument();
 
     const availableLink = screen.getByText("Browser Rendering").closest("a");
-    expect(availableLink).toHaveAttribute("href", "/learning/7");
+    expect(availableLink).toHaveAttribute("href", "/topics/2");
+  });
+
+  it("links a locked topic to its overview page and shows a Locked badge", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => domainsFixture,
+    });
+
+    render(<TopicList />);
+
+    const lockedLink = await waitFor(() =>
+      screen.getByText("System Design Methodology").closest("a"),
+    );
+    expect(lockedLink).toHaveAttribute("href", "/topics/3");
+    expect(within(lockedLink!).getByText("Locked")).toBeInTheDocument();
+  });
+
+  it("filters topics by progress status", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => domainsFixture,
+    });
+
+    render(<TopicList />);
+    await waitFor(() => expect(screen.getByText("Data Structures")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Progress"), { target: { value: "mastered" } });
+
+    expect(screen.getByText("Browser Rendering")).toBeInTheDocument();
+    expect(screen.queryByText("Data Structures")).not.toBeInTheDocument();
+    expect(screen.queryByText("System Design Methodology")).not.toBeInTheDocument();
+  });
+
+  it("filters topics by lock status", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => domainsFixture,
+    });
+
+    render(<TopicList />);
+    await waitFor(() => expect(screen.getByText("Data Structures")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Lock status"), { target: { value: "locked" } });
+
+    expect(screen.getByText("System Design Methodology")).toBeInTheDocument();
+    expect(screen.queryByText("Browser Rendering")).not.toBeInTheDocument();
   });
 
   it("shows a completed-topics fraction per domain", async () => {
@@ -70,8 +146,13 @@ describe("TopicList", () => {
 
     render(<TopicList />);
 
-    await waitFor(() => expect(screen.getByText("0/1 available")).toBeInTheDocument());
-    expect(screen.getByText("1/1 available")).toBeInTheDocument();
+    const emptyDomainDetails = await waitFor(() =>
+      screen.getByText("Computer Science Foundations").closest("details"),
+    );
+    const filledDomainDetails = screen.getByText("Web & Frontend").closest("details")!;
+
+    expect(within(emptyDomainDetails!).getByText("0/1 available")).toBeInTheDocument();
+    expect(within(filledDomainDetails).getByText("1/1 available")).toBeInTheDocument();
   });
 
   it("defaults sections with content open and empty sections collapsed", async () => {
@@ -84,9 +165,7 @@ describe("TopicList", () => {
 
     await waitFor(() => expect(screen.getByText("Data Structures")).toBeInTheDocument());
 
-    const emptyDomainDetails = screen
-      .getByText("Computer Science Foundations")
-      .closest("details");
+    const emptyDomainDetails = screen.getByText("Computer Science Foundations").closest("details");
     const filledDomainDetails = screen.getByText("Web & Frontend").closest("details");
 
     expect(emptyDomainDetails).not.toHaveAttribute("open");
@@ -117,5 +196,32 @@ describe("TopicList", () => {
     render(<TopicList />);
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
+
+  it("shows no dev-bypass banner when the flag is off", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => domainsFixture,
+    });
+
+    render(<TopicList />);
+
+    await waitFor(() => expect(screen.getByText("Data Structures")).toBeInTheDocument());
+    expect(screen.queryByText(/DEV MODE/)).not.toBeInTheDocument();
+  });
+
+  it("shows a loud dev-bypass banner when the API reports it active", async () => {
+    const bypassedFixture = domainsFixture.map((domain) => ({
+      ...domain,
+      topics: domain.topics.map((topic) => ({ ...topic, dev_prerequisites_bypassed: true })),
+    }));
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => bypassedFixture,
+    });
+
+    render(<TopicList />);
+
+    await waitFor(() => expect(screen.getByText(/DEV MODE/)).toBeInTheDocument());
   });
 });

@@ -17,9 +17,7 @@ describe("HealthStatus", () => {
 
     render(<HealthStatus />);
 
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Checking API connectivity",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("Checking API connectivity");
   });
 
   it("renders health details on a successful response", async () => {
@@ -34,23 +32,17 @@ describe("HealthStatus", () => {
 
     render(<HealthStatus />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/API reachable/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/API reachable/)).toBeInTheDocument());
     expect(screen.getByText("engineering-growth-hub-api", { exact: false })).toBeInTheDocument();
   });
 
   it("renders an error state when the API is unreachable", async () => {
-    (fetch as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error("Failed to fetch"),
-    );
+    (fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Failed to fetch"));
 
     render(<HealthStatus />);
 
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Could not reach the API.",
-      ),
+      expect(screen.getByRole("alert")).toHaveTextContent("Could not reach the API."),
     );
   });
 });

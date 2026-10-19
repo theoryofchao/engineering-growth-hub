@@ -1,9 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { API_BASE_URL } from "@/lib/config";
+import { DevBypassBanner } from "@/components/dev-bypass-banner";
+import { useFetch } from "@/hooks/use-fetch";
+
+type PrerequisiteSummary = {
+  id: number;
+  title: string;
+  slug: string;
+  status: string;
+};
 
 type TopicListItem = {
   id: number;
@@ -13,6 +21,10 @@ type TopicListItem = {
   proficiency_tier: string;
   has_content: boolean;
   first_learning_session_id: number | null;
+  status: string;
+  is_locked: boolean;
+  unmet_prerequisites: PrerequisiteSummary[];
+  dev_prerequisites_bypassed: boolean;
 };
 
 type DomainWithTopics = {
@@ -22,11 +34,6 @@ type DomainWithTopics = {
   topics: TopicListItem[];
 };
 
-type State =
-  | { phase: "loading" }
-  | { phase: "error"; message: string }
-  | { phase: "success"; domains: DomainWithTopics[] };
-
 const TIER_LABELS: Record<string, string> = {
   D: "Deep mastery",
   W: "Working proficiency",
@@ -34,35 +41,22 @@ const TIER_LABELS: Record<string, string> = {
   G: "Leadership",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  not_started: "Not started",
+  learning: "Learning",
+  practiced: "Practiced",
+  mastered: "Mastered",
+};
+
+const STATUS_FILTER_OPTIONS = ["all", "not_started", "learning", "practiced", "mastered"] as const;
+type StatusFilter = (typeof STATUS_FILTER_OPTIONS)[number];
+
+type LockFilter = "all" | "locked" | "unlocked";
+
 export function TopicList() {
-  const [state, setState] = useState<State>({ phase: "loading" });
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function load() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/topics`, {
-          signal: controller.signal,
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          throw new Error(`API responded with status ${response.status}`);
-        }
-
-        const domains = (await response.json()) as DomainWithTopics[];
-        setState({ phase: "success", domains });
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        const message = error instanceof Error ? error.message : "Unknown error";
-        setState({ phase: "error", message });
-      }
-    }
-
-    load();
-    return () => controller.abort();
-  }, []);
+  const state = useFetch<DomainWithTopics[]>("/api/v1/topics");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [lockFilter, setLockFilter] = useState<LockFilter>("all");
 
   if (state.phase === "loading") {
     return (
@@ -72,21 +66,67 @@ export function TopicList() {
     );
   }
 
-  if (state.phase === "error") {
+  if (state.phase === "error" || state.phase === "not-found") {
     return (
       <div
         role="alert"
         className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200"
       >
         <p className="font-medium">Could not load the curriculum.</p>
-        <p className="text-sm">{state.message}</p>
+        <p className="text-sm">
+          {state.phase === "error" ? state.message : "Curriculum endpoint not found"}
+        </p>
       </div>
     );
   }
 
+  const domains = state.data;
+
+  const matchesFilters = (topic: TopicListItem) =>
+    (statusFilter === "all" || topic.status === statusFilter) &&
+    (lockFilter === "all" || (lockFilter === "locked" ? topic.is_locked : !topic.is_locked));
+
+  const devBypassActive = domains.some((domain) =>
+    domain.topics.some((topic) => topic.dev_prerequisites_bypassed),
+  );
+
   return (
     <div className="flex flex-col gap-4">
-      {state.domains.map((domain) => {
+      {devBypassActive && <DevBypassBanner />}
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <label className="flex items-center gap-2">
+          <span className="text-zinc-500 dark:text-zinc-400">Progress</span>
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+            className="rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="all">All</option>
+            {STATUS_FILTER_OPTIONS.filter((option) => option !== "all").map((option) => (
+              <option key={option} value={option}>
+                {STATUS_LABELS[option]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-2">
+          <span className="text-zinc-500 dark:text-zinc-400">Lock status</span>
+          <select
+            value={lockFilter}
+            onChange={(event) => setLockFilter(event.target.value as LockFilter)}
+            className="rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="all">All</option>
+            <option value="unlocked">Unlocked</option>
+            <option value="locked">Locked</option>
+          </select>
+        </label>
+      </div>
+
+      {domains.map((domain) => {
+        const visibleTopics = domain.topics.filter(matchesFilters);
+        if (visibleTopics.length === 0) return null;
+
         const completed = domain.topics.filter((topic) => topic.has_content).length;
         const total = domain.topics.length;
 
@@ -110,20 +150,23 @@ export function TopicList() {
             </summary>
 
             {domain.description && (
-              <p className="ml-6 text-sm text-zinc-500 dark:text-zinc-400">
-                {domain.description}
-              </p>
+              <p className="ml-6 text-sm text-zinc-500 dark:text-zinc-400">{domain.description}</p>
             )}
             <ul className="mt-3 ml-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {domain.topics.map((topic) => (
+              {visibleTopics.map((topic) => (
                 <li key={topic.id}>
-                  {topic.has_content && topic.first_learning_session_id ? (
+                  {topic.has_content ? (
                     <Link
-                      href={`/learning/${topic.first_learning_session_id}`}
+                      href={`/topics/${topic.id}`}
                       className="flex h-full flex-col rounded-lg border border-zinc-300 px-4 py-3 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
                     >
-                      <span className="font-medium text-black dark:text-zinc-50">
+                      <span className="flex items-center justify-between font-medium text-black dark:text-zinc-50">
                         {topic.title}
+                        {topic.is_locked && (
+                          <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                            Locked
+                          </span>
+                        )}
                       </span>
                       <span className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                         {TIER_LABELS[topic.proficiency_tier] ?? topic.proficiency_tier}

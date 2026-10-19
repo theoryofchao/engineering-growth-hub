@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
-import { API_BASE_URL } from "@/lib/config";
-import { PomodoroTimer } from "@/components/pomodoro-timer";
-import { ExerciseQuiz } from "@/components/exercise-quiz";
 import { ContentBlocks } from "@/components/content-blocks";
+import { ExerciseQuiz } from "@/components/exercise-quiz";
 import type { Note } from "@/components/notes-panel";
+import { PomodoroTimer } from "@/components/pomodoro-timer";
+import { useFetch } from "@/hooks/use-fetch";
 
 type ExerciseSummary = { id: number; type: string; prompt: string; options: string[] };
 
@@ -107,47 +106,8 @@ function TopicLessonNav({
   );
 }
 
-type State =
-  | { phase: "loading" }
-  | { phase: "error"; message: string }
-  | { phase: "not-found" }
-  | { phase: "success"; data: LearningSession };
-
 export function LessonContent({ sessionId }: { sessionId: number }) {
-  const [state, setState] = useState<State>({ phase: "loading" });
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function load() {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/v1/learning-sessions/${sessionId}`,
-          { signal: controller.signal, cache: "no-store" },
-        );
-
-        if (response.status === 404) {
-          setState({ phase: "not-found" });
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(`API responded with status ${response.status}`);
-        }
-
-        const data = (await response.json()) as LearningSession;
-        setState({ phase: "success", data });
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        setState({ phase: "error", message });
-      }
-    }
-
-    load();
-    return () => controller.abort();
-  }, [sessionId]);
+  const state = useFetch<LearningSession>(`/api/v1/learning-sessions/${sessionId}`);
 
   if (state.phase === "loading") {
     return (
@@ -185,9 +145,7 @@ export function LessonContent({ sessionId }: { sessionId: number }) {
   return (
     <article className="flex flex-col gap-6">
       <header>
-        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-          {data.topic.title}
-        </p>
+        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{data.topic.title}</p>
         <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">
           {data.title}
         </h1>

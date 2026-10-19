@@ -50,14 +50,11 @@ export function ExerciseQuiz({ exercise }: { exercise: Exercise }) {
     setState({ phase: "submitting" });
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/v1/exercises/${exercise.id}/submissions`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ selected_index: selectedIndex }),
-        },
-      );
+      const response = await fetch(`${API_BASE_URL}/api/v1/exercises/${exercise.id}/submissions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selected_index: selectedIndex }),
+      });
 
       if (!response.ok) {
         throw new Error(`API responded with status ${response.status}`);
