@@ -28,3 +28,4 @@ Build an exercise-driven software engineering and technical leadership learning 
 - Capture important decisions in `docs/decisions/` with brief ADRs.
 - Do not claim code runs or tests pass unless actually verified.
 - Do not attempt to build all phases in one task; follow the user's requested milestone.
+- After each meaningful change or vertical slice, append a short entry (what changed, why, files touched) to `.claude/CHANGES.local.md` — a gitignored local scratch log, not a committed changelog. It exists so the user can draft commit messages from uncommitted work spanning several turns or sessions. Clear its contents immediately after the user makes a commit that covers it, so it only ever reflects work not yet committed.

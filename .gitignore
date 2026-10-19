@@ -12,3 +12,6 @@ apps/web/.env*
 
 # OS
 .DS_Store
+
+# Local Claude Code workflow notes (never committed; see CLAUDE.md)
+.claude/CHANGES.local.md
