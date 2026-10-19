@@ -4,176 +4,176 @@
       "name": "Computer Science Foundations",
       "description": "Algorithms, memory, operating systems, networking, theory",
       "modules": [
-        {"id": 1, "title": "Data Structures", "tier": "D", "seniority": "Core", "description": "Implement a structure from first principles and select it using measured access patterns."},
-        {"id": 2, "title": "Algorithms & Problem Solving", "tier": "D", "seniority": "Core", "description": "Design correct solutions and justify time space and invariants."},
-        {"id": 3, "title": "Computer Architecture", "tier": "W", "seniority": "Core", "description": "Connect hardware behavior to software runtime costs."},
-        {"id": 4, "title": "Operating Systems", "tier": "W", "seniority": "Core", "description": "Diagnose resource concurrency and process failures."},
-        {"id": 5, "title": "Computer Networking", "tier": "D", "seniority": "Core", "description": "Trace a request end to end and isolate network faults."},
-        {"id": 6, "title": "Mathematics for Computing", "tier": "W", "seniority": "Core", "description": "Apply mathematics to algorithms systems and experimental conclusions."},
-        {"id": 7, "title": "Programming Language Theory", "tier": "W", "seniority": "Core", "description": "Explain how code becomes runtime behavior and where guarantees apply."}
+        {"id": 1, "title": "Data Structures", "tier": "D", "seniority": "Core", "description": "Implement a structure from first principles and select it using measured access patterns.", "prerequisites": [8]},
+        {"id": 2, "title": "Algorithms & Problem Solving", "tier": "D", "seniority": "Core", "description": "Design correct solutions and justify time space and invariants.", "prerequisites": [1, 6, 8]},
+        {"id": 3, "title": "Computer Architecture", "tier": "W", "seniority": "Core", "description": "Connect hardware behavior to software runtime costs.", "prerequisites": [8]},
+        {"id": 4, "title": "Operating Systems", "tier": "W", "seniority": "Core", "description": "Diagnose resource concurrency and process failures.", "prerequisites": [3, 8]},
+        {"id": 5, "title": "Computer Networking", "tier": "D", "seniority": "Core", "description": "Trace a request end to end and isolate network faults.", "prerequisites": [4, 8]},
+        {"id": 6, "title": "Mathematics for Computing", "tier": "W", "seniority": "Core", "description": "Apply mathematics to algorithms systems and experimental conclusions.", "prerequisites": [8]},
+        {"id": 7, "title": "Programming Language Theory", "tier": "W", "seniority": "Core", "description": "Explain how code becomes runtime behavior and where guarantees apply.", "prerequisites": [3, 8]}
       ]
     },
     {
       "name": "Programming & Code Quality",
       "description": "Idiomatic programming, maintainability, collaborative practice",
       "modules": [
-        {"id": 8, "title": "Programming Fundamentals", "tier": "D", "seniority": "Core", "description": "Implement robust programs without relying on framework conventions."},
-        {"id": 9, "title": "Programming Paradigms", "tier": "D", "seniority": "Core", "description": "Choose paradigms based on constraints and failure modes."},
-        {"id": 10, "title": "Design Principles & Patterns", "tier": "D", "seniority": "Core", "description": "Introduce abstractions that reduce change cost without unnecessary complexity."},
-        {"id": 11, "title": "Code Quality & Maintainability", "tier": "D", "seniority": "Core", "description": "Improve internal quality while preserving externally observable behavior."},
-        {"id": 12, "title": "Developer Tools & Workflows", "tier": "D", "seniority": "Core", "description": "Work efficiently and reproducibly in unfamiliar repositories."},
-        {"id": 13, "title": "Collaborative Coding", "tier": "D", "seniority": "Core", "description": "Raise quality and shared understanding through collaboration."}
+        {"id": 8, "title": "Programming Fundamentals", "tier": "D", "seniority": "Core", "description": "Implement robust programs without relying on framework conventions.", "prerequisites": []},
+        {"id": 9, "title": "Programming Paradigms", "tier": "D", "seniority": "Core", "description": "Choose paradigms based on constraints and failure modes.", "prerequisites": [8]},
+        {"id": 10, "title": "Design Principles & Patterns", "tier": "D", "seniority": "Core", "description": "Introduce abstractions that reduce change cost without unnecessary complexity.", "prerequisites": [8, 9]},
+        {"id": 11, "title": "Code Quality & Maintainability", "tier": "D", "seniority": "Core", "description": "Improve internal quality while preserving externally observable behavior.", "prerequisites": [8, 10]},
+        {"id": 12, "title": "Developer Tools & Workflows", "tier": "D", "seniority": "Core", "description": "Work efficiently and reproducibly in unfamiliar repositories.", "prerequisites": [8]},
+        {"id": 13, "title": "Collaborative Coding", "tier": "D", "seniority": "Core", "description": "Raise quality and shared understanding through collaboration.", "prerequisites": [10, 11, 12]}
       ]
     },
     {
       "name": "Web & Frontend",
       "description": "Browser, React, accessibility, frontend performance",
       "modules": [
-        {"id": 14, "title": "Web Fundamentals", "tier": "D", "seniority": "Core", "description": "Build robust interfaces using web platform primitives."},
-        {"id": 15, "title": "Browser Internals", "tier": "D", "seniority": "Core", "description": "Explain browser scheduling and rendering and diagnose jank."},
-        {"id": 16, "title": "Frontend Architecture", "tier": "D", "seniority": "Core", "description": "Choose frontend boundaries and rendering strategies deliberately."},
-        {"id": 17, "title": "Frontend Performance", "tier": "D", "seniority": "Senior", "description": "Improve real user experience through measured intervention."},
-        {"id": 18, "title": "UI UX & Accessibility", "tier": "D", "seniority": "Core", "description": "Implement inclusive interfaces across device and input contexts."},
-        {"id": 19, "title": "Advanced Client Applications", "tier": "W", "seniority": "Senior", "description": "Build clients resilient to connectivity and synchronization failures."}
+        {"id": 14, "title": "Web Fundamentals", "tier": "D", "seniority": "Core", "description": "Build robust interfaces using web platform primitives.", "prerequisites": [5, 8]},
+        {"id": 15, "title": "Browser Internals", "tier": "D", "seniority": "Core", "description": "Explain browser scheduling and rendering and diagnose jank.", "prerequisites": [3, 14]},
+        {"id": 16, "title": "Frontend Architecture", "tier": "D", "seniority": "Core", "description": "Choose frontend boundaries and rendering strategies deliberately.", "prerequisites": [10, 14, 15]},
+        {"id": 17, "title": "Frontend Performance", "tier": "D", "seniority": "Senior", "description": "Improve real user experience through measured intervention.", "prerequisites": [15, 16, 65]},
+        {"id": 18, "title": "UI UX & Accessibility", "tier": "D", "seniority": "Core", "description": "Implement inclusive interfaces across device and input contexts.", "prerequisites": [14, 16]},
+        {"id": 19, "title": "Advanced Client Applications", "tier": "W", "seniority": "Senior", "description": "Build clients resilient to connectivity and synchronization failures.", "prerequisites": [14, 16, 21]}
       ]
     },
     {
       "name": "Backend & APIs",
       "description": "Service architecture, API contracts, identity, job processing",
       "modules": [
-        {"id": 20, "title": "Backend Fundamentals", "tier": "D", "seniority": "Core", "description": "Build robust maintainable request processing services."},
-        {"id": 21, "title": "API Design", "tier": "D", "seniority": "Core", "description": "Define APIs that are easy to consume and safe to evolve."},
-        {"id": 22, "title": "Authentication & Authorization", "tier": "D", "seniority": "Senior", "description": "Enforce identity and permissions across trust boundaries."},
-        {"id": 23, "title": "Backend Architecture", "tier": "D", "seniority": "Senior", "description": "Separate business rules from infrastructure and isolate change."},
-        {"id": 24, "title": "Background Processing", "tier": "D", "seniority": "Senior", "description": "Implement recoverable asynchronous execution."}
+        {"id": 20, "title": "Backend Fundamentals", "tier": "D", "seniority": "Core", "description": "Build robust maintainable request processing services.", "prerequisites": [5, 8]},
+        {"id": 21, "title": "API Design", "tier": "D", "seniority": "Core", "description": "Define APIs that are easy to consume and safe to evolve.", "prerequisites": [20, 25]},
+        {"id": 22, "title": "Authentication & Authorization", "tier": "D", "seniority": "Senior", "description": "Enforce identity and permissions across trust boundaries.", "prerequisites": [21, 58]},
+        {"id": 23, "title": "Backend Architecture", "tier": "D", "seniority": "Senior", "description": "Separate business rules from infrastructure and isolate change.", "prerequisites": [10, 20, 21, 25]},
+        {"id": 24, "title": "Background Processing", "tier": "D", "seniority": "Senior", "description": "Implement recoverable asynchronous execution.", "prerequisites": [20, 21, 35]}
       ]
     },
     {
       "name": "Data & Storage",
       "description": "SQL, persistence design, caching, data architecture",
       "modules": [
-        {"id": 25, "title": "Relational Databases", "tier": "D", "seniority": "Core", "description": "Build correct and efficient relational persistence."},
-        {"id": 26, "title": "Specialized Databases", "tier": "L", "seniority": "Staff+", "description": "Choose a storage engine for workloads with explicit constraints."},
-        {"id": 27, "title": "Data Architecture", "tier": "D", "seniority": "Core", "description": "Design data systems resilient to change and concurrency."},
-        {"id": 28, "title": "Caching", "tier": "D", "seniority": "Core", "description": "Improve latency while controlling staleness and correctness."},
-        {"id": 29, "title": "Data Engineering", "tier": "L", "seniority": "Staff+", "description": "Review pipelines for correctness freshness and maintainability."}
+        {"id": 25, "title": "Relational Databases", "tier": "D", "seniority": "Core", "description": "Build correct and efficient relational persistence.", "prerequisites": [1, 20]},
+        {"id": 26, "title": "Specialized Databases", "tier": "L", "seniority": "Staff+", "description": "Choose a storage engine for workloads with explicit constraints.", "prerequisites": [25, 27]},
+        {"id": 27, "title": "Data Architecture", "tier": "D", "seniority": "Core", "description": "Design data systems resilient to change and concurrency.", "prerequisites": [25]},
+        {"id": 28, "title": "Caching", "tier": "D", "seniority": "Core", "description": "Improve latency while controlling staleness and correctness.", "prerequisites": [20, 25]},
+        {"id": 29, "title": "Data Engineering", "tier": "L", "seniority": "Staff+", "description": "Review pipelines for correctness freshness and maintainability.", "prerequisites": [25, 37]}
       ]
     },
     {
       "name": "Software Architecture",
       "description": "System design, quality attributes, evolutionary architecture",
       "modules": [
-        {"id": 30, "title": "Architecture Fundamentals", "tier": "D", "seniority": "Senior", "description": "Translate constraints into defensible design decisions."},
-        {"id": 31, "title": "Architectural Styles", "tier": "D", "seniority": "Senior", "description": "Evaluate styles by organizational and runtime tradeoffs."},
-        {"id": 32, "title": "System Design Building Blocks", "tier": "D", "seniority": "Senior", "description": "Compose scalable architecture using well understood primitives."},
-        {"id": 33, "title": "System Design Methodology", "tier": "D", "seniority": "Senior", "description": "Lead a system design discussion from ambiguity to decision."},
-        {"id": 34, "title": "Architecture Evolution", "tier": "W", "seniority": "Staff+", "description": "Plan safe change to existing production architecture."}
+        {"id": 30, "title": "Architecture Fundamentals", "tier": "D", "seniority": "Senior", "description": "Translate constraints into defensible design decisions.", "prerequisites": [10, 20, 25]},
+        {"id": 31, "title": "Architectural Styles", "tier": "D", "seniority": "Senior", "description": "Evaluate styles by organizational and runtime tradeoffs.", "prerequisites": [30, 35]},
+        {"id": 32, "title": "System Design Building Blocks", "tier": "D", "seniority": "Senior", "description": "Compose scalable architecture using well understood primitives.", "prerequisites": [5, 20, 25, 28]},
+        {"id": 33, "title": "System Design Methodology", "tier": "D", "seniority": "Senior", "description": "Lead a system design discussion from ambiguity to decision.", "prerequisites": [30, 31, 32]},
+        {"id": 34, "title": "Architecture Evolution", "tier": "W", "seniority": "Staff+", "description": "Plan safe change to existing production architecture.", "prerequisites": [30, 31, 33]}
       ]
     },
     {
       "name": "Distributed Systems",
       "description": "Failure modes, consistency, messaging, resilience",
       "modules": [
-        {"id": 35, "title": "Distributed Fundamentals", "tier": "W", "seniority": "Senior", "description": "Reason about distributed behavior under failure."},
-        {"id": 36, "title": "Distributed Data", "tier": "W", "seniority": "Senior", "description": "Select distributed correctness and recovery guarantees."},
-        {"id": 37, "title": "Messaging & Streaming", "tier": "W", "seniority": "Senior", "description": "Operate reliable event driven workloads."},
-        {"id": 38, "title": "Resilience Patterns", "tier": "W", "seniority": "Senior", "description": "Prevent cascading failures and recover predictably."},
-        {"id": 39, "title": "Distributed Scalability", "tier": "W", "seniority": "Staff+", "description": "Design practical scaling and fault tolerance approaches."}
+        {"id": 35, "title": "Distributed Fundamentals", "tier": "W", "seniority": "Senior", "description": "Reason about distributed behavior under failure.", "prerequisites": [5, 25, 30]},
+        {"id": 36, "title": "Distributed Data", "tier": "W", "seniority": "Senior", "description": "Select distributed correctness and recovery guarantees.", "prerequisites": [27, 35]},
+        {"id": 37, "title": "Messaging & Streaming", "tier": "W", "seniority": "Senior", "description": "Operate reliable event driven workloads.", "prerequisites": [24, 35]},
+        {"id": 38, "title": "Resilience Patterns", "tier": "W", "seniority": "Senior", "description": "Prevent cascading failures and recover predictably.", "prerequisites": [20, 35, 53]},
+        {"id": 39, "title": "Distributed Scalability", "tier": "W", "seniority": "Staff+", "description": "Design practical scaling and fault tolerance approaches.", "prerequisites": [35, 36, 37]}
       ]
     },
     {
       "name": "Testing & Quality",
       "description": "Verification, debugging, testing infrastructure",
       "modules": [
-        {"id": 40, "title": "Testing Fundamentals", "tier": "D", "seniority": "Core", "description": "Create fast trustworthy feedback on behavior."},
-        {"id": 41, "title": "Advanced Testing", "tier": "D", "seniority": "Senior", "description": "Find defects missed by example driven tests."},
-        {"id": 42, "title": "Test Infrastructure", "tier": "D", "seniority": "Senior", "description": "Make tests repeatable across developer and CI environments."},
-        {"id": 43, "title": "Debugging & Root Cause Analysis", "tier": "D", "seniority": "Senior", "description": "Diagnose unknown failures systematically and verify remediation."}
+        {"id": 40, "title": "Testing Fundamentals", "tier": "D", "seniority": "Core", "description": "Create fast trustworthy feedback on behavior.", "prerequisites": [8, 11]},
+        {"id": 41, "title": "Advanced Testing", "tier": "D", "seniority": "Senior", "description": "Find defects missed by example driven tests.", "prerequisites": [21, 38, 40]},
+        {"id": 42, "title": "Test Infrastructure", "tier": "D", "seniority": "Senior", "description": "Make tests repeatable across developer and CI environments.", "prerequisites": [40, 45, 49]},
+        {"id": 43, "title": "Debugging & Root Cause Analysis", "tier": "D", "seniority": "Senior", "description": "Diagnose unknown failures systematically and verify remediation.", "prerequisites": [4, 12, 40]}
       ]
     },
     {
       "name": "Infrastructure & Cloud",
       "description": "Linux, containers, orchestration, cloud, IaC",
       "modules": [
-        {"id": 44, "title": "Linux & Infrastructure", "tier": "W", "seniority": "Senior", "description": "Operate Linux services and diagnose host level failures."},
-        {"id": 45, "title": "Containers & Virtualization", "tier": "W", "seniority": "Senior", "description": "Build reproducible and secure containerized services."},
-        {"id": 46, "title": "Kubernetes", "tier": "L", "seniority": "Staff+", "description": "Explain orchestration mechanics and review deployments."},
-        {"id": 47, "title": "Cloud Platforms", "tier": "W", "seniority": "Senior", "description": "Deploy secure small production-like cloud systems."},
-        {"id": 48, "title": "Infrastructure as Code", "tier": "W", "seniority": "Senior", "description": "Provision auditable reproducible environments."}
+        {"id": 44, "title": "Linux & Infrastructure", "tier": "W", "seniority": "Senior", "description": "Operate Linux services and diagnose host level failures.", "prerequisites": [4, 5, 12]},
+        {"id": 45, "title": "Containers & Virtualization", "tier": "W", "seniority": "Senior", "description": "Build reproducible and secure containerized services.", "prerequisites": [20, 44]},
+        {"id": 46, "title": "Kubernetes", "tier": "L", "seniority": "Staff+", "description": "Explain orchestration mechanics and review deployments.", "prerequisites": [44, 45, 47]},
+        {"id": 47, "title": "Cloud Platforms", "tier": "W", "seniority": "Senior", "description": "Deploy secure small production-like cloud systems.", "prerequisites": [32, 44, 45]},
+        {"id": 48, "title": "Infrastructure as Code", "tier": "W", "seniority": "Senior", "description": "Provision auditable reproducible environments.", "prerequisites": [12, 47]}
       ]
     },
     {
       "name": "DevOps & Delivery",
       "description": "CI/CD, releases, platforms, delivery metrics",
       "modules": [
-        {"id": 49, "title": "CI/CD", "tier": "W", "seniority": "Senior", "description": "Ship verified changes through automated delivery."},
-        {"id": 50, "title": "Deployment Strategies", "tier": "W", "seniority": "Senior", "description": "Release software with limited disruption and safe recovery."},
-        {"id": 51, "title": "Platform Engineering", "tier": "L", "seniority": "Staff+", "description": "Evaluate platform investments for team productivity."},
-        {"id": 52, "title": "Delivery Management", "tier": "G", "seniority": "Staff+/EM", "description": "Improve flow and outcomes without vanity metrics."}
+        {"id": 49, "title": "CI/CD", "tier": "W", "seniority": "Senior", "description": "Ship verified changes through automated delivery.", "prerequisites": [12, 40, 45]},
+        {"id": 50, "title": "Deployment Strategies", "tier": "W", "seniority": "Senior", "description": "Release software with limited disruption and safe recovery.", "prerequisites": [49, 53]},
+        {"id": 51, "title": "Platform Engineering", "tier": "L", "seniority": "Staff+", "description": "Evaluate platform investments for team productivity.", "prerequisites": [45, 48, 49]},
+        {"id": 52, "title": "Delivery Management", "tier": "G", "seniority": "Staff+/EM", "description": "Improve flow and outcomes without vanity metrics.", "prerequisites": [49, 50, 72]}
       ]
     },
     {
       "name": "Observability & Reliability",
       "description": "Instrumentation, monitoring, SRE, incident response",
       "modules": [
-        {"id": 53, "title": "Observability Fundamentals", "tier": "D", "seniority": "Senior", "description": "Instrument services so distributed failures can be diagnosed."},
-        {"id": 54, "title": "Monitoring & Alerting", "tier": "D", "seniority": "Senior", "description": "Detect important customer impact with low-noise alerts."},
-        {"id": 55, "title": "Site Reliability Engineering", "tier": "W", "seniority": "Staff+", "description": "Manage reliability with measurable customer outcomes."},
-        {"id": 56, "title": "Incident Management", "tier": "W", "seniority": "Senior", "description": "Respond to incidents and learn from them effectively."},
-        {"id": 57, "title": "Production Resilience", "tier": "W", "seniority": "Staff+", "description": "Build and verify business recovery capabilities."}
+        {"id": 53, "title": "Observability Fundamentals", "tier": "D", "seniority": "Senior", "description": "Instrument services so distributed failures can be diagnosed.", "prerequisites": [20, 35, 43]},
+        {"id": 54, "title": "Monitoring & Alerting", "tier": "D", "seniority": "Senior", "description": "Detect important customer impact with low-noise alerts.", "prerequisites": [53, 65]},
+        {"id": 55, "title": "Site Reliability Engineering", "tier": "W", "seniority": "Staff+", "description": "Manage reliability with measurable customer outcomes.", "prerequisites": [53, 54, 64]},
+        {"id": 56, "title": "Incident Management", "tier": "W", "seniority": "Senior", "description": "Respond to incidents and learn from them effectively.", "prerequisites": [53, 54, 55, 74]},
+        {"id": 57, "title": "Production Resilience", "tier": "W", "seniority": "Staff+", "description": "Build and verify business recovery capabilities.", "prerequisites": [35, 55]}
       ]
     },
     {
       "name": "Security & Privacy",
       "description": "Application security, secure delivery, privacy",
       "modules": [
-        {"id": 58, "title": "Application Security", "tier": "D", "seniority": "Senior", "description": "Find and remediate common application vulnerabilities."},
-        {"id": 59, "title": "Infrastructure Security", "tier": "W", "seniority": "Senior", "description": "Design operational defense in depth."},
-        {"id": 60, "title": "Secure Software Development", "tier": "D", "seniority": "Senior", "description": "Integrate security into engineering lifecycle."},
-        {"id": 61, "title": "Privacy Compliance & Governance", "tier": "L", "seniority": "Staff+", "description": "Recognize data governance constraints and review risks."}
+        {"id": 58, "title": "Application Security", "tier": "D", "seniority": "Senior", "description": "Find and remediate common application vulnerabilities.", "prerequisites": [14, 20, 21]},
+        {"id": 59, "title": "Infrastructure Security", "tier": "W", "seniority": "Senior", "description": "Design operational defense in depth.", "prerequisites": [44, 45, 47, 58]},
+        {"id": 60, "title": "Secure Software Development", "tier": "D", "seniority": "Senior", "description": "Integrate security into engineering lifecycle.", "prerequisites": [40, 49, 58]},
+        {"id": 61, "title": "Privacy Compliance & Governance", "tier": "L", "seniority": "Staff+", "description": "Recognize data governance constraints and review risks.", "prerequisites": [27, 58, 59]}
       ]
     },
     {
       "name": "Performance Engineering",
       "description": "Profiling, optimization, load and capacity",
       "modules": [
-        {"id": 62, "title": "Application Performance", "tier": "W", "seniority": "Senior", "description": "Measure identify and improve expensive code paths."},
-        {"id": 63, "title": "Database Performance", "tier": "W", "seniority": "Senior", "description": "Remove data-layer bottlenecks without introducing regressions."},
-        {"id": 64, "title": "Scalability & Capacity", "tier": "W", "seniority": "Senior", "description": "Predict and validate scaling thresholds."},
-        {"id": 65, "title": "Performance Measurement", "tier": "W", "seniority": "Senior", "description": "Produce trustworthy performance evidence."}
+        {"id": 62, "title": "Application Performance", "tier": "W", "seniority": "Senior", "description": "Measure identify and improve expensive code paths.", "prerequisites": [2, 3, 43]},
+        {"id": 63, "title": "Database Performance", "tier": "W", "seniority": "Senior", "description": "Remove data-layer bottlenecks without introducing regressions.", "prerequisites": [25, 62]},
+        {"id": 64, "title": "Scalability & Capacity", "tier": "W", "seniority": "Senior", "description": "Predict and validate scaling thresholds.", "prerequisites": [39, 62, 63]},
+        {"id": 65, "title": "Performance Measurement", "tier": "W", "seniority": "Senior", "description": "Produce trustworthy performance evidence.", "prerequisites": [40, 62, 64]}
       ]
     },
     {
       "name": "AI & ML Engineering",
       "description": "AI applications, evaluations, AI-assisted development",
       "modules": [
-        {"id": 66, "title": "Machine Learning Foundations", "tier": "L", "seniority": "Staff+", "description": "Understand model training evaluation and failure modes."},
-        {"id": 67, "title": "LLM Fundamentals", "tier": "W", "seniority": "Senior", "description": "Explain model constraints and select suitable inference options."},
-        {"id": 68, "title": "AI Application Engineering", "tier": "W", "seniority": "Senior", "description": "Build AI features with measurable behavior and bounded tool use."},
-        {"id": 69, "title": "AI Production Systems", "tier": "W", "seniority": "Senior", "description": "Operate AI features safely and cost effectively."},
-        {"id": 70, "title": "AI-Assisted Software Development", "tier": "D", "seniority": "Senior", "description": "Use agents effectively while retaining accountability for correctness."}
+        {"id": 66, "title": "Machine Learning Foundations", "tier": "L", "seniority": "Staff+", "description": "Understand model training evaluation and failure modes.", "prerequisites": [6, 8, 29]},
+        {"id": 67, "title": "LLM Fundamentals", "tier": "W", "seniority": "Senior", "description": "Explain model constraints and select suitable inference options.", "prerequisites": [66]},
+        {"id": 68, "title": "AI Application Engineering", "tier": "W", "seniority": "Senior", "description": "Build AI features with measurable behavior and bounded tool use.", "prerequisites": [21, 27, 67]},
+        {"id": 69, "title": "AI Production Systems", "tier": "W", "seniority": "Senior", "description": "Operate AI features safely and cost effectively.", "prerequisites": [53, 59, 67, 68]},
+        {"id": 70, "title": "AI-Assisted Software Development", "tier": "D", "seniority": "Senior", "description": "Use agents effectively while retaining accountability for correctness.", "prerequisites": [10, 12, 13, 40, 43, 49]}
       ]
     },
     {
       "name": "Product & Collaboration",
       "description": "Product thinking, execution, communication",
       "modules": [
-        {"id": 71, "title": "Requirements & Product Thinking", "tier": "G", "seniority": "Staff+/EM", "description": "Translate ambiguous customer problems into actionable outcomes."},
-        {"id": 72, "title": "Software Project Execution", "tier": "G", "seniority": "Staff+/EM", "description": "Plan and guide deliverable increments with explicit risks."},
-        {"id": 73, "title": "Product Analytics & Experimentation", "tier": "G", "seniority": "Staff+/EM", "description": "Measure product outcomes and avoid misleading conclusions."},
-        {"id": 74, "title": "Technical Communication", "tier": "G", "seniority": "Staff+/EM", "description": "Explain constraints decisions and tradeoffs to varied audiences."},
-        {"id": 75, "title": "Cross-Functional Engineering", "tier": "G", "seniority": "Staff+/EM", "description": "Build alignment across functions without hiding engineering constraints."}
+        {"id": 71, "title": "Requirements & Product Thinking", "tier": "G", "seniority": "Staff+/EM", "description": "Translate ambiguous customer problems into actionable outcomes.", "prerequisites": [30]},
+        {"id": 72, "title": "Software Project Execution", "tier": "G", "seniority": "Staff+/EM", "description": "Plan and guide deliverable increments with explicit risks.", "prerequisites": [13, 71]},
+        {"id": 73, "title": "Product Analytics & Experimentation", "tier": "G", "seniority": "Staff+/EM", "description": "Measure product outcomes and avoid misleading conclusions.", "prerequisites": [6, 29, 71]},
+        {"id": 74, "title": "Technical Communication", "tier": "G", "seniority": "Staff+/EM", "description": "Explain constraints decisions and tradeoffs to varied audiences.", "prerequisites": [30, 33]},
+        {"id": 75, "title": "Cross-Functional Engineering", "tier": "G", "seniority": "Staff+/EM", "description": "Build alignment across functions without hiding engineering constraints.", "prerequisites": [71, 72, 74]}
       ]
     },
     {
       "name": "Leadership & Strategy",
       "description": "Leadership, mentorship, economics, roadmaps",
       "modules": [
-        {"id": 76, "title": "Technical Leadership", "tier": "G", "seniority": "Staff+/EM", "description": "Lead complex engineering decisions and implementation alignment."},
-        {"id": 77, "title": "Mentorship & Team Development", "tier": "G", "seniority": "Staff+/EM", "description": "Develop others through actionable feedback and support."},
-        {"id": 78, "title": "Engineering Management Fundamentals", "tier": "G", "seniority": "Staff+/EM", "description": "Understand people management constraints and team effectiveness."},
-        {"id": 79, "title": "Engineering Economics", "tier": "G", "seniority": "Staff+/EM", "description": "Evaluate technical choices against business value and risk."},
-        {"id": 80, "title": "Engineering Strategy", "tier": "G", "seniority": "Staff+/EM", "description": "Align technical direction with long range business outcomes."}
+        {"id": 76, "title": "Technical Leadership", "tier": "G", "seniority": "Staff+/EM", "description": "Lead complex engineering decisions and implementation alignment.", "prerequisites": [30, 33, 74, 75]},
+        {"id": 77, "title": "Mentorship & Team Development", "tier": "G", "seniority": "Staff+/EM", "description": "Develop others through actionable feedback and support.", "prerequisites": [13, 74]},
+        {"id": 78, "title": "Engineering Management Fundamentals", "tier": "G", "seniority": "Staff+/EM", "description": "Understand people management constraints and team effectiveness.", "prerequisites": [72, 75, 77]},
+        {"id": 79, "title": "Engineering Economics", "tier": "G", "seniority": "Staff+/EM", "description": "Evaluate technical choices against business value and risk.", "prerequisites": [30, 47, 64, 71]},
+        {"id": 80, "title": "Engineering Strategy", "tier": "G", "seniority": "Staff+/EM", "description": "Align technical direction with long range business outcomes.", "prerequisites": [34, 71, 76, 79]}
       ]
     }
   ]

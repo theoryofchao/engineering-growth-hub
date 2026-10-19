@@ -2,15 +2,16 @@
 
 Hierarchy and fields follow docs/ARCHITECTURE.md's core modeling candidates.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.extensions import db
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Domain(db.Model):
@@ -38,6 +39,16 @@ class Module(db.Model):
     __table_args__ = (db.UniqueConstraint("domain_id", "title", name="uq_module_domain_title"),)
 
 
+topic_prerequisites = db.Table(
+    "topic_prerequisites",
+    db.Column("topic_id", db.Integer, db.ForeignKey("topics.id"), primary_key=True),
+    db.Column("prerequisite_topic_id", db.Integer, db.ForeignKey("topics.id"), primary_key=True),
+    db.CheckConstraint(
+        "topic_id != prerequisite_topic_id", name="ck_topic_prerequisites_no_self_reference"
+    ),
+)
+
+
 class Topic(db.Model):
     """A unit of curriculum mastery (CURRICULUM.md's "module" granularity).
 
@@ -57,6 +68,17 @@ class Topic(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
 
     module = db.relationship("Module", back_populates="topics")
+    # Topics this one requires before it's considered unlocked. The
+    # `unlocks` backref (topics that become available once this one is
+    # done) is unused today but comes free with the self-referential M2M.
+    prerequisites = db.relationship(
+        "Topic",
+        secondary=topic_prerequisites,
+        primaryjoin=id == topic_prerequisites.c.topic_id,
+        secondaryjoin=id == topic_prerequisites.c.prerequisite_topic_id,
+        backref="unlocks",
+        order_by="Topic.id",
+    )
     learning_sessions = db.relationship(
         "LearningSession", back_populates="topic", order_by="LearningSession.sequence"
     )
@@ -144,7 +166,7 @@ class Note(db.Model):
     content_block = db.relationship("ContentBlock", back_populates="note")
 
     @staticmethod
-    def upsert(content_block_id: int, body: str) -> "Note":
+    def upsert(content_block_id: int, body: str) -> Note:
         note = Note.query.filter_by(content_block_id=content_block_id).first()
         if note is None:
             note = Note(content_block_id=content_block_id, body=body)
@@ -192,7 +214,7 @@ class StudySession(db.Model):
             if last_resumed_at.tzinfo is None:
                 # SQLite (used in tests) drops tzinfo on read-back even for
                 # DateTime(timezone=True) columns; Postgres does not.
-                last_resumed_at = last_resumed_at.replace(tzinfo=timezone.utc)
+                last_resumed_at = last_resumed_at.replace(tzinfo=UTC)
             running = (_utcnow() - last_resumed_at).total_seconds()
             return self.elapsed_seconds + max(0, int(running))
         return self.elapsed_seconds
@@ -238,9 +260,7 @@ class Exercise(db.Model):
     learning_session_id = db.Column(
         db.Integer, db.ForeignKey("learning_sessions.id"), nullable=False
     )
-    content_block_id = db.Column(
-        db.Integer, db.ForeignKey("content_blocks.id"), nullable=True
-    )
+    content_block_id = db.Column(db.Integer, db.ForeignKey("content_blocks.id"), nullable=True)
     type = db.Column(db.String(50), nullable=False, default="multiple_choice")
     prompt = db.Column(db.Text, nullable=False)
     definition_json = db.Column(db.JSON, nullable=False)
@@ -253,9 +273,7 @@ class Exercise(db.Model):
         "ExerciseSubmission", back_populates="exercise", order_by="ExerciseSubmission.submitted_at"
     )
 
-    __table_args__ = (
-        db.CheckConstraint("type in ('multiple_choice')", name="ck_exercise_type"),
-    )
+    __table_args__ = (db.CheckConstraint("type in ('multiple_choice')", name="ck_exercise_type"),)
 
 
 class ExerciseSubmission(db.Model):
@@ -270,7 +288,7 @@ class ExerciseSubmission(db.Model):
     exercise = db.relationship("Exercise", back_populates="submissions")
 
 
-_PROGRESS_STATUS_RANK = {"not_started": 0, "learning": 1, "practiced": 2, "mastered": 3}
+PROGRESS_STATUS_RANK = {"not_started": 0, "learning": 1, "practiced": 2, "mastered": 3}
 
 
 class UserProgress(db.Model):
@@ -294,12 +312,12 @@ class UserProgress(db.Model):
 
     def advance_to(self, status: str) -> None:
         """Move status forward only; never downgrades an already-earned status."""
-        if _PROGRESS_STATUS_RANK[status] > _PROGRESS_STATUS_RANK[self.status]:
+        if PROGRESS_STATUS_RANK[status] > PROGRESS_STATUS_RANK[self.status]:
             self.status = status
             self.updated_at = _utcnow()
 
     @staticmethod
-    def get_or_create(topic_id: int) -> "UserProgress":
+    def get_or_create(topic_id: int) -> UserProgress:
         progress = UserProgress.query.filter_by(topic_id=topic_id).first()
         if progress is None:
             progress = UserProgress(topic_id=topic_id, status="not_started")

@@ -63,9 +63,7 @@ def test_pause_freezes_elapsed_time(app, client):
         session.last_resumed_at -= timedelta(seconds=90)
         db.session.commit()
 
-    pause_response = client.patch(
-        f"/api/v1/study-sessions/{session_id}", json={"action": "pause"}
-    )
+    pause_response = client.patch(f"/api/v1/study-sessions/{session_id}", json={"action": "pause"})
     assert pause_response.status_code == 200
     paused_body = pause_response.get_json()
     assert paused_body["status"] == "paused"
@@ -110,9 +108,7 @@ def test_update_rejects_unknown_action(app, client):
     )
     session_id = create_response.get_json()["id"]
 
-    response = client.patch(
-        f"/api/v1/study-sessions/{session_id}", json={"action": "bogus"}
-    )
+    response = client.patch(f"/api/v1/study-sessions/{session_id}", json={"action": "bogus"})
     assert response.status_code == 400
 
 

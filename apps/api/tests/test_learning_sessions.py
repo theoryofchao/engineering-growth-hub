@@ -87,3 +87,19 @@ def test_block_scoped_exercise_nests_under_its_block_not_the_session(app, client
     # The original session-level exercise is unaffected and still shows
     # up in the lesson-level wrap-up list, not duplicated into a block.
     assert len(body["exercises"]) == 1
+
+
+def test_get_learning_session_query_count_is_bounded(app, client, count_queries):
+    """Regression test for the N+1 fix: content_blocks -> (note,
+    exercises) fan-out must not scale with the number of content blocks.
+    """
+    with app.app_context():
+        seed_all()
+        topic = Topic.query.filter_by(slug="70-ai-assisted-software-development").first()
+        session_id = topic.learning_sessions[0].id
+
+    with count_queries() as counter:
+        response = client.get(f"/api/v1/learning-sessions/{session_id}")
+
+    assert response.status_code == 200
+    assert counter["n"] < 10

@@ -1,9 +1,9 @@
 """Read access to learning session content for the learning page."""
+
 from __future__ import annotations
 
 from flask import Blueprint, abort, jsonify
 
-from app.extensions import db
 from app.models import LearningSession
 from app.schemas import (
     ContentBlockDetail,
@@ -13,6 +13,7 @@ from app.schemas import (
     NoteDetail,
     TopicSummary,
 )
+from app.services import learning_sessions_service
 
 learning_sessions_bp = Blueprint("learning_sessions", __name__, url_prefix="/api/v1")
 
@@ -27,9 +28,7 @@ def _exercise_summary(exercise) -> ExerciseSummary:
 
 
 def _serialize(learning_session: LearningSession) -> dict:
-    session_level_exercises = [
-        e for e in learning_session.exercises if e.content_block_id is None
-    ]
+    session_level_exercises = [e for e in learning_session.exercises if e.content_block_id is None]
 
     body = LearningSessionDetail(
         id=learning_session.id,
@@ -67,7 +66,7 @@ def _serialize(learning_session: LearningSession) -> dict:
 
 @learning_sessions_bp.get("/learning-sessions/<int:session_id>")
 def get_learning_session(session_id: int):
-    learning_session = db.session.get(LearningSession, session_id)
+    learning_session = learning_sessions_service.get_detail(session_id)
     if learning_session is None:
         abort(404, description="Learning session not found")
 

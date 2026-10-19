@@ -7,6 +7,7 @@ JSON file per learning session, so a topic's content doesn't grow into
 a single unbounded file as it gains sessions -- see
 content/curriculum/README.md for the file layout and sizing rule.
 """
+
 from __future__ import annotations
 
 import json
@@ -26,14 +27,50 @@ def _slugify(text: str) -> str:
     return re.sub(r"-{2,}", "-", slug)
 
 
+def _validate_no_prerequisite_cycles(prereqs_by_module_id: dict[int, list[int]]) -> None:
+    """DFS cycle check over the plain {module_id: [prerequisite_ids]}
+    data straight from curriculum-map.json, before any DB writes --
+    CURRICULUM.md's own backlog calls for validating this as a DAG, and
+    it never has been. 80 nodes/~200 edges: a library is unwarranted.
+    """
+    state: dict[int, str] = {}
+
+    def visit(module_id: int, path: list[int]) -> None:
+        if state.get(module_id) == "done":
+            return
+        if state.get(module_id) == "visiting":
+            cycle = path[path.index(module_id) :] + [module_id]
+            raise ValueError(f"Prerequisite cycle detected: {' -> '.join(map(str, cycle))}")
+        if module_id not in prereqs_by_module_id:
+            raise ValueError(f"Unknown prerequisite module id: {module_id}")
+
+        state[module_id] = "visiting"
+        for prereq_id in prereqs_by_module_id[module_id]:
+            visit(prereq_id, path + [module_id])
+        state[module_id] = "done"
+
+    for module_id in prereqs_by_module_id:
+        visit(module_id, [])
+
+
 def load_curriculum_map(path: Path) -> None:
     """Import the full CURRICULUM.md breadth as topic metadata (title,
-    tier, description), with no learning sessions. This is what lets the
-    homepage show the whole 80-module map with most of it marked WIP,
-    while `load_topic_dir` below attaches real lesson content to the
-    handful of topics that have it, matched by the same slug.
+    tier, description, prerequisites), with no learning sessions. This
+    is what lets the homepage show the whole 80-module map with most of
+    it marked WIP, while `load_topic_dir` below attaches real lesson
+    content to the handful of topics that have it, matched by the same
+    slug.
     """
     data = json.loads(path.read_text())
+
+    prereqs_by_module_id = {
+        module_data["id"]: module_data.get("prerequisites", [])
+        for domain_data in data["domains"]
+        for module_data in domain_data["modules"]
+    }
+    _validate_no_prerequisite_cycles(prereqs_by_module_id)
+
+    topics_by_module_id: dict[int, Topic] = {}
 
     for domain_data in data["domains"]:
         domain = Domain.query.filter_by(name=domain_data["name"]).first()
@@ -52,15 +89,26 @@ def load_curriculum_map(path: Path) -> None:
             slug = f"{module_data['id']:02d}-{_slugify(module_data['title'])}"
             topic = Topic.query.filter_by(slug=slug).first()
             if topic is None:
-                db.session.add(
-                    Topic(
-                        module_id=module.id,
-                        title=module_data["title"],
-                        slug=slug,
-                        description=module_data["description"],
-                        proficiency_tier=module_data["tier"],
-                    )
+                topic = Topic(
+                    module_id=module.id,
+                    title=module_data["title"],
+                    slug=slug,
+                    description=module_data["description"],
+                    proficiency_tier=module_data["tier"],
                 )
+                db.session.add(topic)
+                db.session.flush()
+            topics_by_module_id[module_data["id"]] = topic
+
+    # Second pass: prerequisites are linked only once every topic in the
+    # map exists, since a module can depend on one that appears later in
+    # iteration order (e.g. module 1 depends on module 8). Reassigning
+    # the full list is naturally idempotent -- SQLAlchemy's collection
+    # diffing only emits INSERT/DELETE for actual differences.
+    for module_id, topic in topics_by_module_id.items():
+        topic.prerequisites = [
+            topics_by_module_id[prereq_id] for prereq_id in prereqs_by_module_id[module_id]
+        ]
 
     db.session.commit()
 
@@ -109,7 +157,9 @@ def _load_session(topic: Topic, session_data: dict) -> None:
             block.body = block_data["body"]
 
         for exercise_index, exercise_data in enumerate(block_exercises_data, start=1):
-            existing = Exercise.query.filter_by(content_block_id=block.id, sequence=exercise_index).first()
+            existing = Exercise.query.filter_by(
+                content_block_id=block.id, sequence=exercise_index
+            ).first()
             if existing is None:
                 db.session.add(
                     Exercise(
@@ -166,7 +216,9 @@ def load_topic_dir(dir_path: Path) -> None:
         db.session.add(domain)
         db.session.flush()
 
-    module = Module.query.filter_by(domain_id=domain.id, title=topic_data["module"]["title"]).first()
+    module = Module.query.filter_by(
+        domain_id=domain.id, title=topic_data["module"]["title"]
+    ).first()
     if module is None:
         module = Module(domain_id=domain.id, **topic_data["module"])
         db.session.add(module)

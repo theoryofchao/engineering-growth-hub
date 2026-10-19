@@ -1,4 +1,5 @@
 """Per-content-block notes. One note per block, upserted in place."""
+
 from __future__ import annotations
 
 from flask import Blueprint, abort, jsonify, request

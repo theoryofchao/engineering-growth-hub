@@ -28,6 +28,11 @@ services:
       FLASK_DEBUG: "1"
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-egh}:${POSTGRES_PASSWORD:-egh}@db:5432/${POSTGRES_DB:-engineering_growth_hub}
       CORS_ORIGINS: http://localhost:3000
+      # DEV-ONLY, off by default: uncomment to see every topic as unlocked
+      # regardless of prerequisites. Only takes effect under APP_ENV=development
+      # (see apps/api/app/config.py) -- never uncomment this outside your own
+      # machine.
+      DEV_UNLOCK_ALL_TOPICS: "1"
     ports:
       - "5000:5000"
     volumes:

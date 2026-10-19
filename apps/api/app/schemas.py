@@ -1,4 +1,5 @@
 """Pydantic response contracts for the API."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -97,6 +98,17 @@ class DashboardSummary(BaseModel):
     topics: list[TopicProgressSummary]
 
 
+class PrerequisiteSummary(BaseModel):
+    """A prerequisite topic's own id/title/slug/status, so the UI can
+    explain and link to what's blocking a locked topic.
+    """
+
+    id: int
+    title: str
+    slug: str
+    status: str
+
+
 class TopicListItem(BaseModel):
     id: int
     title: str
@@ -105,6 +117,26 @@ class TopicListItem(BaseModel):
     proficiency_tier: str
     has_content: bool
     first_learning_session_id: int | None = None
+    status: str
+    is_locked: bool
+    unmet_prerequisites: list[PrerequisiteSummary] = []
+    # True only when a local dev backdoor (DEV_UNLOCK_ALL_TOPICS) is forcing
+    # is_locked=False despite unmet prerequisites. See routes/topics.py.
+    dev_prerequisites_bypassed: bool = False
+
+
+class TopicDetail(BaseModel):
+    id: int
+    title: str
+    slug: str
+    description: str | None
+    proficiency_tier: str
+    status: str
+    is_locked: bool
+    learning_sessions: list[LearningSessionSummary]
+    prerequisites: list[PrerequisiteSummary]
+    unmet_prerequisites: list[PrerequisiteSummary]
+    dev_prerequisites_bypassed: bool = False
 
 
 class DomainWithTopics(BaseModel):

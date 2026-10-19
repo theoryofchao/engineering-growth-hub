@@ -1,0 +1,27 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+warn_unused_configs = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+# SQLAlchemy removed its mypy plugin in 2.0+; without it, mypy can't
+# resolve db.Column/db.relationship attribute types on the classic
+# declarative style this codebase uses (no Mapped[]/mapped_column()
+# annotations anywhere in app/models.py). Full strictness on ORM-touching
+# code would require migrating every model to that newer typed style --
+# a separate, materially larger piece of work, not bundled into adding
+# tooling. Disabled here rather than silenced with scattered inline
+# ignores, and documented so this is a known, revisitable gap, not an
+# oversight.
+disable_error_code = ["attr-defined", "index", "arg-type", "no-any-return", "name-defined", "assignment"]
