@@ -1,6 +1,13 @@
-"""Curriculum domain models: domain -> module -> topic -> learning session.
+"""Curriculum domain models: topic -> module -> section -> learning session.
 
 Hierarchy and fields follow docs/ARCHITECTURE.md's core modeling candidates.
+Naming: `Topic` is the top-level grouping (e.g. "Computer Science
+Foundations", "Programming & Code Quality") and `Section` is the area of
+learning under a topic that a learner actually browses into (e.g.
+"AI-Assisted Software Development") -- see
+docs/decisions/0027-topic-section-module-rename-and-routing.md for the
+full rationale, including why this reuses names that pre-dated this ADR
+for a *different* pair of entities.
 """
 
 from __future__ import annotations
@@ -14,50 +21,75 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class Domain(db.Model):
-    __tablename__ = "domains"
+class Topic(db.Model):
+    """A top-level area of the curriculum, e.g. "Computer Science
+    Foundations" or "Programming & Code Quality". Shown as a heading on
+    the homepage, grouping the `Section`s a learner actually opens.
+    """
+
+    __tablename__ = "topics"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False, unique=True)
+    slug = db.Column(db.String(200), nullable=False, unique=True)
     description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
 
-    modules = db.relationship("Module", back_populates="domain", order_by="Module.id")
+    modules = db.relationship("Module", back_populates="topic", order_by="Module.id")
 
 
 class Module(db.Model):
+    """An internal grouping layer between `Topic` and `Section`, not
+    currently surfaced by any route or API response. CURRICULUM.md's own
+    80-module breadth map is flat (topic -> a numbered list, with no
+    further subgrouping), so the loader creates exactly one `Module` per
+    `Topic` for curriculum-map-sourced content today (see
+    `seed.load_curriculum_map`); the handful of hand-authored lessons
+    predating that map use it for a real, distinct grouping instead (e.g.
+    "Browser Fundamentals" under the "Frontend Engineering" topic). Kept
+    rather than collapsed so a future finer-grained map can populate it
+    for real without another schema change.
+    """
+
     __tablename__ = "modules"
 
     id = db.Column(db.Integer, primary_key=True)
-    domain_id = db.Column(db.Integer, db.ForeignKey("domains.id"), nullable=False)
+    topic_id = db.Column(db.Integer, db.ForeignKey("topics.id"), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
 
-    domain = db.relationship("Domain", back_populates="modules")
-    topics = db.relationship("Topic", back_populates="module", order_by="Topic.id")
+    topic = db.relationship("Topic", back_populates="modules")
+    sections = db.relationship("Section", back_populates="module", order_by="Section.id")
 
-    __table_args__ = (db.UniqueConstraint("domain_id", "title", name="uq_module_domain_title"),)
+    __table_args__ = (db.UniqueConstraint("topic_id", "title", name="uq_module_topic_title"),)
 
 
-topic_prerequisites = db.Table(
-    "topic_prerequisites",
-    db.Column("topic_id", db.Integer, db.ForeignKey("topics.id"), primary_key=True),
-    db.Column("prerequisite_topic_id", db.Integer, db.ForeignKey("topics.id"), primary_key=True),
+section_prerequisites = db.Table(
+    "section_prerequisites",
+    db.Column("section_id", db.Integer, db.ForeignKey("sections.id"), primary_key=True),
+    db.Column(
+        "prerequisite_section_id", db.Integer, db.ForeignKey("sections.id"), primary_key=True
+    ),
     db.CheckConstraint(
-        "topic_id != prerequisite_topic_id", name="ck_topic_prerequisites_no_self_reference"
+        "section_id != prerequisite_section_id", name="ck_section_prerequisites_no_self_reference"
     ),
 )
 
 
-class Topic(db.Model):
-    """A unit of curriculum mastery (CURRICULUM.md's "module" granularity).
+class Section(db.Model):
+    """A unit of curriculum mastery (CURRICULUM.md's "module" granularity)
+    -- the thing a learner actually opens from the homepage, e.g.
+    "AI-Assisted Software Development". Confusingly shares a name with
+    CURRICULUM.md's own "module" vocabulary and with this schema's
+    (differently-scoped) `Module` entity; see the docstrings above and
+    docs/decisions/0027-....md.
 
     `proficiency_tier` lives here, not on `Module`, because CURRICULUM.md
-    assigns a target tier (D/W/L/G) per module/topic, not per domain-level
-    grouping; see docs/decisions/0004-....md.
+    assigns a target tier (D/W/L/G) per module/section, not per
+    topic-level grouping; see docs/decisions/0004-....md.
     """
 
-    __tablename__ = "topics"
+    __tablename__ = "sections"
 
     id = db.Column(db.Integer, primary_key=True)
     module_id = db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=False)
@@ -67,25 +99,25 @@ class Topic(db.Model):
     proficiency_tier = db.Column(db.String(1), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
 
-    module = db.relationship("Module", back_populates="topics")
-    # Topics this one requires before it's considered unlocked. The
-    # `unlocks` backref (topics that become available once this one is
+    module = db.relationship("Module", back_populates="sections")
+    # Sections this one requires before it's considered unlocked. The
+    # `unlocks` backref (sections that become available once this one is
     # done) is unused today but comes free with the self-referential M2M.
     prerequisites = db.relationship(
-        "Topic",
-        secondary=topic_prerequisites,
-        primaryjoin=id == topic_prerequisites.c.topic_id,
-        secondaryjoin=id == topic_prerequisites.c.prerequisite_topic_id,
+        "Section",
+        secondary=section_prerequisites,
+        primaryjoin=id == section_prerequisites.c.section_id,
+        secondaryjoin=id == section_prerequisites.c.prerequisite_section_id,
         backref="unlocks",
-        order_by="Topic.id",
+        order_by="Section.id",
     )
     learning_sessions = db.relationship(
-        "LearningSession", back_populates="topic", order_by="LearningSession.sequence"
+        "LearningSession", back_populates="section", order_by="LearningSession.sequence"
     )
-    progress = db.relationship("UserProgress", back_populates="topic", uselist=False)
+    progress = db.relationship("UserProgress", back_populates="section", uselist=False)
 
     __table_args__ = (
-        db.CheckConstraint("proficiency_tier in ('D', 'W', 'L', 'G')", name="ck_topic_tier"),
+        db.CheckConstraint("proficiency_tier in ('D', 'W', 'L', 'G')", name="ck_section_tier"),
     )
 
 
@@ -93,7 +125,7 @@ class LearningSession(db.Model):
     __tablename__ = "learning_sessions"
 
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(db.Integer, db.ForeignKey("topics.id"), nullable=False)
+    section_id = db.Column(db.Integer, db.ForeignKey("sections.id"), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     duration_minutes = db.Column(db.Integer, nullable=False)
     objective = db.Column(db.Text, nullable=False)
@@ -101,7 +133,7 @@ class LearningSession(db.Model):
     access_tier = db.Column(db.String(50), nullable=False, default="free")
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
 
-    topic = db.relationship("Topic", back_populates="learning_sessions")
+    section = db.relationship("Section", back_populates="learning_sessions")
     study_sessions = db.relationship("StudySession", back_populates="learning_session")
     exercises = db.relationship(
         "Exercise", back_populates="learning_session", order_by="Exercise.sequence"
@@ -132,6 +164,10 @@ class ContentBlock(db.Model):
     sequence = db.Column(db.Integer, nullable=False)
     heading = db.Column(db.String(200), nullable=False)
     body = db.Column(db.Text, nullable=False)
+    # Worked examples shown in a collapsed accordion under the body,
+    # e.g. a longer code/config sample that would otherwise bloat the
+    # prose. Each item is `{"label": str, "content": str}`.
+    examples = db.Column(db.JSON, nullable=False, default=list)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
 
     learning_session = db.relationship("LearningSession", back_populates="content_blocks")
@@ -292,16 +328,16 @@ PROGRESS_STATUS_RANK = {"not_started": 0, "learning": 1, "practiced": 2, "master
 
 
 class UserProgress(db.Model):
-    """Per-topic mastery status. No `user_id` yet (single-user MVP, no auth)."""
+    """Per-section mastery status. No `user_id` yet (single-user MVP, no auth)."""
 
     __tablename__ = "user_progress"
 
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(db.Integer, db.ForeignKey("topics.id"), nullable=False, unique=True)
+    section_id = db.Column(db.Integer, db.ForeignKey("sections.id"), nullable=False, unique=True)
     status = db.Column(db.String(20), nullable=False, default="not_started")
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
 
-    topic = db.relationship("Topic", back_populates="progress")
+    section = db.relationship("Section", back_populates="progress")
 
     __table_args__ = (
         db.CheckConstraint(
@@ -317,9 +353,38 @@ class UserProgress(db.Model):
             self.updated_at = _utcnow()
 
     @staticmethod
-    def get_or_create(topic_id: int) -> UserProgress:
-        progress = UserProgress.query.filter_by(topic_id=topic_id).first()
+    def get_or_create(section_id: int) -> UserProgress:
+        progress = UserProgress.query.filter_by(section_id=section_id).first()
         if progress is None:
-            progress = UserProgress(topic_id=topic_id, status="not_started")
+            progress = UserProgress(section_id=section_id, status="not_started")
             db.session.add(progress)
         return progress
+
+
+class LeadershipStory(db.Model):
+    """A STAR-method behavioral-interview story, tagged to a competency.
+
+    The competency is a `Section` under the "Leadership & Strategy" topic
+    (modules 76-80) rather than a separate table -- that topic already
+    models exactly this concept as first-class curriculum sections, so
+    reusing it avoids a parallel taxonomy. No `user_id` yet (single-user
+    MVP, no auth), matching `UserProgress`.
+    """
+
+    __tablename__ = "leadership_stories"
+
+    id = db.Column(db.Integer, primary_key=True)
+    section_id = db.Column(db.Integer, db.ForeignKey("sections.id"), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    situation = db.Column(db.Text, nullable=False)
+    task = db.Column(db.Text, nullable=False)
+    action = db.Column(db.Text, nullable=False)
+    result = db.Column(db.Text, nullable=False)
+    reflection = db.Column(db.Text, nullable=True)
+    quantified_outcome = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow
+    )
+
+    section = db.relationship("Section", backref="leadership_stories")

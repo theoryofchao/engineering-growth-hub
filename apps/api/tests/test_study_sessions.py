@@ -1,15 +1,15 @@
 from datetime import timedelta
 
 from app.extensions import db
-from app.models import StudySession, Topic
+from app.models import Section, StudySession
 from app.seed import seed_all
 
 
 def _seed_learning_session_id(app) -> int:
     with app.app_context():
         seed_all()
-        topic = Topic.query.filter_by(slug="browser-rendering").first()
-        return topic.learning_sessions[0].id
+        section = Section.query.filter_by(slug="browser-rendering").first()
+        return section.learning_sessions[0].id
 
 
 def test_create_study_session_starts_active(app, client):

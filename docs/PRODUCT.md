@@ -46,7 +46,7 @@ Topic data: hierarchy, learning objectives, prerequisites, references, sessions,
 - Avoid exposing future protected materials in client bundles or public file endpoints.
 
 ## MVP experience
-Browse a seeded domain/topic; open one 25-minute lesson; view content; start/pause timer; complete one small exercise; save progress and see it on a dashboard. Include a minimal leadership story form after the core loop works.
+Browse a seeded topic/section; open one 25-minute lesson; view content; start/pause timer; complete one small exercise; save progress and see it on a dashboard. Include a minimal leadership story form after the core loop works.
 
 ## Product quality
 Responsive, keyboard-accessible interface; clear loading/error/empty states; no dark patterns or punitive streaks. Separate study time, completion, practice and mastery metrics.

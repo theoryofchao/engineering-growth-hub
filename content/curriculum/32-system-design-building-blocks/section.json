@@ -1,12 +1,13 @@
 {
-  "domain": {
+  "topic": {
     "name": "Software Architecture",
+    "slug": "software-architecture",
     "description": "System design, quality attributes, evolutionary architecture"
   },
   "module": {
     "title": "Software Architecture"
   },
-  "topic": {
+  "section": {
     "title": "System Design Building Blocks",
     "slug": "32-system-design-building-blocks",
     "description": "Compose scalable architecture using well understood primitives.",

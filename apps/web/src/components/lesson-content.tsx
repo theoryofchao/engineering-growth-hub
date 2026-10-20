@@ -10,7 +10,7 @@ import { useFetch } from "@/hooks/use-fetch";
 
 type ExerciseSummary = { id: number; type: string; prompt: string; options: string[] };
 
-type TopicSessionSummary = {
+type SectionSessionSummary = {
   id: number;
   title: string;
   sequence: number;
@@ -29,33 +29,39 @@ type LearningSession = {
     body: string;
     note: Note | null;
     exercises: ExerciseSummary[];
+    examples?: { label: string; content: string }[];
   }[];
   access_tier: string;
-  topic: { id: number; title: string; slug: string };
-  topic_sessions: TopicSessionSummary[];
+  section: { id: number; title: string; slug: string };
+  section_sessions: SectionSessionSummary[];
   exercises: ExerciseSummary[];
 };
 
-function TopicLessonNav({
+function SectionLessonNav({
+  topicSlug,
+  sectionSlug,
   currentId,
   sessions,
 }: {
+  topicSlug: string;
+  sectionSlug: string;
   currentId: number;
-  sessions: TopicSessionSummary[];
+  sessions: SectionSessionSummary[];
 }) {
   if (sessions.length <= 1) return null;
 
   const currentIndex = sessions.findIndex((s) => s.id === currentId);
   const prev = currentIndex > 0 ? sessions[currentIndex - 1] : null;
   const next = currentIndex < sessions.length - 1 ? sessions[currentIndex + 1] : null;
+  const hrefFor = (sessionId: number) => `/learn/${topicSlug}/${sectionSlug}/${sessionId}`;
 
   return (
     <nav
-      aria-label="Lessons in this topic"
+      aria-label="Lessons in this section"
       className="rounded-lg border border-zinc-300 p-3 dark:border-zinc-700"
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-        Lessons in this topic
+        Lessons in this section
       </p>
       <ol className="mt-2 flex flex-col gap-0.5">
         {sessions.map((s) =>
@@ -69,7 +75,7 @@ function TopicLessonNav({
           ) : (
             <li key={s.id}>
               <Link
-                href={`/learning/${s.id}`}
+                href={hrefFor(s.id)}
                 className="block rounded px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-black dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
               >
                 {s.sequence}. {s.title}
@@ -82,7 +88,7 @@ function TopicLessonNav({
         <div className="mt-3 flex justify-between gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
           {prev ? (
             <Link
-              href={`/learning/${prev.id}`}
+              href={hrefFor(prev.id)}
               className="text-zinc-600 hover:underline dark:text-zinc-400"
             >
               ← {prev.title}
@@ -92,7 +98,7 @@ function TopicLessonNav({
           )}
           {next ? (
             <Link
-              href={`/learning/${next.id}`}
+              href={hrefFor(next.id)}
               className="text-right text-zinc-600 hover:underline dark:text-zinc-400"
             >
               {next.title} →
@@ -106,7 +112,15 @@ function TopicLessonNav({
   );
 }
 
-export function LessonContent({ sessionId }: { sessionId: number }) {
+export function LessonContent({
+  topicSlug,
+  sectionSlug,
+  sessionId,
+}: {
+  topicSlug: string;
+  sectionSlug: string;
+  sessionId: number;
+}) {
   const state = useFetch<LearningSession>(`/api/v1/learning-sessions/${sessionId}`);
 
   if (state.phase === "loading") {
@@ -145,7 +159,7 @@ export function LessonContent({ sessionId }: { sessionId: number }) {
   return (
     <article className="flex flex-col gap-6">
       <header>
-        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{data.topic.title}</p>
+        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{data.section.title}</p>
         <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">
           {data.title}
         </h1>
@@ -154,7 +168,12 @@ export function LessonContent({ sessionId }: { sessionId: number }) {
         </p>
       </header>
 
-      <TopicLessonNav currentId={data.id} sessions={data.topic_sessions} />
+      <SectionLessonNav
+        topicSlug={topicSlug}
+        sectionSlug={sectionSlug}
+        currentId={data.id}
+        sessions={data.section_sessions}
+      />
 
       <PomodoroTimer learningSessionId={data.id} modeMinutes={data.duration_minutes} />
 

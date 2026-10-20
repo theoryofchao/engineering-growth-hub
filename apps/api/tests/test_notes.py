@@ -1,19 +1,19 @@
-from app.models import Topic
+from app.models import Section
 from app.seed import seed_all
 
 
 def _first_content_block_id(app) -> int:
     with app.app_context():
         seed_all()
-        topic = Topic.query.filter_by(slug="browser-rendering").first()
-        return topic.learning_sessions[0].content_blocks[0].id
+        section = Section.query.filter_by(slug="browser-rendering").first()
+        return section.learning_sessions[0].content_blocks[0].id
 
 
 def _ids(app) -> dict:
     with app.app_context():
         seed_all()
-        topic = Topic.query.filter_by(slug="browser-rendering").first()
-        learning_session = topic.learning_sessions[0]
+        section = Section.query.filter_by(slug="browser-rendering").first()
+        learning_session = section.learning_sessions[0]
         return {
             "learning_session_id": learning_session.id,
             "block_id": learning_session.content_blocks[0].id,

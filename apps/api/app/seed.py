@@ -1,10 +1,10 @@
 """Idempotent loader for curriculum content files into the database.
 
-Content lives under content/curriculum/<topic-slug>/ rather than
-hard-coded in application code (docs/ARCHITECTURE.md). Each topic
-directory holds a `topic.json` (domain/module/topic metadata) plus one
-JSON file per learning session, so a topic's content doesn't grow into
-a single unbounded file as it gains sessions -- see
+Content lives under content/curriculum/<section-slug>/ rather than
+hard-coded in application code (docs/ARCHITECTURE.md). Each section
+directory holds a `section.json` (topic/module/section metadata) plus
+one JSON file per learning session, so a section's content doesn't grow
+into a single unbounded file as it gains sessions -- see
 content/curriculum/README.md for the file layout and sizing rule.
 """
 
@@ -15,11 +15,11 @@ import re
 from pathlib import Path
 
 from app.extensions import db
-from app.models import ContentBlock, Domain, Exercise, LearningSession, Module, Topic
+from app.models import ContentBlock, Exercise, LearningSession, Module, Section, Topic
 
 CONTENT_DIR = Path(__file__).resolve().parents[3] / "content" / "curriculum"
 CURRICULUM_MAP_FILENAME = "curriculum-map.json"
-TOPIC_METADATA_FILENAME = "topic.json"
+SECTION_METADATA_FILENAME = "section.json"
 
 
 def _slugify(text: str) -> str:
@@ -32,6 +32,10 @@ def _validate_no_prerequisite_cycles(prereqs_by_module_id: dict[int, list[int]])
     data straight from curriculum-map.json, before any DB writes --
     CURRICULUM.md's own backlog calls for validating this as a DAG, and
     it never has been. 80 nodes/~200 edges: a library is unwarranted.
+
+    Note: "module_id" here is CURRICULUM.md's own numbering (1-80),
+    which this schema stores as `Section.id`/`Section.slug`, not
+    `Module` -- see models.py.
     """
     state: dict[int, str] = {}
 
@@ -54,79 +58,87 @@ def _validate_no_prerequisite_cycles(prereqs_by_module_id: dict[int, list[int]])
 
 
 def load_curriculum_map(path: Path) -> None:
-    """Import the full CURRICULUM.md breadth as topic metadata (title,
+    """Import the full CURRICULUM.md breadth as section metadata (title,
     tier, description, prerequisites), with no learning sessions. This
     is what lets the homepage show the whole 80-module map with most of
-    it marked WIP, while `load_topic_dir` below attaches real lesson
-    content to the handful of topics that have it, matched by the same
+    it marked WIP, while `load_section_dir` below attaches real lesson
+    content to the handful of sections that have it, matched by the same
     slug.
     """
     data = json.loads(path.read_text())
 
     prereqs_by_module_id = {
         module_data["id"]: module_data.get("prerequisites", [])
-        for domain_data in data["domains"]
-        for module_data in domain_data["modules"]
+        for topic_data in data["domains"]
+        for module_data in topic_data["modules"]
     }
     _validate_no_prerequisite_cycles(prereqs_by_module_id)
 
-    topics_by_module_id: dict[int, Topic] = {}
+    sections_by_module_id: dict[int, Section] = {}
 
-    for domain_data in data["domains"]:
-        domain = Domain.query.filter_by(name=domain_data["name"]).first()
-        if domain is None:
-            domain = Domain(name=domain_data["name"], description=domain_data["description"])
-            db.session.add(domain)
+    for topic_data in data["domains"]:
+        topic = Topic.query.filter_by(name=topic_data["name"]).first()
+        if topic is None:
+            topic = Topic(
+                name=topic_data["name"],
+                slug=_slugify(topic_data["name"]),
+                description=topic_data["description"],
+            )
+            db.session.add(topic)
             db.session.flush()
 
-        module = Module.query.filter_by(domain_id=domain.id, title=domain_data["name"]).first()
+        # CURRICULUM.md's own map is flat (a topic -> a numbered list of
+        # modules, no further subgrouping), so every curriculum-map-only
+        # topic gets exactly one placeholder Module -- see Module's
+        # docstring in models.py.
+        module = Module.query.filter_by(topic_id=topic.id, title=topic_data["name"]).first()
         if module is None:
-            module = Module(domain_id=domain.id, title=domain_data["name"])
+            module = Module(topic_id=topic.id, title=topic_data["name"])
             db.session.add(module)
             db.session.flush()
 
-        for module_data in domain_data["modules"]:
+        for module_data in topic_data["modules"]:
             slug = f"{module_data['id']:02d}-{_slugify(module_data['title'])}"
-            topic = Topic.query.filter_by(slug=slug).first()
-            if topic is None:
-                topic = Topic(
+            section = Section.query.filter_by(slug=slug).first()
+            if section is None:
+                section = Section(
                     module_id=module.id,
                     title=module_data["title"],
                     slug=slug,
                     description=module_data["description"],
                     proficiency_tier=module_data["tier"],
                 )
-                db.session.add(topic)
+                db.session.add(section)
                 db.session.flush()
-            topics_by_module_id[module_data["id"]] = topic
+            sections_by_module_id[module_data["id"]] = section
 
-    # Second pass: prerequisites are linked only once every topic in the
+    # Second pass: prerequisites are linked only once every section in the
     # map exists, since a module can depend on one that appears later in
     # iteration order (e.g. module 1 depends on module 8). Reassigning
     # the full list is naturally idempotent -- SQLAlchemy's collection
     # diffing only emits INSERT/DELETE for actual differences.
-    for module_id, topic in topics_by_module_id.items():
-        topic.prerequisites = [
-            topics_by_module_id[prereq_id] for prereq_id in prereqs_by_module_id[module_id]
+    for module_id, section in sections_by_module_id.items():
+        section.prerequisites = [
+            sections_by_module_id[prereq_id] for prereq_id in prereqs_by_module_id[module_id]
         ]
 
     db.session.commit()
 
 
-def _load_session(topic: Topic, session_data: dict) -> None:
+def _load_session(section: Section, session_data: dict) -> None:
     """Upsert one learning session -- plus its content blocks and
-    exercises -- under `topic`. Shared by `load_topic_dir` regardless of
-    which session file a given session came from.
+    exercises -- under `section`. Shared by `load_section_dir` regardless
+    of which session file a given session came from.
     """
     session_data = dict(session_data)
     exercises_data = session_data.pop("exercises", [])
     content_blocks_data = session_data.pop("content_blocks", [])
 
     learning_session = LearningSession.query.filter_by(
-        topic_id=topic.id, sequence=session_data["sequence"]
+        section_id=section.id, sequence=session_data["sequence"]
     ).first()
     if learning_session is None:
-        learning_session = LearningSession(topic_id=topic.id, **session_data)
+        learning_session = LearningSession(section_id=section.id, **session_data)
         db.session.add(learning_session)
         db.session.flush()
     else:
@@ -149,12 +161,14 @@ def _load_session(topic: Topic, session_data: dict) -> None:
                 sequence=block_index,
                 heading=block_data["heading"],
                 body=block_data["body"],
+                examples=block_data.get("examples", []),
             )
             db.session.add(block)
             db.session.flush()
         else:
             block.heading = block_data["heading"]
             block.body = block_data["body"]
+            block.examples = block_data.get("examples", [])
 
         for exercise_index, exercise_data in enumerate(block_exercises_data, start=1):
             existing = Exercise.query.filter_by(
@@ -200,39 +214,41 @@ def _load_session(topic: Topic, session_data: dict) -> None:
             existing.definition_json = exercise_data["definition"]
 
 
-def load_topic_dir(dir_path: Path) -> None:
-    """Load one topic's content: `topic.json` (domain/module/topic
+def load_section_dir(dir_path: Path) -> None:
+    """Load one section's content: `section.json` (topic/module/section
     metadata) plus every other `*.json` file in the directory, each
     holding exactly one learning session. Session files are read in
     sorted-filename order, but the `sequence` field inside each file is
     what actually controls display/DB order -- numbering filenames like
     `01-...json` is for human navigation only, not relied on by code.
     """
-    topic_data = json.loads((dir_path / TOPIC_METADATA_FILENAME).read_text())
+    section_data = json.loads((dir_path / SECTION_METADATA_FILENAME).read_text())
 
-    domain = Domain.query.filter_by(name=topic_data["domain"]["name"]).first()
-    if domain is None:
-        domain = Domain(**topic_data["domain"])
-        db.session.add(domain)
-        db.session.flush()
-
-    module = Module.query.filter_by(
-        domain_id=domain.id, title=topic_data["module"]["title"]
-    ).first()
-    if module is None:
-        module = Module(domain_id=domain.id, **topic_data["module"])
-        db.session.add(module)
-        db.session.flush()
-
-    topic = Topic.query.filter_by(slug=topic_data["topic"]["slug"]).first()
+    topic = Topic.query.filter_by(name=section_data["topic"]["name"]).first()
     if topic is None:
-        topic = Topic(module_id=module.id, **topic_data["topic"])
+        topic = Topic(**section_data["topic"])
         db.session.add(topic)
         db.session.flush()
 
-    session_paths = sorted(p for p in dir_path.glob("*.json") if p.name != TOPIC_METADATA_FILENAME)
+    module = Module.query.filter_by(
+        topic_id=topic.id, title=section_data["module"]["title"]
+    ).first()
+    if module is None:
+        module = Module(topic_id=topic.id, **section_data["module"])
+        db.session.add(module)
+        db.session.flush()
+
+    section = Section.query.filter_by(slug=section_data["section"]["slug"]).first()
+    if section is None:
+        section = Section(module_id=module.id, **section_data["section"])
+        db.session.add(section)
+        db.session.flush()
+
+    session_paths = sorted(
+        p for p in dir_path.glob("*.json") if p.name != SECTION_METADATA_FILENAME
+    )
     for session_path in session_paths:
-        _load_session(topic, json.loads(session_path.read_text()))
+        _load_session(section, json.loads(session_path.read_text()))
 
     db.session.commit()
 
@@ -244,4 +260,4 @@ def seed_all() -> None:
 
     for path in sorted(CONTENT_DIR.iterdir()):
         if path.is_dir():
-            load_topic_dir(path)
+            load_section_dir(path)

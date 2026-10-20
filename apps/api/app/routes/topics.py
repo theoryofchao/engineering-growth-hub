@@ -1,109 +1,82 @@
-"""Full curriculum breadth for the homepage: every domain/topic that
+"""Full curriculum breadth for the homepage: every topic/section that
 exists (per CURRICULUM.md), flagged with whether a lesson has actually
-been authored yet. Most topics have no learning sessions — that's
+been authored yet. Most sections have no learning sessions — that's
 expected, not a bug, until Milestone 2's full content import.
 """
 
 from __future__ import annotations
 
-from flask import Blueprint, abort, current_app, jsonify
+from flask import Blueprint, current_app, jsonify
 
 from app.schemas import (
-    DomainWithTopics,
-    LearningSessionSummary,
     PrerequisiteSummary,
-    TopicDetail,
-    TopicListItem,
+    SectionListItem,
+    TopicRef,
+    TopicWithSections,
 )
-from app.services import topics_service
-from app.services.topics_service import TopicStatus
+from app.services import sections_service, topics_service
+from app.services.sections_service import SectionStatus
 
 topics_bp = Blueprint("topics", __name__, url_prefix="/api/v1")
 
 
 def _dev_bypass_active() -> bool:
-    """Local dev-only backdoor: see DEV_UNLOCK_ALL_TOPICS in app/config.py.
+    """Local dev-only backdoor: see DEV_UNLOCK_ALL_SECTIONS in app/config.py.
     Only ever true under DevelopmentConfig -- TestingConfig and
     ProductionConfig don't define this key, so .get() falls back to False
     for them regardless of what's in the environment.
     """
-    return bool(current_app.config.get("DEV_UNLOCK_ALL_TOPICS", False))
+    return bool(current_app.config.get("DEV_UNLOCK_ALL_SECTIONS", False))
 
 
-def _prerequisite_summary(prereq: topics_service.PrerequisiteStatus) -> PrerequisiteSummary:
+def _prerequisite_summary(prereq: sections_service.PrerequisiteStatus) -> PrerequisiteSummary:
+    section = prereq.section
     return PrerequisiteSummary(
-        id=prereq.topic.id, title=prereq.topic.title, slug=prereq.topic.slug, status=prereq.status
+        id=section.id,
+        title=section.title,
+        slug=section.slug,
+        topic=TopicRef(name=section.module.topic.name, slug=section.module.topic.slug),
+        status=prereq.status,
     )
 
 
-def _topic_list_item(topic_status: TopicStatus) -> TopicListItem:
-    topic = topic_status.topic
-    return TopicListItem(
-        id=topic.id,
-        title=topic.title,
-        slug=topic.slug,
-        description=topic.description,
-        proficiency_tier=topic.proficiency_tier,
-        has_content=len(topic.learning_sessions) > 0,
+def _section_list_item(section_status: SectionStatus) -> SectionListItem:
+    section = section_status.section
+    return SectionListItem(
+        id=section.id,
+        title=section.title,
+        slug=section.slug,
+        description=section.description,
+        proficiency_tier=section.proficiency_tier,
+        has_content=len(section.learning_sessions) > 0,
         first_learning_session_id=(
-            topic.learning_sessions[0].id if topic.learning_sessions else None
+            section.learning_sessions[0].id if section.learning_sessions else None
         ),
-        status=topic_status.status,
-        is_locked=topic_status.is_locked,
-        unmet_prerequisites=[_prerequisite_summary(p) for p in topic_status.unmet_prerequisites],
-        dev_prerequisites_bypassed=topic_status.dev_bypassed,
+        status=section_status.status,
+        is_locked=section_status.is_locked,
+        unmet_prerequisites=[_prerequisite_summary(p) for p in section_status.unmet_prerequisites],
+        dev_prerequisites_bypassed=section_status.dev_bypassed,
     )
 
 
 @topics_bp.get("/topics")
 def list_topics():
-    domains = topics_service.list_topics()
+    topics = topics_service.list_topics()
     dev_bypass = _dev_bypass_active()
 
     body = [
-        DomainWithTopics(
-            id=domain.id,
-            name=domain.name,
-            description=domain.description,
-            topics=[
-                _topic_list_item(topics_service.compute_topic_status(topic, dev_bypass))
-                for module in domain.modules
-                for topic in module.topics
+        TopicWithSections(
+            id=topic.id,
+            name=topic.name,
+            slug=topic.slug,
+            description=topic.description,
+            sections=[
+                _section_list_item(sections_service.compute_section_status(section, dev_bypass))
+                for module in topic.modules
+                for section in module.sections
             ],
         )
-        for domain in domains
+        for topic in topics
     ]
 
-    return jsonify([d.model_dump() for d in body])
-
-
-@topics_bp.get("/topics/<int:topic_id>")
-def get_topic(topic_id: int):
-    topic_status = topics_service.get_topic_detail(topic_id, _dev_bypass_active())
-    if topic_status is None:
-        abort(404, description="Topic not found")
-
-    topic = topic_status.topic
-    body = TopicDetail(
-        id=topic.id,
-        title=topic.title,
-        slug=topic.slug,
-        description=topic.description,
-        proficiency_tier=topic.proficiency_tier,
-        status=topic_status.status,
-        is_locked=topic_status.is_locked,
-        learning_sessions=[
-            LearningSessionSummary(
-                id=session.id,
-                title=session.title,
-                sequence=session.sequence,
-                duration_minutes=session.duration_minutes,
-            )
-            for session in topic.learning_sessions
-        ],
-        prerequisites=[_prerequisite_summary(p) for p in topic_status.prerequisites],
-        unmet_prerequisites=[_prerequisite_summary(p) for p in topic_status.unmet_prerequisites],
-        dev_prerequisites_bypassed=topic_status.dev_bypassed,
-    )
-
-    return jsonify(body.model_dump())
+    return jsonify([t.model_dump() for t in body])

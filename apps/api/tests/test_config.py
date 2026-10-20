@@ -2,18 +2,18 @@ from app.config import DevelopmentConfig, ProductionConfig, TestingConfig, _env_
 
 
 def test_dev_unlock_all_topics_defaults_off():
-    assert DevelopmentConfig.DEV_UNLOCK_ALL_TOPICS is False
+    assert DevelopmentConfig.DEV_UNLOCK_ALL_SECTIONS is False
 
 
 def test_dev_unlock_all_topics_is_never_defined_outside_development():
-    """TestingConfig/ProductionConfig must not read DEV_UNLOCK_ALL_TOPICS
+    """TestingConfig/ProductionConfig must not read DEV_UNLOCK_ALL_SECTIONS
     at all -- not just default it to False -- so an env var leaking into
     either environment can never bypass prerequisite locking there.
     """
-    assert "DEV_UNLOCK_ALL_TOPICS" not in vars(TestingConfig)
-    assert "DEV_UNLOCK_ALL_TOPICS" not in vars(ProductionConfig)
-    assert TestingConfig.DEV_UNLOCK_ALL_TOPICS is False
-    assert ProductionConfig.DEV_UNLOCK_ALL_TOPICS is False
+    assert "DEV_UNLOCK_ALL_SECTIONS" not in vars(TestingConfig)
+    assert "DEV_UNLOCK_ALL_SECTIONS" not in vars(ProductionConfig)
+    assert TestingConfig.DEV_UNLOCK_ALL_SECTIONS is False
+    assert ProductionConfig.DEV_UNLOCK_ALL_SECTIONS is False
 
 
 def test_env_flag_parses_truthy_and_falsy_values(monkeypatch):

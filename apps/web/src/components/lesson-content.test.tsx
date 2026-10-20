@@ -20,14 +20,16 @@ function baseLessonResponse(overrides: Partial<Record<string, unknown>> = {}) {
       },
     ],
     access_tier: "free",
-    topic: { id: 1, title: "Browser Rendering", slug: "browser-rendering" },
-    topic_sessions: [
+    section: { id: 1, title: "Browser Rendering", slug: "browser-rendering" },
+    section_sessions: [
       { id: 1, title: "Critical Rendering Path", sequence: 1, duration_minutes: 25 },
     ],
     exercises: [],
     ...overrides,
   };
 }
+
+const baseProps = { topicSlug: "web-frontend", sectionSlug: "browser-rendering", sessionId: 1 };
 
 describe("LessonContent", () => {
   beforeEach(() => {
@@ -41,7 +43,7 @@ describe("LessonContent", () => {
   it("shows loading state before the response resolves", () => {
     (fetch as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
 
-    render(<LessonContent sessionId={1} />);
+    render(<LessonContent {...baseProps} />);
 
     expect(screen.getByRole("status")).toHaveTextContent("Loading lesson");
   });
@@ -53,7 +55,7 @@ describe("LessonContent", () => {
       json: async () => baseLessonResponse(),
     });
 
-    render(<LessonContent sessionId={1} />);
+    render(<LessonContent {...baseProps} />);
 
     await waitFor(() => expect(screen.getByText("Critical Rendering Path")).toBeInTheDocument());
     expect(screen.getByText("Browser Rendering")).toBeInTheDocument();
@@ -78,7 +80,7 @@ describe("LessonContent", () => {
         }),
     });
 
-    render(<LessonContent sessionId={1} />);
+    render(<LessonContent {...baseProps} />);
 
     await waitFor(() => expect(screen.getByText("Check your understanding")).toBeInTheDocument());
     expect(
@@ -112,33 +114,33 @@ describe("LessonContent", () => {
         }),
     });
 
-    render(<LessonContent sessionId={1} />);
+    render(<LessonContent {...baseProps} />);
 
     await waitFor(() => expect(screen.getByText("Pinned to this slide?")).toBeInTheDocument());
     // No session-level exercises were returned, so no wrap-up section.
     expect(screen.queryByText("Check your understanding")).not.toBeInTheDocument();
   });
 
-  it("does not render topic lesson nav when the topic has only one lesson", async () => {
+  it("does not render section lesson nav when the section has only one lesson", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => baseLessonResponse(),
     });
 
-    render(<LessonContent sessionId={1} />);
+    render(<LessonContent {...baseProps} />);
 
     await waitFor(() => expect(screen.getByText("Critical Rendering Path")).toBeInTheDocument());
-    expect(screen.queryByText("Lessons in this topic")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lessons in this section")).not.toBeInTheDocument();
   });
 
-  it("renders topic lesson nav with prev/next links when the topic has multiple lessons", async () => {
+  it("renders section lesson nav with prev/next links when the section has multiple lessons", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       status: 200,
       json: async () =>
         baseLessonResponse({
-          topic_sessions: [
+          section_sessions: [
             { id: 1, title: "Critical Rendering Path", sequence: 1, duration_minutes: 25 },
             { id: 2, title: "Compositing", sequence: 2, duration_minutes: 25 },
             { id: 3, title: "Layout Thrashing", sequence: 3, duration_minutes: 25 },
@@ -146,11 +148,11 @@ describe("LessonContent", () => {
         }),
     });
 
-    render(<LessonContent sessionId={1} />);
+    render(<LessonContent {...baseProps} />);
 
-    await waitFor(() => expect(screen.getByText("Lessons in this topic")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Lessons in this section")).toBeInTheDocument());
 
-    const nav = screen.getByRole("navigation", { name: "Lessons in this topic" });
+    const nav = screen.getByRole("navigation", { name: "Lessons in this section" });
     // Current lesson is listed as plain text (not a link).
     expect(within(nav).getByText("1. Critical Rendering Path")).toBeInTheDocument();
     expect(
@@ -160,12 +162,15 @@ describe("LessonContent", () => {
     // Other lessons are links.
     expect(within(nav).getByRole("link", { name: "2. Compositing" })).toHaveAttribute(
       "href",
-      "/learning/2",
+      "/learn/web-frontend/browser-rendering/2",
     );
 
     // No "previous" since this is lesson 1, but there's a "next".
     expect(within(nav).queryByText(/^←/)).not.toBeInTheDocument();
-    expect(within(nav).getByText("Compositing →")).toHaveAttribute("href", "/learning/2");
+    expect(within(nav).getByText("Compositing →")).toHaveAttribute(
+      "href",
+      "/learn/web-frontend/browser-rendering/2",
+    );
   });
 
   it("renders a not-found state for a missing lesson", async () => {
@@ -175,7 +180,7 @@ describe("LessonContent", () => {
       json: async () => ({ error: "Learning session not found" }),
     });
 
-    render(<LessonContent sessionId={999} />);
+    render(<LessonContent {...baseProps} sessionId={999} />);
 
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Lesson not found."));
   });
@@ -183,7 +188,7 @@ describe("LessonContent", () => {
   it("renders an error state when the API is unreachable", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Failed to fetch"));
 
-    render(<LessonContent sessionId={1} />);
+    render(<LessonContent {...baseProps} />);
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent("Could not load the lesson."),

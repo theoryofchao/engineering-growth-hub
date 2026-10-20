@@ -48,8 +48,8 @@ def submit(exercise_id: int, selected_index: int) -> ExerciseResult | None:
     )
 
     if is_correct:
-        topic_id = exercise.learning_session.topic_id
-        UserProgress.get_or_create(topic_id).advance_to("practiced")
+        section_id = exercise.learning_session.section_id
+        UserProgress.get_or_create(section_id).advance_to("practiced")
 
     db.session.commit()
 

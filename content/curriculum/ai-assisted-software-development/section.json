@@ -1,12 +1,13 @@
 {
-  "domain": {
+  "topic": {
     "name": "AI & ML Engineering",
+    "slug": "ai-ml-engineering",
     "description": "AI applications, evaluations, AI-assisted development"
   },
   "module": {
     "title": "AI & ML Engineering"
   },
-  "topic": {
+  "section": {
     "title": "AI-Assisted Software Development",
     "slug": "70-ai-assisted-software-development",
     "description": "Use agents effectively while retaining accountability for correctness.",

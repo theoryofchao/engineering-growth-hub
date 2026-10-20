@@ -1,13 +1,13 @@
 from app.extensions import db
-from app.models import Exercise, Topic, UserProgress
+from app.models import Exercise, Section, UserProgress
 from app.seed import seed_all
 
 
 def _seed_exercise_id(app) -> int:
     with app.app_context():
         seed_all()
-        topic = Topic.query.filter_by(slug="browser-rendering").first()
-        exercise = topic.learning_sessions[0].exercises[0]
+        section = Section.query.filter_by(slug="browser-rendering").first()
+        exercise = section.learning_sessions[0].exercises[0]
         return exercise.id
 
 
@@ -45,8 +45,8 @@ def test_correct_submission_advances_progress_to_practiced(app, client):
 
     with app.app_context():
         exercise = db.session.get(Exercise, exercise_id)
-        topic_id = exercise.learning_session.topic_id
-        progress = UserProgress.query.filter_by(topic_id=topic_id).first()
+        section_id = exercise.learning_session.section_id
+        progress = UserProgress.query.filter_by(section_id=section_id).first()
         assert progress is not None
         assert progress.status == "practiced"
 
@@ -58,8 +58,8 @@ def test_incorrect_submission_does_not_advance_progress(app, client):
 
     with app.app_context():
         exercise = db.session.get(Exercise, exercise_id)
-        topic_id = exercise.learning_session.topic_id
-        progress = UserProgress.query.filter_by(topic_id=topic_id).first()
+        section_id = exercise.learning_session.section_id
+        progress = UserProgress.query.filter_by(section_id=section_id).first()
         assert progress is None  # never started a study session either
 
 

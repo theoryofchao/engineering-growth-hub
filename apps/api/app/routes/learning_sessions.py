@@ -7,11 +7,12 @@ from flask import Blueprint, abort, jsonify
 from app.models import LearningSession
 from app.schemas import (
     ContentBlockDetail,
+    ContentExample,
     ExerciseSummary,
     LearningSessionDetail,
     LearningSessionSummary,
     NoteDetail,
-    TopicSummary,
+    SectionSummary,
 )
 from app.services import learning_sessions_service
 
@@ -37,12 +38,12 @@ def _serialize(learning_session: LearningSession) -> dict:
         objective=learning_session.objective,
         sequence=learning_session.sequence,
         access_tier=learning_session.access_tier,
-        topic=TopicSummary.model_validate(learning_session.topic),
-        topic_sessions=[
+        section=SectionSummary.model_validate(learning_session.section),
+        section_sessions=[
             LearningSessionSummary(
                 id=s.id, title=s.title, sequence=s.sequence, duration_minutes=s.duration_minutes
             )
-            for s in learning_session.topic.learning_sessions
+            for s in learning_session.section.learning_sessions
         ],
         content_blocks=[
             ContentBlockDetail(
@@ -56,6 +57,7 @@ def _serialize(learning_session: LearningSession) -> dict:
                     else None
                 ),
                 exercises=[_exercise_summary(e) for e in block.exercises],
+                examples=[ContentExample(**example) for example in block.examples],
             )
             for block in learning_session.content_blocks
         ],

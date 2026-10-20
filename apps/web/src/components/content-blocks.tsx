@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 
+import { ContentExample, ExampleAccordion } from "@/components/example-accordion";
 import { ExerciseQuiz } from "@/components/exercise-quiz";
 import { Note, NotesPanel } from "@/components/notes-panel";
 import { useNoteDraft } from "@/hooks/use-note-draft";
@@ -15,6 +16,7 @@ type Block = {
   body: string;
   note: Note | null;
   exercises: ExerciseSummary[];
+  examples?: ContentExample[];
 };
 
 type ViewMode = "page" | "slide";
@@ -153,6 +155,7 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
               <p className="mt-1 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
                 {block.body}
               </p>
+              <ExampleAccordion examples={block.examples ?? []} />
               {block.exercises.length > 0 && (
                 <div className="mt-3 flex flex-col gap-3">
                   {block.exercises.map((exercise) => (
@@ -185,6 +188,7 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
             <p className="mt-2 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
               {blocks[slideIndex].body}
             </p>
+            <ExampleAccordion examples={blocks[slideIndex].examples ?? []} />
             {blocks[slideIndex].exercises.length > 0 && (
               <div className="mt-3 flex flex-col gap-3">
                 {blocks[slideIndex].exercises.map((exercise) => (

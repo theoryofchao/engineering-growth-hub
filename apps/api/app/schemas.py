@@ -7,7 +7,19 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
-class TopicSummary(BaseModel):
+class TopicRef(BaseModel):
+    """Minimal parent-topic reference, just enough to build a `/learn/<topic
+    slug>/<section slug>` link to a section that isn't necessarily the one
+    the current page is already on (e.g. a prerequisite in another topic).
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+    slug: str
+
+
+class SectionSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -29,6 +41,11 @@ class NoteDetail(BaseModel):
     updated_at: datetime
 
 
+class ContentExample(BaseModel):
+    label: str
+    content: str
+
+
 class ContentBlockDetail(BaseModel):
     id: int
     sequence: int
@@ -36,6 +53,7 @@ class ContentBlockDetail(BaseModel):
     body: str
     note: NoteDetail | None = None
     exercises: list[ExerciseSummary] = []
+    examples: list[ContentExample] = []
 
 
 class LearningSessionSummary(BaseModel):
@@ -55,11 +73,11 @@ class LearningSessionDetail(BaseModel):
     content_blocks: list[ContentBlockDetail]
     sequence: int
     access_tier: str
-    topic: TopicSummary
-    # Every learning session in this topic (including this one), ordered
+    section: SectionSummary
+    # Every learning session in this section (including this one), ordered
     # by sequence — lets the frontend render "other lessons in this
-    # topic" navigation instead of a dead end after lesson 1.
-    topic_sessions: list[LearningSessionSummary]
+    # section" navigation instead of a dead end after lesson 1.
+    section_sessions: list[LearningSessionSummary]
     # Lesson-level exercises not pinned to any specific slide (shown in a
     # wrap-up section). Most exercises should be block-scoped instead —
     # see ContentBlockDetail.exercises.
@@ -84,8 +102,8 @@ class ExerciseSubmissionResult(BaseModel):
     explanation: str
 
 
-class TopicProgressSummary(BaseModel):
-    topic_id: int
+class SectionProgressSummary(BaseModel):
+    section_id: int
     title: str
     slug: str
     status: str
@@ -95,21 +113,24 @@ class TopicProgressSummary(BaseModel):
 
 class DashboardSummary(BaseModel):
     total_study_seconds: int
-    topics: list[TopicProgressSummary]
+    sections: list[SectionProgressSummary]
 
 
 class PrerequisiteSummary(BaseModel):
-    """A prerequisite topic's own id/title/slug/status, so the UI can
-    explain and link to what's blocking a locked topic.
+    """A prerequisite section's own id/title/slug/status plus its parent
+    topic, so the UI can explain and link to what's blocking a locked
+    section -- a prerequisite can live under a different topic than the
+    section it's blocking, so the link needs that topic's slug too.
     """
 
     id: int
     title: str
     slug: str
+    topic: TopicRef
     status: str
 
 
-class TopicListItem(BaseModel):
+class SectionListItem(BaseModel):
     id: int
     title: str
     slug: str
@@ -120,15 +141,16 @@ class TopicListItem(BaseModel):
     status: str
     is_locked: bool
     unmet_prerequisites: list[PrerequisiteSummary] = []
-    # True only when a local dev backdoor (DEV_UNLOCK_ALL_TOPICS) is forcing
-    # is_locked=False despite unmet prerequisites. See routes/topics.py.
+    # True only when a local dev backdoor (DEV_UNLOCK_ALL_SECTIONS) is forcing
+    # is_locked=False despite unmet prerequisites. See routes/sections.py.
     dev_prerequisites_bypassed: bool = False
 
 
-class TopicDetail(BaseModel):
+class SectionDetail(BaseModel):
     id: int
     title: str
     slug: str
+    topic: TopicRef
     description: str | None
     proficiency_tier: str
     status: str
@@ -139,8 +161,43 @@ class TopicDetail(BaseModel):
     dev_prerequisites_bypassed: bool = False
 
 
-class DomainWithTopics(BaseModel):
+class TopicWithSections(BaseModel):
     id: int
     name: str
+    slug: str
     description: str | None
-    topics: list[TopicListItem]
+    sections: list[SectionListItem]
+
+
+class CompetencySummary(BaseModel):
+    id: int
+    title: str
+    slug: str
+    description: str | None
+
+
+class LeadershipStorySummary(BaseModel):
+    """One entry in a story list -- `result` gives a one-line preview
+    without shipping the full STAR text for every row.
+    """
+
+    id: int
+    title: str
+    competency: CompetencySummary
+    result: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class LeadershipStoryDetail(BaseModel):
+    id: int
+    title: str
+    competency: CompetencySummary
+    situation: str
+    task: str
+    action: str
+    result: str
+    reflection: str | None
+    quantified_outcome: str | None
+    created_at: datetime
+    updated_at: datetime

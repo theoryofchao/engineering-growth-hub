@@ -12,14 +12,14 @@ describe("DashboardSummary", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows total time and per-topic progress", async () => {
+  it("shows total time and per-section progress", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: async () => ({
         total_study_seconds: 1500,
-        topics: [
+        sections: [
           {
-            topic_id: 1,
+            section_id: 1,
             title: "Browser Rendering",
             slug: "browser-rendering",
             status: "practiced",
@@ -38,10 +38,10 @@ describe("DashboardSummary", () => {
     expect(screen.getByText("1 / 1 correct")).toBeInTheDocument();
   });
 
-  it("shows an empty state with no topics started", async () => {
+  it("shows an empty state with no sections started", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => ({ total_study_seconds: 0, topics: [] }),
+      json: async () => ({ total_study_seconds: 0, sections: [] }),
     });
 
     render(<DashboardSummary />);

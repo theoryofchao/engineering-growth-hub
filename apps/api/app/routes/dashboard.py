@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify
 
-from app.schemas import DashboardSummary, TopicProgressSummary
+from app.schemas import DashboardSummary, SectionProgressSummary
 from app.services import dashboard_service
 
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/api/v1")
@@ -21,16 +21,16 @@ def get_dashboard_summary():
 
     body = DashboardSummary(
         total_study_seconds=summary.total_study_seconds,
-        topics=[
-            TopicProgressSummary(
-                topic_id=view.topic.id,
-                title=view.topic.title,
-                slug=view.topic.slug,
+        sections=[
+            SectionProgressSummary(
+                section_id=view.section.id,
+                title=view.section.title,
+                slug=view.section.slug,
                 status=view.status,
                 exercises_attempted=view.exercises_attempted,
                 exercises_correct=view.exercises_correct,
             )
-            for view in summary.topics
+            for view in summary.sections
         ],
     )
     return jsonify(body.model_dump())

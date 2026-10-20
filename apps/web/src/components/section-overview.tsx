@@ -5,10 +5,16 @@ import Link from "next/link";
 import { DevBypassBanner } from "@/components/dev-bypass-banner";
 import { useFetch } from "@/hooks/use-fetch";
 
+type TopicRef = {
+  name: string;
+  slug: string;
+};
+
 type PrerequisiteSummary = {
   id: number;
   title: string;
   slug: string;
+  topic: TopicRef;
   status: string;
 };
 
@@ -19,10 +25,11 @@ type LearningSessionSummary = {
   duration_minutes: number;
 };
 
-type TopicDetail = {
+type SectionDetail = {
   id: number;
   title: string;
   slug: string;
+  topic: TopicRef;
   description: string | null;
   proficiency_tier: string;
   status: string;
@@ -47,13 +54,19 @@ const STATUS_LABELS: Record<string, string> = {
   mastered: "Mastered",
 };
 
-export function TopicOverview({ topicId }: { topicId: number }) {
-  const state = useFetch<TopicDetail>(`/api/v1/topics/${topicId}`);
+export function SectionOverview({
+  topicSlug,
+  sectionSlug,
+}: {
+  topicSlug: string;
+  sectionSlug: string;
+}) {
+  const state = useFetch<SectionDetail>(`/api/v1/sections/${sectionSlug}`);
 
   if (state.phase === "loading") {
     return (
       <p role="status" aria-live="polite" className="text-zinc-600 dark:text-zinc-400">
-        Loading topic…
+        Loading section…
       </p>
     );
   }
@@ -64,7 +77,7 @@ export function TopicOverview({ topicId }: { topicId: number }) {
         role="alert"
         className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
       >
-        <p className="font-medium">Topic not found.</p>
+        <p className="font-medium">Section not found.</p>
       </div>
     );
   }
@@ -75,7 +88,7 @@ export function TopicOverview({ topicId }: { topicId: number }) {
         role="alert"
         className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200"
       >
-        <p className="font-medium">Could not load the topic.</p>
+        <p className="font-medium">Could not load the section.</p>
         <p className="text-sm">{state.message}</p>
       </div>
     );
@@ -87,7 +100,7 @@ export function TopicOverview({ topicId }: { topicId: number }) {
     <article className="flex flex-col gap-6">
       <header>
         <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-          {TIER_LABELS[data.proficiency_tier] ?? data.proficiency_tier}
+          {data.topic.name} · {TIER_LABELS[data.proficiency_tier] ?? data.proficiency_tier}
         </p>
         <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">
           {data.title}
@@ -108,11 +121,14 @@ export function TopicOverview({ topicId }: { topicId: number }) {
           className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
         >
           <p className="font-medium">Locked</p>
-          <p className="mt-1 text-sm">Complete these topics first:</p>
+          <p className="mt-1 text-sm">Complete these sections first:</p>
           <ul className="mt-2 flex flex-col gap-1">
             {data.unmet_prerequisites.map((prereq) => (
               <li key={prereq.id}>
-                <Link href={`/topics/${prereq.id}`} className="text-sm underline">
+                <Link
+                  href={`/learn/${prereq.topic.slug}/${prereq.slug}`}
+                  className="text-sm underline"
+                >
                   {prereq.title}
                 </Link>
                 <span className="ml-2 text-xs opacity-75">
@@ -131,7 +147,7 @@ export function TopicOverview({ topicId }: { topicId: number }) {
 
         {data.learning_sessions.length === 0 ? (
           <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            No lessons authored yet for this topic.
+            No lessons authored yet for this section.
           </p>
         ) : (
           <ul className="mt-2 flex flex-col gap-2">
@@ -151,7 +167,7 @@ export function TopicOverview({ topicId }: { topicId: number }) {
                   </div>
                 ) : (
                   <Link
-                    href={`/learning/${session.id}`}
+                    href={`/learn/${topicSlug}/${sectionSlug}/${session.id}`}
                     className="flex items-center justify-between rounded-lg border border-zinc-300 px-4 py-3 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
                   >
                     <span className="font-medium text-black dark:text-zinc-50">

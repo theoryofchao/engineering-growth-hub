@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { ContentWidthContainer } from "@/components/content-width-container";
 import { LessonContent } from "@/components/lesson-content";
 
-export default function LearningSessionPage(props: PageProps<"/learning/[id]">) {
+export default function LearningSessionPage(
+  props: PageProps<"/learn/[topicSlug]/[sectionSlug]/[sessionId]">,
+) {
   return (
     <div className="flex flex-1 justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-2xl flex-col gap-6 px-6 py-16">
+      <ContentWidthContainer>
         <Link href="/" className="text-sm text-zinc-500 hover:underline dark:text-zinc-400">
           ← Back
         </Link>
@@ -19,12 +22,18 @@ export default function LearningSessionPage(props: PageProps<"/learning/[id]">) 
         >
           <LessonSection params={props.params} />
         </Suspense>
-      </main>
+      </ContentWidthContainer>
     </div>
   );
 }
 
-async function LessonSection({ params }: { params: PageProps<"/learning/[id]">["params"] }) {
-  const { id } = await params;
-  return <LessonContent sessionId={Number(id)} />;
+async function LessonSection({
+  params,
+}: {
+  params: PageProps<"/learn/[topicSlug]/[sectionSlug]/[sessionId]">["params"];
+}) {
+  const { topicSlug, sectionSlug, sessionId } = await params;
+  return (
+    <LessonContent topicSlug={topicSlug} sectionSlug={sectionSlug} sessionId={Number(sessionId)} />
+  );
 }

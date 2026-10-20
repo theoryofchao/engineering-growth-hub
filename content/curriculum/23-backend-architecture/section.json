@@ -1,12 +1,13 @@
 {
-  "domain": {
+  "topic": {
     "name": "Backend & APIs",
+    "slug": "backend-apis",
     "description": "Service architecture, API contracts, identity, job processing"
   },
   "module": {
     "title": "Backend Architecture"
   },
-  "topic": {
+  "section": {
     "title": "Backend Architecture",
     "slug": "23-backend-architecture",
     "description": "Separate business rules from infrastructure and isolate change.",

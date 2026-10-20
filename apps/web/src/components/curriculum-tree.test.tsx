@@ -1,14 +1,15 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TopicList } from "./topic-list";
+import { CurriculumTree } from "./curriculum-tree";
 
-const domainsFixture = [
+const topicsFixture = [
   {
     id: 1,
     name: "Computer Science Foundations",
+    slug: "computer-science-foundations",
     description: "Algorithms, memory, operating systems",
-    topics: [
+    sections: [
       {
         id: 1,
         title: "Data Structures",
@@ -27,8 +28,9 @@ const domainsFixture = [
   {
     id: 2,
     name: "Web & Frontend",
+    slug: "web-frontend",
     description: "Browser, React",
-    topics: [
+    sections: [
       {
         id: 2,
         title: "Browser Rendering",
@@ -47,8 +49,9 @@ const domainsFixture = [
   {
     id: 3,
     name: "Software Architecture",
+    slug: "software-architecture",
     description: "System design",
-    topics: [
+    sections: [
       {
         id: 3,
         title: "System Design Methodology",
@@ -60,7 +63,13 @@ const domainsFixture = [
         status: "not_started",
         is_locked: true,
         unmet_prerequisites: [
-          { id: 1, title: "Data Structures", slug: "01-data-structures", status: "not_started" },
+          {
+            id: 1,
+            title: "Data Structures",
+            slug: "01-data-structures",
+            topic: { name: "Computer Science Foundations", slug: "computer-science-foundations" },
+            status: "not_started",
+          },
         ],
         dev_prerequisites_bypassed: false,
       },
@@ -68,7 +77,7 @@ const domainsFixture = [
   },
 ];
 
-describe("TopicList", () => {
+describe("CurriculumTree", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
   });
@@ -77,43 +86,46 @@ describe("TopicList", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders domains with both WIP and available topics", async () => {
+  it("renders topics with both WIP and available sections", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => domainsFixture,
+      json: async () => topicsFixture,
     });
 
-    render(<TopicList />);
+    render(<CurriculumTree />);
 
     await waitFor(() => expect(screen.getByText("Data Structures")).toBeInTheDocument());
     expect(screen.getByText("WIP")).toBeInTheDocument();
 
     const availableLink = screen.getByText("Browser Rendering").closest("a");
-    expect(availableLink).toHaveAttribute("href", "/topics/2");
+    expect(availableLink).toHaveAttribute("href", "/learn/web-frontend/browser-rendering");
   });
 
-  it("links a locked topic to its overview page and shows a Locked badge", async () => {
+  it("links a locked section to its overview page and shows a Locked badge", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => domainsFixture,
+      json: async () => topicsFixture,
     });
 
-    render(<TopicList />);
+    render(<CurriculumTree />);
 
     const lockedLink = await waitFor(() =>
       screen.getByText("System Design Methodology").closest("a"),
     );
-    expect(lockedLink).toHaveAttribute("href", "/topics/3");
+    expect(lockedLink).toHaveAttribute(
+      "href",
+      "/learn/software-architecture/33-system-design-methodology",
+    );
     expect(within(lockedLink!).getByText("Locked")).toBeInTheDocument();
   });
 
-  it("filters topics by progress status", async () => {
+  it("filters sections by progress status", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => domainsFixture,
+      json: async () => topicsFixture,
     });
 
-    render(<TopicList />);
+    render(<CurriculumTree />);
     await waitFor(() => expect(screen.getByText("Data Structures")).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText("Progress"), { target: { value: "mastered" } });
@@ -123,13 +135,13 @@ describe("TopicList", () => {
     expect(screen.queryByText("System Design Methodology")).not.toBeInTheDocument();
   });
 
-  it("filters topics by lock status", async () => {
+  it("filters sections by lock status", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => domainsFixture,
+      json: async () => topicsFixture,
     });
 
-    render(<TopicList />);
+    render(<CurriculumTree />);
     await waitFor(() => expect(screen.getByText("Data Structures")).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText("Lock status"), { target: { value: "locked" } });
@@ -138,47 +150,47 @@ describe("TopicList", () => {
     expect(screen.queryByText("Browser Rendering")).not.toBeInTheDocument();
   });
 
-  it("shows a completed-topics fraction per domain", async () => {
+  it("shows a completed-sections fraction per topic", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => domainsFixture,
+      json: async () => topicsFixture,
     });
 
-    render(<TopicList />);
+    render(<CurriculumTree />);
 
-    const emptyDomainDetails = await waitFor(() =>
+    const emptyTopicDetails = await waitFor(() =>
       screen.getByText("Computer Science Foundations").closest("details"),
     );
-    const filledDomainDetails = screen.getByText("Web & Frontend").closest("details")!;
+    const filledTopicDetails = screen.getByText("Web & Frontend").closest("details")!;
 
-    expect(within(emptyDomainDetails!).getByText("0/1 available")).toBeInTheDocument();
-    expect(within(filledDomainDetails).getByText("1/1 available")).toBeInTheDocument();
+    expect(within(emptyTopicDetails!).getByText("0/1 available")).toBeInTheDocument();
+    expect(within(filledTopicDetails).getByText("1/1 available")).toBeInTheDocument();
   });
 
-  it("defaults sections with content open and empty sections collapsed", async () => {
+  it("defaults topics with content open and empty topics collapsed", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => domainsFixture,
+      json: async () => topicsFixture,
     });
 
-    render(<TopicList />);
+    render(<CurriculumTree />);
 
     await waitFor(() => expect(screen.getByText("Data Structures")).toBeInTheDocument());
 
-    const emptyDomainDetails = screen.getByText("Computer Science Foundations").closest("details");
-    const filledDomainDetails = screen.getByText("Web & Frontend").closest("details");
+    const emptyTopicDetails = screen.getByText("Computer Science Foundations").closest("details");
+    const filledTopicDetails = screen.getByText("Web & Frontend").closest("details");
 
-    expect(emptyDomainDetails).not.toHaveAttribute("open");
-    expect(filledDomainDetails).toHaveAttribute("open");
+    expect(emptyTopicDetails).not.toHaveAttribute("open");
+    expect(filledTopicDetails).toHaveAttribute("open");
   });
 
-  it("toggles a section open when its header is clicked", async () => {
+  it("toggles a topic open when its header is clicked", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => domainsFixture,
+      json: async () => topicsFixture,
     });
 
-    render(<TopicList />);
+    render(<CurriculumTree />);
 
     await waitFor(() => expect(screen.getByText("Data Structures")).toBeInTheDocument());
 
@@ -193,7 +205,7 @@ describe("TopicList", () => {
   it("shows an error state when the request fails", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Failed to fetch"));
 
-    render(<TopicList />);
+    render(<CurriculumTree />);
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
   });
@@ -201,26 +213,29 @@ describe("TopicList", () => {
   it("shows no dev-bypass banner when the flag is off", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => domainsFixture,
+      json: async () => topicsFixture,
     });
 
-    render(<TopicList />);
+    render(<CurriculumTree />);
 
     await waitFor(() => expect(screen.getByText("Data Structures")).toBeInTheDocument());
     expect(screen.queryByText(/DEV MODE/)).not.toBeInTheDocument();
   });
 
   it("shows a loud dev-bypass banner when the API reports it active", async () => {
-    const bypassedFixture = domainsFixture.map((domain) => ({
-      ...domain,
-      topics: domain.topics.map((topic) => ({ ...topic, dev_prerequisites_bypassed: true })),
+    const bypassedFixture = topicsFixture.map((topic) => ({
+      ...topic,
+      sections: topic.sections.map((section) => ({
+        ...section,
+        dev_prerequisites_bypassed: true,
+      })),
     }));
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: async () => bypassedFixture,
     });
 
-    render(<TopicList />);
+    render(<CurriculumTree />);
 
     await waitFor(() => expect(screen.getByText(/DEV MODE/)).toBeInTheDocument());
   });

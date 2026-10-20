@@ -6,14 +6,20 @@ import { useState } from "react";
 import { DevBypassBanner } from "@/components/dev-bypass-banner";
 import { useFetch } from "@/hooks/use-fetch";
 
+type TopicRef = {
+  name: string;
+  slug: string;
+};
+
 type PrerequisiteSummary = {
   id: number;
   title: string;
   slug: string;
+  topic: TopicRef;
   status: string;
 };
 
-type TopicListItem = {
+type SectionListItem = {
   id: number;
   title: string;
   slug: string;
@@ -27,11 +33,12 @@ type TopicListItem = {
   dev_prerequisites_bypassed: boolean;
 };
 
-type DomainWithTopics = {
+type TopicWithSections = {
   id: number;
   name: string;
+  slug: string;
   description: string | null;
-  topics: TopicListItem[];
+  sections: SectionListItem[];
 };
 
 const TIER_LABELS: Record<string, string> = {
@@ -53,8 +60,8 @@ type StatusFilter = (typeof STATUS_FILTER_OPTIONS)[number];
 
 type LockFilter = "all" | "locked" | "unlocked";
 
-export function TopicList() {
-  const state = useFetch<DomainWithTopics[]>("/api/v1/topics");
+export function CurriculumTree() {
+  const state = useFetch<TopicWithSections[]>("/api/v1/topics");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [lockFilter, setLockFilter] = useState<LockFilter>("all");
 
@@ -80,14 +87,14 @@ export function TopicList() {
     );
   }
 
-  const domains = state.data;
+  const topics = state.data;
 
-  const matchesFilters = (topic: TopicListItem) =>
-    (statusFilter === "all" || topic.status === statusFilter) &&
-    (lockFilter === "all" || (lockFilter === "locked" ? topic.is_locked : !topic.is_locked));
+  const matchesFilters = (section: SectionListItem) =>
+    (statusFilter === "all" || section.status === statusFilter) &&
+    (lockFilter === "all" || (lockFilter === "locked" ? section.is_locked : !section.is_locked));
 
-  const devBypassActive = domains.some((domain) =>
-    domain.topics.some((topic) => topic.dev_prerequisites_bypassed),
+  const devBypassActive = topics.some((topic) =>
+    topic.sections.some((section) => section.dev_prerequisites_bypassed),
   );
 
   return (
@@ -123,15 +130,15 @@ export function TopicList() {
         </label>
       </div>
 
-      {domains.map((domain) => {
-        const visibleTopics = domain.topics.filter(matchesFilters);
-        if (visibleTopics.length === 0) return null;
+      {topics.map((topic) => {
+        const visibleSections = topic.sections.filter(matchesFilters);
+        if (visibleSections.length === 0) return null;
 
-        const completed = domain.topics.filter((topic) => topic.has_content).length;
-        const total = domain.topics.length;
+        const completed = topic.sections.filter((section) => section.has_content).length;
+        const total = topic.sections.length;
 
         return (
-          <details key={domain.id} open={completed > 0} className="group">
+          <details key={topic.id} open={completed > 0} className="group">
             <summary className="flex cursor-pointer list-none items-baseline justify-between gap-4 rounded-lg py-1 marker:content-none">
               <span className="flex items-baseline gap-2">
                 <span
@@ -141,7 +148,7 @@ export function TopicList() {
                   ▶
                 </span>
                 <span className="text-lg font-semibold text-black dark:text-zinc-50">
-                  {domain.name}
+                  {topic.name}
                 </span>
               </span>
               <span className="shrink-0 rounded bg-zinc-200 px-2 py-0.5 text-xs font-medium tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
@@ -149,27 +156,27 @@ export function TopicList() {
               </span>
             </summary>
 
-            {domain.description && (
-              <p className="ml-6 text-sm text-zinc-500 dark:text-zinc-400">{domain.description}</p>
+            {topic.description && (
+              <p className="ml-6 text-sm text-zinc-500 dark:text-zinc-400">{topic.description}</p>
             )}
             <ul className="mt-3 ml-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {visibleTopics.map((topic) => (
-                <li key={topic.id}>
-                  {topic.has_content ? (
+              {visibleSections.map((section) => (
+                <li key={section.id}>
+                  {section.has_content ? (
                     <Link
-                      href={`/topics/${topic.id}`}
+                      href={`/learn/${topic.slug}/${section.slug}`}
                       className="flex h-full flex-col rounded-lg border border-zinc-300 px-4 py-3 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
                     >
                       <span className="flex items-center justify-between font-medium text-black dark:text-zinc-50">
-                        {topic.title}
-                        {topic.is_locked && (
+                        {section.title}
+                        {section.is_locked && (
                           <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                             Locked
                           </span>
                         )}
                       </span>
                       <span className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                        {TIER_LABELS[topic.proficiency_tier] ?? topic.proficiency_tier}
+                        {TIER_LABELS[section.proficiency_tier] ?? section.proficiency_tier}
                       </span>
                     </Link>
                   ) : (
@@ -178,13 +185,13 @@ export function TopicList() {
                       className="flex h-full flex-col rounded-lg border border-dashed border-zinc-300 px-4 py-3 opacity-60 dark:border-zinc-700"
                     >
                       <span className="flex items-center justify-between font-medium text-zinc-600 dark:text-zinc-400">
-                        {topic.title}
+                        {section.title}
                         <span className="ml-2 rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
                           WIP
                         </span>
                       </span>
                       <span className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
-                        {TIER_LABELS[topic.proficiency_tier] ?? topic.proficiency_tier}
+                        {TIER_LABELS[section.proficiency_tier] ?? section.proficiency_tier}
                       </span>
                     </div>
                   )}

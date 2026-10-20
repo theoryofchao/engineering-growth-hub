@@ -4,7 +4,7 @@ directly now that it's not embedded in the route handler.
 
 import pytest
 
-from app.models import Topic
+from app.models import Section
 from app.seed import seed_all
 from app.services import study_sessions_service
 
@@ -12,8 +12,8 @@ from app.services import study_sessions_service
 def _browser_rendering_session_id(app) -> int:
     with app.app_context():
         seed_all()
-        topic = Topic.query.filter_by(slug="browser-rendering").first()
-        return topic.learning_sessions[0].id
+        section = Section.query.filter_by(slug="browser-rendering").first()
+        return section.learning_sessions[0].id
 
 
 def test_create_raises_value_error_for_invalid_mode_minutes(app):

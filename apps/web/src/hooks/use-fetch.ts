@@ -17,7 +17,7 @@ export type FetchState<T> =
  *
  * This is the fetch+AbortController+loading/error/success lifecycle that
  * was independently duplicated across health-status.tsx,
- * dashboard-summary.tsx, topic-list.tsx, topic-overview.tsx, and
+ * dashboard-summary.tsx, curriculum-tree.tsx, section-overview.tsx, and
  * lesson-content.tsx -- see docs/decisions/0022-frontend-fetch-hook-and-component-splits.md.
  */
 export function useFetch<T>(path: string | null): FetchState<T> {

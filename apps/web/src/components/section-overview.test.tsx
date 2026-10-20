@@ -1,39 +1,58 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TopicOverview } from "./topic-overview";
+import { SectionOverview } from "./section-overview";
 
-const lockedTopicFixture = {
+const topicRef = { name: "Software Architecture", slug: "software-architecture" };
+const prereqTopicRef = {
+  name: "Computer Science Foundations",
+  slug: "computer-science-foundations",
+};
+
+const lockedSectionFixture = {
   id: 3,
   title: "System Design Methodology",
   slug: "33-system-design-methodology",
+  topic: topicRef,
   description: "Lead a system design discussion from ambiguity to decision.",
   proficiency_tier: "D",
   status: "not_started",
   is_locked: true,
   learning_sessions: [{ id: 9, title: "Framing the Problem", sequence: 1, duration_minutes: 25 }],
   prerequisites: [
-    { id: 1, title: "Data Structures", slug: "01-data-structures", status: "not_started" },
+    {
+      id: 1,
+      title: "Data Structures",
+      slug: "01-data-structures",
+      topic: prereqTopicRef,
+      status: "not_started",
+    },
   ],
   unmet_prerequisites: [
-    { id: 1, title: "Data Structures", slug: "01-data-structures", status: "not_started" },
+    {
+      id: 1,
+      title: "Data Structures",
+      slug: "01-data-structures",
+      topic: prereqTopicRef,
+      status: "not_started",
+    },
   ],
   dev_prerequisites_bypassed: false,
 };
 
-const unlockedTopicFixture = {
-  ...lockedTopicFixture,
+const unlockedSectionFixture = {
+  ...lockedSectionFixture,
   is_locked: false,
   unmet_prerequisites: [],
 };
 
-const devBypassedTopicFixture = {
-  ...lockedTopicFixture,
+const devBypassedSectionFixture = {
+  ...lockedSectionFixture,
   is_locked: false,
   dev_prerequisites_bypassed: true,
 };
 
-describe("TopicOverview", () => {
+describe("SectionOverview", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
   });
@@ -42,20 +61,28 @@ describe("TopicOverview", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows a lock banner with prerequisite links and disabled sessions when locked", async () => {
+  it("shows a lock banner with prerequisite links (across topics) and disabled sessions when locked", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => lockedTopicFixture,
+      json: async () => lockedSectionFixture,
     });
 
-    render(<TopicOverview topicId={3} />);
+    render(
+      <SectionOverview
+        topicSlug="software-architecture"
+        sectionSlug="33-system-design-methodology"
+      />,
+    );
 
     await waitFor(() => expect(screen.getByText("System Design Methodology")).toBeInTheDocument());
 
     const banner = screen.getByRole("alert");
     const prereqLink = within(banner).getByText("Data Structures").closest("a");
-    expect(prereqLink).toHaveAttribute("href", "/topics/1");
+    expect(prereqLink).toHaveAttribute(
+      "href",
+      "/learn/computer-science-foundations/01-data-structures",
+    );
 
     const sessionEntry = screen.getByText(/Framing the Problem/).closest("div");
     expect(sessionEntry).toHaveAttribute("aria-disabled", "true");
@@ -66,13 +93,21 @@ describe("TopicOverview", () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => unlockedTopicFixture,
+      json: async () => unlockedSectionFixture,
     });
 
-    render(<TopicOverview topicId={3} />);
+    render(
+      <SectionOverview
+        topicSlug="software-architecture"
+        sectionSlug="33-system-design-methodology"
+      />,
+    );
 
     const sessionLink = await waitFor(() => screen.getByText(/Framing the Problem/).closest("a"));
-    expect(sessionLink).toHaveAttribute("href", "/learning/9");
+    expect(sessionLink).toHaveAttribute(
+      "href",
+      "/learn/software-architecture/33-system-design-methodology/9",
+    );
     expect(screen.queryByText("Locked")).not.toBeInTheDocument();
   });
 
@@ -80,32 +115,45 @@ describe("TopicOverview", () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => devBypassedTopicFixture,
+      json: async () => devBypassedSectionFixture,
     });
 
-    render(<TopicOverview topicId={3} />);
+    render(
+      <SectionOverview
+        topicSlug="software-architecture"
+        sectionSlug="33-system-design-methodology"
+      />,
+    );
 
     await waitFor(() => expect(screen.getByText(/DEV MODE/)).toBeInTheDocument());
     const sessionLink = screen.getByText(/Framing the Problem/).closest("a");
-    expect(sessionLink).toHaveAttribute("href", "/learning/9");
+    expect(sessionLink).toHaveAttribute(
+      "href",
+      "/learn/software-architecture/33-system-design-methodology/9",
+    );
   });
 
-  it("shows a not-found state for a missing topic", async () => {
+  it("shows a not-found state for a missing section", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: false,
       status: 404,
       json: async () => ({}),
     });
 
-    render(<TopicOverview topicId={999} />);
+    render(<SectionOverview topicSlug="software-architecture" sectionSlug="not-a-real-section" />);
 
-    await waitFor(() => expect(screen.getByText("Topic not found.")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Section not found.")).toBeInTheDocument());
   });
 
   it("shows an error state when the request fails", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Failed to fetch"));
 
-    render(<TopicOverview topicId={3} />);
+    render(
+      <SectionOverview
+        topicSlug="software-architecture"
+        sectionSlug="33-system-design-methodology"
+      />,
+    );
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
   });

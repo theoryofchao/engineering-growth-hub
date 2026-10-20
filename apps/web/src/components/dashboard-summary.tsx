@@ -2,8 +2,8 @@
 
 import { useFetch } from "@/hooks/use-fetch";
 
-type TopicProgress = {
-  topic_id: number;
+type SectionProgress = {
+  section_id: number;
   title: string;
   slug: string;
   status: string;
@@ -13,7 +13,7 @@ type TopicProgress = {
 
 type Dashboard = {
   total_study_seconds: number;
-  topics: TopicProgress[];
+  sections: SectionProgress[];
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -58,10 +58,10 @@ export function DashboardSummary() {
 
   const { data } = state;
 
-  if (data.topics.length === 0) {
+  if (data.sections.length === 0) {
     return (
       <p className="text-zinc-600 dark:text-zinc-400">
-        No lessons started yet. Pick a topic from the homepage to begin.
+        No lessons started yet. Pick a section from the homepage to begin.
       </p>
     );
   }
@@ -78,20 +78,20 @@ export function DashboardSummary() {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-300 text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-            <th className="py-2 font-medium">Topic</th>
+            <th className="py-2 font-medium">Section</th>
             <th className="py-2 font-medium">Status</th>
             <th className="py-2 font-medium">Exercises</th>
           </tr>
         </thead>
         <tbody>
-          {data.topics.map((topic) => (
-            <tr key={topic.topic_id} className="border-b border-zinc-200 dark:border-zinc-800">
-              <td className="py-2 text-black dark:text-zinc-50">{topic.title}</td>
+          {data.sections.map((section) => (
+            <tr key={section.section_id} className="border-b border-zinc-200 dark:border-zinc-800">
+              <td className="py-2 text-black dark:text-zinc-50">{section.title}</td>
               <td className="py-2 text-zinc-600 dark:text-zinc-400">
-                {STATUS_LABELS[topic.status] ?? topic.status}
+                {STATUS_LABELS[section.status] ?? section.status}
               </td>
               <td className="py-2 text-zinc-600 dark:text-zinc-400">
-                {topic.exercises_correct} / {topic.exercises_attempted} correct
+                {section.exercises_correct} / {section.exercises_attempted} correct
               </td>
             </tr>
           ))}

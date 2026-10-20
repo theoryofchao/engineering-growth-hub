@@ -28,7 +28,7 @@ def create(learning_session_id: int, mode_minutes: int) -> StudySession | None:
     session = StudySession(learning_session_id=learning_session.id, mode_minutes=mode_minutes)
     db.session.add(session)
 
-    UserProgress.get_or_create(learning_session.topic_id).advance_to("learning")
+    UserProgress.get_or_create(learning_session.section_id).advance_to("learning")
 
     db.session.commit()
     return session

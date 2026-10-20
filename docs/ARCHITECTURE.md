@@ -25,14 +25,17 @@ CLAUDE.md
 - React Flow for leadership trees and prerequisites later; Markdown/MDX rendering subject to secure content ingestion.
 
 ## Core modeling candidates
-- `domains(id, name, description)`
-- `modules(id, domain_id, title, proficiency_tier)`
-- `topics(id, module_id, parent_topic_id?, title, slug, description)`
-- `topic_dependencies(topic_id, prerequisite_topic_id)`
-- `learning_sessions(id, topic_id, title, duration_minutes, objective, content, sequence, access_tier)`
+
+Naming: `topic` is the top-level grouping (e.g. "Computer Science Foundations"), `section` is the thing a learner actually opens under a topic (e.g. "AI-Assisted Software Development" -- CURRICULUM.md's own "module" granularity), and `module` is a separate, currently route-unexposed grouping layer between the two -- see `docs/decisions/0027-topic-section-module-rename-and-routing.md`.
+
+- `topics(id, name, slug, description)`
+- `modules(id, topic_id, title)`
+- `sections(id, module_id, parent_section_id?, title, slug, description, proficiency_tier)`
+- `section_prerequisites(section_id, prerequisite_section_id)`
+- `learning_sessions(id, section_id, title, duration_minutes, objective, content, sequence, access_tier)`
 - `exercises(id, learning_session_id, type, prompt, definition_json, estimated_minutes)`
 - `exercise_submissions(id, user_id, exercise_id, result_json, score, submitted_at)`
-- `user_progress(id, user_id, topic_id, status, mastery_level, updated_at)`
+- `user_progress(id, user_id, section_id, status, mastery_level, updated_at)`
 - `study_sessions(id, user_id, learning_session_id, started_at, elapsed_seconds, status)`
 - `leadership_stories(id, user_id, competency, situation, task, action, result, reflection)`
 Future: `projects`, `project_milestones`, `assessment_attempts`, `content_access_policies`, `flowcharts`.
@@ -42,11 +45,10 @@ Simplify as needed while preserving migration paths. Consider foreign keys, uniq
 ## API starter routes
 ```text
 GET    /api/v1/health
-GET    /api/v1/domains
 GET    /api/v1/topics
-GET    /api/v1/topics/{id}
+GET    /api/v1/sections/{slug}
 GET    /api/v1/learning-sessions/{id}
-PATCH  /api/v1/topics/{id}/progress
+PATCH  /api/v1/sections/{slug}/progress
 POST   /api/v1/study-sessions
 PATCH  /api/v1/study-sessions/{id}
 POST   /api/v1/exercises/{id}/submissions

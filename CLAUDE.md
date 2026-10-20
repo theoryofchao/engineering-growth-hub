@@ -12,7 +12,7 @@ Build an exercise-driven software engineering and technical leadership learning 
 ## Technical direction
 - Monorepo: `apps/web` (Next.js App Router, React, TypeScript, Tailwind, shadcn/ui) and `apps/api` (Python, Flask, SQLAlchemy, Alembic/Flask-Migrate, Pydantic). PostgreSQL; Docker Compose; pytest, Vitest, Playwright; OpenAPI client typing.
 - Flask owns business logic, persistence, content access, and progress decisions. Next.js handles UI/rendering. Avoid duplicating business rules.
-- Model course hierarchy as domain → module → topic → learning session → exercise/assessment; allow topic prerequisites.
+- Model course hierarchy as topic → module → section → learning session → exercise/assessment; allow section prerequisites. `topic` is the top-level grouping ("Computer Science Foundations"), `section` is what a learner actually opens ("AI-Assisted Software Development" — CURRICULUM.md's own "module" granularity), and `module` is a separate, currently route-unexposed grouping layer between them — see `docs/decisions/0027-topic-section-module-rename-and-routing.md`. Routes reflect this down to the section level: `/learn/<topic-slug>/<section-slug>` and below.
 - Each learning session is a focused 25-minute or 50-minute unit with a subsequent 5- or 10-minute break. Persist learning progress separately from timer activity.
 - Design exercise types for quiz, short answer, code, debugging, architecture, project milestone, and leadership scenarios. Implement only small MVP subset initially.
 - Never execute untrusted learner code in Flask or with infrastructure secrets. Start with quizzes; browser coding runner is a separate security-reviewed milestone.
