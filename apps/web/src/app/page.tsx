@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ContentWidthContainer } from "@/components/content-width-container";
 import { CurriculumTree } from "@/components/curriculum-tree";
 import { HealthStatus } from "@/components/health-status";
 import { TierLegend } from "@/components/tier-legend";
@@ -7,7 +8,10 @@ import { TierLegend } from "@/components/tier-legend";
 export default function Home() {
   return (
     <div className="flex flex-1 justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-4xl flex-col gap-8 px-6 py-16">
+      <ContentWidthContainer
+        baseMaxWidthClassName="max-w-4xl"
+        className="flex-col gap-8 px-6 py-16"
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
@@ -41,7 +45,7 @@ export default function Home() {
         <div className="border-t border-zinc-200 pt-6 dark:border-zinc-800">
           <HealthStatus />
         </div>
-      </main>
+      </ContentWidthContainer>
     </div>
   );
 }

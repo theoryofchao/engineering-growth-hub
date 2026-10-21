@@ -19,11 +19,13 @@ describe("ContentBlocks", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
     Element.prototype.scrollIntoView = vi.fn(); // not implemented in jsdom
+    localStorage.clear();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    localStorage.clear();
   });
 
   it("renders all blocks in page view by default, without boundaries shown", () => {

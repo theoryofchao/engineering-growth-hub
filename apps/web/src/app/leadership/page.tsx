@@ -1,11 +1,12 @@
 import Link from "next/link";
 
+import { ContentWidthContainer } from "@/components/content-width-container";
 import { LeadershipHome } from "@/components/leadership-home";
 
 export default function LeadershipPage() {
   return (
     <div className="flex flex-1 justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-2xl flex-col gap-6 px-6 py-16">
+      <ContentWidthContainer>
         <Link href="/" className="text-sm text-zinc-500 hover:underline dark:text-zinc-400">
           ← Back
         </Link>
@@ -13,7 +14,7 @@ export default function LeadershipPage() {
           Leadership
         </h1>
         <LeadershipHome />
-      </main>
+      </ContentWidthContainer>
     </div>
   );
 }

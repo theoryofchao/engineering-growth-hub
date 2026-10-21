@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ContentExample, ExampleAccordion } from "@/components/example-accordion";
 import { ExerciseSwitch } from "@/components/exercise-switch";
 import { Note, NotesPanel } from "@/components/notes-panel";
+import { useDefaultViewMode } from "@/hooks/use-default-view-mode";
 import { useNoteDraft } from "@/hooks/use-note-draft";
+import { useShowSectionBoundariesDefault } from "@/hooks/use-show-section-boundaries-default";
 import type { Exercise as ExerciseSummary } from "@/lib/exercise-types";
 
 type Block = {
@@ -30,10 +32,40 @@ function toggleButtonClass(active: boolean): string {
 
 export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
   const [blocks, setBlocks] = useState(initialBlocks);
-  const [viewMode, setViewMode] = useState<ViewMode>("page");
-  const [showBoundaries, setShowBoundaries] = useState(false);
+  const [viewMode, setViewModeState] = useState<ViewMode>("page");
+  const [showBoundaries, setShowBoundariesState] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const blockRefs = useRef(new Map<number, HTMLDivElement>());
+
+  // The two site-wide defaults restore from localStorage asynchronously
+  // (after mount), so they can't just seed useState's initial value --
+  // that's captured once, before the restore happens. Instead, apply
+  // them via this effect, but only until the learner actually touches
+  // either control themselves; after that, their in-session choice
+  // wins and the default stops overriding it (same "sets a default,
+  // doesn't retroactively override" behavior as useContentWidth).
+  const [defaultViewMode] = useDefaultViewMode();
+  const [showBoundariesDefault] = useShowSectionBoundariesDefault();
+  const userChangedViewMode = useRef(false);
+  const userChangedShowBoundaries = useRef(false);
+
+  useEffect(() => {
+    if (!userChangedViewMode.current) setViewModeState(defaultViewMode);
+  }, [defaultViewMode]);
+
+  useEffect(() => {
+    if (!userChangedShowBoundaries.current) setShowBoundariesState(showBoundariesDefault);
+  }, [showBoundariesDefault]);
+
+  function setViewMode(mode: ViewMode) {
+    userChangedViewMode.current = true;
+    setViewModeState(mode);
+  }
+
+  function setShowBoundaries(value: boolean) {
+    userChangedShowBoundaries.current = true;
+    setShowBoundariesState(value);
+  }
 
   const {
     activeBlock,
