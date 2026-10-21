@@ -44,9 +44,9 @@ def test_seed_all_imports_full_curriculum_map(app):
         assert Topic.query.count() == 17
         assert Section.query.count() == 81
 
-        wip_section = Section.query.filter_by(slug="01-data-structures").first()
+        wip_section = Section.query.filter_by(slug="03-computer-architecture").first()
         assert wip_section is not None
-        assert wip_section.proficiency_tier == "D"
+        assert wip_section.proficiency_tier == "W"
         assert wip_section.learning_sessions == []  # no lesson authored yet -> WIP
 
         ai_section = Section.query.filter_by(slug="70-ai-assisted-software-development").first()
@@ -127,19 +127,21 @@ def test_seed_all_links_prerequisites_from_curriculum_map(app):
     with app.app_context():
         seed_all()
 
-        # Module 2 ("Algorithms & Problem Solving") depends on modules
-        # 1, 6, 8 per CURRICULUM.md -- confirm the M2M resolved correctly.
+        # Module 2 ("Algorithms & Problem Solving") depends on module 1
+        # ("Data Structures") per curriculum-map.json. CURRICULUM.md's own
+        # documented graph also lists modules 6 and 8 as prerequisites,
+        # but those have zero seeded content and can never reach
+        # "practiced" -- those two edges are temporarily dropped here so
+        # the two sections with real lesson content (modules 1/2) are
+        # reachable; see docs/decisions/0028-....md.
         section = Section.query.filter_by(slug="02-algorithms-problem-solving").first()
         assert section is not None
         prereq_slugs = {p.slug for p in section.prerequisites}
-        assert prereq_slugs == {
-            "01-data-structures",
-            "06-mathematics-for-computing",
-            "08-programming-fundamentals",
-        }
+        assert prereq_slugs == {"01-data-structures"}
 
-        # Module 8 is the one entry point with no prerequisites.
-        entry_point = Section.query.filter_by(slug="08-programming-fundamentals").first()
+        # Module 1 is now an entry point with no prerequisites (same
+        # temporary reason as above).
+        entry_point = Section.query.filter_by(slug="01-data-structures").first()
         assert entry_point.prerequisites == []
 
         # The legacy pre-map section isn't in curriculum-map.json at all,

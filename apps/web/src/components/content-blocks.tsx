@@ -3,11 +3,10 @@
 import { useRef, useState } from "react";
 
 import { ContentExample, ExampleAccordion } from "@/components/example-accordion";
-import { ExerciseQuiz } from "@/components/exercise-quiz";
+import { ExerciseSwitch } from "@/components/exercise-switch";
 import { Note, NotesPanel } from "@/components/notes-panel";
 import { useNoteDraft } from "@/hooks/use-note-draft";
-
-type ExerciseSummary = { id: number; type: string; prompt: string; options: string[] };
+import type { Exercise as ExerciseSummary } from "@/lib/exercise-types";
 
 type Block = {
   id: number;
@@ -159,7 +158,7 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
               {block.exercises.length > 0 && (
                 <div className="mt-3 flex flex-col gap-3">
                   {block.exercises.map((exercise) => (
-                    <ExerciseQuiz key={exercise.id} exercise={exercise} />
+                    <ExerciseSwitch key={exercise.id} exercise={exercise} />
                   ))}
                 </div>
               )}
@@ -192,7 +191,7 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
             {blocks[slideIndex].exercises.length > 0 && (
               <div className="mt-3 flex flex-col gap-3">
                 {blocks[slideIndex].exercises.map((exercise) => (
-                  <ExerciseQuiz key={exercise.id} exercise={exercise} />
+                  <ExerciseSwitch key={exercise.id} exercise={exercise} />
                 ))}
               </div>
             )}

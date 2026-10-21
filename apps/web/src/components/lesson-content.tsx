@@ -3,12 +3,11 @@
 import Link from "next/link";
 
 import { ContentBlocks } from "@/components/content-blocks";
-import { ExerciseQuiz } from "@/components/exercise-quiz";
+import { ExerciseSwitch } from "@/components/exercise-switch";
 import type { Note } from "@/components/notes-panel";
 import { PomodoroTimer } from "@/components/pomodoro-timer";
 import { useFetch } from "@/hooks/use-fetch";
-
-type ExerciseSummary = { id: number; type: string; prompt: string; options: string[] };
+import type { Exercise as ExerciseSummary } from "@/lib/exercise-types";
 
 type SectionSessionSummary = {
   id: number;
@@ -200,7 +199,7 @@ export function LessonContent({
           </h2>
           <div className="mt-1 flex flex-col gap-3">
             {data.exercises.map((exercise) => (
-              <ExerciseQuiz key={exercise.id} exercise={exercise} />
+              <ExerciseSwitch key={exercise.id} exercise={exercise} />
             ))}
           </div>
         </section>

@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Computer Science Foundations",
+    "slug": "computer-science-foundations",
+    "description": "Algorithms, memory, operating systems, networking, theory"
+  },
+  "module": {
+    "title": "Computer Science Foundations"
+  },
+  "section": {
+    "title": "Algorithms & Problem Solving",
+    "slug": "02-algorithms-problem-solving",
+    "description": "Design correct solutions and justify time space and invariants.",
+    "proficiency_tier": "D"
+  }
+}

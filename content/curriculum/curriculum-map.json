@@ -4,8 +4,8 @@
       "name": "Computer Science Foundations",
       "description": "Algorithms, memory, operating systems, networking, theory",
       "modules": [
-        {"id": 1, "title": "Data Structures", "tier": "D", "seniority": "Core", "description": "Implement a structure from first principles and select it using measured access patterns.", "prerequisites": [8]},
-        {"id": 2, "title": "Algorithms & Problem Solving", "tier": "D", "seniority": "Core", "description": "Design correct solutions and justify time space and invariants.", "prerequisites": [1, 6, 8]},
+        {"id": 1, "title": "Data Structures", "tier": "D", "seniority": "Core", "description": "Implement a structure from first principles and select it using measured access patterns.", "prerequisites": []},
+        {"id": 2, "title": "Algorithms & Problem Solving", "tier": "D", "seniority": "Core", "description": "Design correct solutions and justify time space and invariants.", "prerequisites": [1]},
         {"id": 3, "title": "Computer Architecture", "tier": "W", "seniority": "Core", "description": "Connect hardware behavior to software runtime costs.", "prerequisites": [8]},
         {"id": 4, "title": "Operating Systems", "tier": "W", "seniority": "Core", "description": "Diagnose resource concurrency and process failures.", "prerequisites": [3, 8]},
         {"id": 5, "title": "Computer Networking", "tier": "D", "seniority": "Core", "description": "Trace a request end to end and isolate network faults.", "prerequisites": [4, 8]},

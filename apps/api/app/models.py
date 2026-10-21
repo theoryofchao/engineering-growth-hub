@@ -285,9 +285,12 @@ class Exercise(db.Model):
     so existing lesson-level exercises don't need to move.
 
     `definition_json` holds the answer key (e.g. `correct_index`,
-    `explanation` for multiple_choice) and must never be sent to the
-    client until after a submission is scored — see
-    app/routes/exercises.py.
+    `explanation` for multiple_choice; `hidden_test_cases[].expected_output`
+    for code) and must never be sent to the client until after a
+    submission is scored — see app/routes/exercises.py. "Never sent"
+    means never sent *ungraded*: a code exercise's hidden expected
+    outputs are revealed in the submission response after scoring,
+    symmetric to `correct_index` being revealed today.
     """
 
     __tablename__ = "exercises"
@@ -309,7 +312,9 @@ class Exercise(db.Model):
         "ExerciseSubmission", back_populates="exercise", order_by="ExerciseSubmission.submitted_at"
     )
 
-    __table_args__ = (db.CheckConstraint("type in ('multiple_choice')", name="ck_exercise_type"),)
+    __table_args__ = (
+        db.CheckConstraint("type in ('multiple_choice', 'code')", name="ck_exercise_type"),
+    )
 
 
 class ExerciseSubmission(db.Model):

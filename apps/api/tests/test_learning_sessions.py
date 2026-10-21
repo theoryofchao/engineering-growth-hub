@@ -90,6 +90,29 @@ def test_block_scoped_exercise_nests_under_its_block_not_the_session(app, client
     assert len(body["exercises"]) == 1
 
 
+def test_code_exercise_summary_never_leaks_hidden_expected_output(app, client):
+    with app.app_context():
+        seed_all()
+        section = Section.query.filter_by(slug="01-data-structures").first()
+        session_id = section.learning_sessions[0].id
+
+    response = client.get(f"/api/v1/learning-sessions/{session_id}")
+    body = response.get_json()
+
+    block_exercises = [e for b in body["content_blocks"] for e in b["exercises"]]
+    code_exercises = [e for e in block_exercises if e["type"] == "code"]
+    assert len(code_exercises) == 2
+
+    for exercise in code_exercises:
+        assert "starter_code" in exercise
+        assert "function_name" in exercise
+        for case in exercise["visible_test_cases"]:
+            assert "expected_output" in case
+        for case in exercise["hidden_test_cases"]:
+            assert "expected_output" not in case
+            assert "input" in case
+
+
 def test_get_learning_session_query_count_is_bounded(app, client, count_queries):
     """Regression test for the N+1 fix: content_blocks -> (note,
     exercises) fan-out must not scale with the number of content blocks.

@@ -46,3 +46,33 @@ This is the standing authoring target for any new session file, derived from mea
 - **A session is ~25 minutes of reading + interaction** (the `duration_minutes` field is check-constrained to `25` or `50` — use `50` only for labs/longer exercises, matching `docs/PRODUCT.md`'s Pomodoro sizing). 6–7 blocks at the length above is what actually fits that budget; don't stretch a thinner section to hit the block count, and don't cram extra ideas into one oversized block to avoid adding another one — split into a second session instead.
 
 Before seeding new content, validate it's well-formed JSON and re-run `apps/api/tests/test_seed.py` / `test_learning_sessions.py` — both hardcode a session count per section that a new session will need bumping (see ADR 0011/0012 for the pattern).
+
+## Authoring a code exercise
+
+A `type: "code"` exercise (Monaco editor, in-browser JS execution) is graded by the server comparing submitted *output values* to a stored answer key — the same trust model as `multiple_choice`'s `selected_index`/`correct_index`, generalized to N test cases. See `docs/decisions/0028-code-exercises-client-side-sandbox.md` for why. That trust model only works if grading stays a single equality check per case, which puts two constraints on how a code exercise's problem statement and test cases are written:
+
+- **Canonical output required.** If a problem has multiple validly-shaped answers (e.g. "the two indices," which could be reported in either order), the prompt must pin down one agreed form — "return indices in ascending order" — and every test case's `expected_output` must match that form. No order-insensitive or fuzzy comparison is done.
+- **Return the full graded result — don't rely on in-place-mutation-only grading.** A problem like "remove duplicates in place" normally returns just a new length and expects the judge to separately inspect the mutated array; here, the function must return the result that fully determines correctness on its own (e.g. the deduplicated array itself), since grading only ever looks at the one returned value.
+
+`definition` shape:
+
+```json
+{
+  "language": "javascript",
+  "function_name": "reverseInPlace",
+  "starter_code": "function reverseInPlace(nums) {\n  // your code here\n}",
+  "timeout_ms": 2000,
+  "visible_test_cases": [
+    { "input": [[1, 2, 3]], "expected_output": [3, 2, 1] }
+  ],
+  "hidden_test_cases": [
+    { "input": [[5]], "expected_output": [5] }
+  ]
+}
+```
+
+`input` is always a list of positional arguments, spread into the call (`fn(...input)`) — this stays generic across arities without a separate schema per problem. `visible_test_cases` are shown to the learner (with their expected output, so Run gives real feedback while coding); `hidden_test_cases`' inputs are sent to the client too (the Worker has to run them to grade on Submit), but their `expected_output` never leaves the server until after a submission is scored.
+
+- **Minimum hidden cases:** at least 2, covering at least one edge case (empty input, a single element, duplicates — whatever's relevant to the problem).
+- **Default `timeout_ms`:** 2000. Only raise it for a problem that's legitimately compute-heavier, not to paper over an inefficient reference solution.
+- **One exercise per block.** A code exercise's Monaco editor + Run/Submit footprint is heavier than a quiz's; don't stack a quiz on top of a code exercise in the same block the way a block can otherwise carry two `multiple_choice` exercises.

@@ -1,0 +1,99 @@
+{
+  "title": "Two Pointers and Sliding Windows on Arrays",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Apply the same-direction two-pointer variant and the fixed-size sliding-window technique to solve sorted-array and subarray problems in O(n) time.",
+  "content_blocks": [
+    {
+      "heading": "From One Array to Two Techniques",
+      "body": "The previous module's lesson used converging two pointers — one at each end, moving toward the middle — to reverse an array and check a palindrome in O(1) extra space. That's one variant of a larger family. This session covers two more members of that family: same-direction two pointers, where both pointers move forward but at different speeds, and the sliding window, where a pointer pair defines a contiguous range that grows or slides as you scan.\n\nAll three variants share the same underlying idea: instead of re-scanning the array from scratch for every candidate answer (the brute-force O(n²) instinct), keep a small amount of state — usually just the pointers themselves, sometimes a running sum — and update it incrementally as you move through the array once. Recognizing which variant fits a given problem is the actual skill; once you see it, the loop itself is usually five or six lines.\n\nAll three exercises in this session assume a plain JavaScript function with no imports — the same constraint as the previous session."
+    },
+    {
+      "heading": "Two Pointers on a Sorted Array",
+      "body": "Given a sorted array and a target sum, the brute-force approach checks every pair — O(n²). The two-pointer version exploits the sort order directly: start one pointer at index 0 and the other at the last index. If the pair's sum is too small, the only way to increase it is to move the left pointer rightward (toward larger values); if it's too large, move the right pointer leftward. Either way, exactly one pointer moves per step, so the whole array is scanned once — O(n) time, O(1) extra space.\n\nThis only works because the array is sorted — the pointer movement decision (\"too small, so move left pointer right\") relies on knowing that moving right always increases the value you're looking at. On an unsorted array this reasoning breaks down entirely, which is exactly the kind of precondition worth stating out loud before reaching for this pattern.\n\nAssume exactly one valid pair exists, and return its two indices in ascending order (the smaller index first) — a problem like this needs one agreed-on output shape, since \"the pair\" could otherwise be reported in either order.",
+      "exercises": [
+        {
+          "type": "code",
+          "sequence": 1,
+          "prompt": "Write `twoSumSorted(nums, target)` that returns the two 0-indexed indices `[i, j]` (with `i < j`) of the pair in the ascending-sorted array `nums` that sums to `target`, using two pointers in O(n) time. Exactly one valid pair exists.",
+          "definition": {
+            "language": "javascript",
+            "function_name": "twoSumSorted",
+            "starter_code": "function twoSumSorted(nums, target) {\n  // your code here\n}",
+            "timeout_ms": 2000,
+            "visible_test_cases": [
+              { "input": [[2, 7, 11, 15], 9], "expected_output": [0, 1] },
+              { "input": [[1, 2, 3, 4, 6], 6], "expected_output": [1, 3] }
+            ],
+            "hidden_test_cases": [
+              { "input": [[1, 2, 3, 4, 6], 10], "expected_output": [3, 4] },
+              { "input": [[0, 1, 2, 11, 15], 11], "expected_output": [0, 3] },
+              { "input": [[-7, -3, 0, 4, 9], 2], "expected_output": [0, 4] }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Removing Duplicates In Place",
+      "body": "A different two-pointer shape: given a sorted array, remove duplicates so each distinct value appears once, keeping the remaining values in their original order. Here both pointers move in the *same* direction rather than converging — a \"slow\" pointer marks the last confirmed-unique position, and a \"fast\" pointer scans ahead looking for the next value that differs from it. Whenever the fast pointer finds a new value, the slow pointer advances and copies it into place.\n\nBecause the array is sorted, \"differs from the last kept value\" is exactly the same thing as \"hasn't been seen yet\" — a duplicate always sits immediately next to its twin, never scattered elsewhere, which is precisely what makes a single forward pass sufficient. This is O(n) time and O(1) extra space, same complexity profile as the previous two patterns, just with both pointers advancing together instead of racing toward a meeting point.\n\nReturn the deduplicated array itself (not just its length) so there's one unambiguous thing to check — the classic version of this problem returns a length and expects the judge to inspect the mutated array too, but a single return value keeps the grading here just as simple as every other exercise in this course.",
+      "exercises": [
+        {
+          "type": "code",
+          "sequence": 1,
+          "prompt": "Write `removeDuplicatesInPlace(nums)` that removes duplicate values from the sorted array `nums` using two same-direction pointers, keeping the first occurrence of each value in its original order, and returns the deduplicated array.",
+          "definition": {
+            "language": "javascript",
+            "function_name": "removeDuplicatesInPlace",
+            "starter_code": "function removeDuplicatesInPlace(nums) {\n  // your code here\n}",
+            "timeout_ms": 2000,
+            "visible_test_cases": [
+              { "input": [[1, 1, 2]], "expected_output": [1, 2] },
+              { "input": [[0, 0, 1, 1, 1, 2, 3, 3]], "expected_output": [0, 1, 2, 3] }
+            ],
+            "hidden_test_cases": [
+              { "input": [[]], "expected_output": [] },
+              { "input": [[5]], "expected_output": [5] },
+              { "input": [[2, 2, 2, 2]], "expected_output": [2] }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Sliding Window Pattern",
+      "body": "A sliding window tracks a contiguous range of fixed or variable size as it moves across an array, and — like the two-pointer variants before it — exists to avoid re-scanning the same elements repeatedly. For a *fixed*-size window of width `k`, the key trick is that sliding the window one step to the right only changes two elements: the one that just left the window on the left, and the one that just entered on the right. Everything else in the middle is unchanged.\n\nThat means you never need to re-sum the whole window from scratch at each position — compute the sum of the first window once, and from then on just subtract the outgoing element and add the incoming one as the window slides. A brute-force approach recomputing each window's sum from scratch is O(n·k); the sliding-window version is O(n) regardless of `k`, because each element is added to the running sum exactly once and removed exactly once over the whole scan.\n\nThe next exercise asks for the maximum sum over all fixed-size windows of width `k` — track a running window sum, update it incrementally as the window slides, and keep the best value seen so far."
+    },
+    {
+      "heading": "Fixed-Size Window Sums",
+      "body": "Apply the incremental-sum trick from the previous block: compute the sum of the first `k` elements directly, record it as the running maximum, then slide the window one position at a time across the rest of the array — at each step, subtract the element leaving the window and add the element entering it, and update the running maximum if the new sum is higher.\n\nWalk through `[2, 1, 5, 1, 3, 2]` with `k = 3` to see why this stays correct as the window moves. The first window `[2, 1, 5]` sums to 8. Sliding right by one drops the `2` and picks up the `1` at the far end: `8 - 2 + 1 = 7`, matching `[1, 5, 1]` directly without re-adding the `1` and `5` that never left the window. The next slide drops that `1` and picks up `3`: `7 - 1 + 3 = 9`, matching `[5, 1, 3]` — the new running maximum. Continue the same way to `[1, 3, 2] = 6`, and the answer is 9.\n\nAssume `k` is always at least 1 and no larger than the length of `nums`, so there's always at least one valid window and you don't need to handle an empty-window edge case. Negative numbers are allowed in `nums`, so the running maximum should start from the first window's sum rather than from 0.",
+      "exercises": [
+        {
+          "type": "code",
+          "sequence": 1,
+          "prompt": "Write `maxSubarraySumFixedWindow(nums, k)` that returns the maximum sum of any contiguous subarray of length exactly `k` in `nums`, computed in O(n) time with an incrementally-updated window sum (not by re-summing each window from scratch).",
+          "definition": {
+            "language": "javascript",
+            "function_name": "maxSubarraySumFixedWindow",
+            "starter_code": "function maxSubarraySumFixedWindow(nums, k) {\n  // your code here\n}",
+            "timeout_ms": 2000,
+            "visible_test_cases": [
+              { "input": [[2, 1, 5, 1, 3, 2], 3], "expected_output": 9 },
+              { "input": [[1, 1, 1, 1], 2], "expected_output": 2 }
+            ],
+            "hidden_test_cases": [
+              { "input": [[5], 1], "expected_output": 5 },
+              { "input": [[4, 2, 1, 7, 8, 1, 2, 8, 1, 0], 3], "expected_output": 16 },
+              { "input": [[-1, -2, -3, -4], 2], "expected_output": -3 }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Pattern Underneath the Pattern",
+      "body": "Converging two pointers, same-direction two pointers, and fixed-size sliding windows look like three separate tricks, but they're really one idea applied three ways: maintain a small amount of running state across a single pass instead of recomputing an answer from scratch for every position. The specific state differs — a meeting point, a \"last kept\" marker, a running sum — but the reason it works is always the same: moving one step forward only invalidates a small, bounded part of what you already knew, so you update that part instead of starting over.\n\nThis is also the mental model to carry into variable-size sliding windows, prefix sums, and the graph-traversal techniques later in this module — each one is another instance of \"what's the minimal state I need to carry forward, and how does it change by exactly one step at a time?\" Asking that question explicitly, before writing any code, is usually what separates a clean O(n) solution from an accidental O(n²) one."
+    }
+  ]
+}

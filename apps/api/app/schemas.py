@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TopicRef(BaseModel):
@@ -27,13 +28,47 @@ class SectionSummary(BaseModel):
     slug: str
 
 
-class ExerciseSummary(BaseModel):
+class ExerciseSummaryQuiz(BaseModel):
     """Client-safe exercise view. Never include the answer key here."""
 
     id: int
-    type: str
+    type: Literal["multiple_choice"]
     prompt: str
     options: list[str]
+
+
+class CodeTestCase(BaseModel):
+    input: list[Any]
+    expected_output: Any
+
+
+class CodeHiddenTestCaseInput(BaseModel):
+    """A hidden test case's input only. Deliberately has no
+    `expected_output` field, so a serialization bug can't leak one by
+    accident -- there's nothing to forget to strip.
+    """
+
+    input: list[Any]
+
+
+class ExerciseSummaryCode(BaseModel):
+    """Client-safe exercise view for a code exercise. `hidden_test_cases`
+    carries inputs only -- the grading outputs stay server-side (see
+    app/services/exercises_service.py) until after a submission is scored.
+    """
+
+    id: int
+    type: Literal["code"]
+    prompt: str
+    language: str
+    function_name: str
+    starter_code: str
+    timeout_ms: int
+    visible_test_cases: list[CodeTestCase]
+    hidden_test_cases: list[CodeHiddenTestCaseInput]
+
+
+ExerciseSummary = Annotated[ExerciseSummaryQuiz | ExerciseSummaryCode, Field(discriminator="type")]
 
 
 class NoteDetail(BaseModel):
@@ -94,12 +129,29 @@ class StudySessionDetail(BaseModel):
     completed_at: datetime | None = None
 
 
-class ExerciseSubmissionResult(BaseModel):
+class ExerciseSubmissionResultQuiz(BaseModel):
+    kind: Literal["quiz"] = "quiz"
     exercise_id: int
     is_correct: bool
     score: float
     correct_index: int
     explanation: str
+
+
+class CodeCaseResult(BaseModel):
+    hidden: bool
+    input: list[Any]
+    expected_output: Any
+    actual_output: Any
+    passed: bool
+
+
+class ExerciseSubmissionResultCode(BaseModel):
+    kind: Literal["code"] = "code"
+    exercise_id: int
+    is_correct: bool
+    score: float
+    cases: list[CodeCaseResult]
 
 
 class SectionProgressSummary(BaseModel):

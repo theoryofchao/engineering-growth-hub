@@ -12,9 +12,9 @@ def test_get_section_detail_returns_sessions_and_prerequisites(app, client):
     assert body["slug"] == "02-algorithms-problem-solving"
     assert body["topic"]["slug"] == "computer-science-foundations"
     assert body["is_locked"] is True
-    assert body["learning_sessions"] == []
-    assert len(body["prerequisites"]) == 3
-    assert len(body["unmet_prerequisites"]) == 3
+    assert len(body["learning_sessions"]) == 1
+    assert len(body["prerequisites"]) == 1
+    assert len(body["unmet_prerequisites"]) == 1
 
 
 def test_get_section_detail_404_for_missing_slug(app, client):
@@ -36,7 +36,7 @@ def test_dev_bypass_unlocks_detail_when_enabled(app, client):
         detail = detail_response.get_json()
         assert detail["is_locked"] is False
         assert detail["dev_prerequisites_bypassed"] is True
-        assert len(detail["unmet_prerequisites"]) == 3
+        assert len(detail["unmet_prerequisites"]) == 1
     finally:
         app.config["DEV_UNLOCK_ALL_SECTIONS"] = False
 

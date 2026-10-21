@@ -3,13 +3,7 @@
 import { useState } from "react";
 
 import { API_BASE_URL } from "@/lib/config";
-
-type Exercise = {
-  id: number;
-  type: string;
-  prompt: string;
-  options: string[];
-};
+import type { ExerciseQuizData } from "@/lib/exercise-types";
 
 type SubmissionResult = {
   exercise_id: number;
@@ -35,7 +29,7 @@ function shuffledIndices(count: number): number[] {
   return indices;
 }
 
-export function ExerciseQuiz({ exercise }: { exercise: Exercise }) {
+export function ExerciseQuiz({ exercise }: { exercise: ExerciseQuizData }) {
   const [state, setState] = useState<State>({ phase: "answering", selectedIndex: null });
   // Display order is randomized per mount (not tied to the correct
   // answer's original position in definition_json) so the correct

@@ -206,7 +206,12 @@ describe("ContentBlocks", () => {
       body: "Overview body.",
       note: null,
       exercises: [
-        { id: 9, type: "multiple_choice", prompt: "Pinned question?", options: ["Yes", "No"] },
+        {
+          id: 9,
+          type: "multiple_choice" as const,
+          prompt: "Pinned question?",
+          options: ["Yes", "No"],
+        },
       ],
     },
   ];

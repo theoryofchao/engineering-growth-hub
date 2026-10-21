@@ -1,10 +1,19 @@
 """Exercise submission scoring and progress advancement. The answer key
-(definition_json) never leaves this module until after scoring.
+(definition_json) never leaves this module ungraded.
+
+Code exercises generalize the multiple_choice trust model instead of
+replacing it: multiple_choice compares a submitted `selected_index` to
+a stored `correct_index`; code compares a submitted list of `outputs`
+(produced by the client's own sandboxed run of the learner's function)
+to stored `expected_output` values, one per test case. Both are plain
+data-equality checks against an answer key the server alone holds --
+this module never executes learner code.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy.orm import joinedload
 
@@ -21,9 +30,26 @@ class ExerciseResult:
     explanation: str
 
 
-def submit(exercise_id: int, selected_index: int) -> ExerciseResult | None:
+@dataclass
+class CodeCaseOutcome:
+    hidden: bool
+    input: list[Any]
+    expected_output: Any
+    actual_output: Any
+    passed: bool
+
+
+@dataclass
+class CodeExerciseResult:
+    exercise_id: int
+    is_correct: bool
+    score: float
+    cases: list[CodeCaseOutcome]
+
+
+def submit(exercise_id: int, payload: Any) -> ExerciseResult | CodeExerciseResult | None:
     """Returns None if the exercise doesn't exist. Raises ValueError if
-    `selected_index` is out of range for this exercise's options.
+    `payload` is malformed for this exercise's type.
     """
     exercise = db.session.get(
         Exercise, exercise_id, options=[joinedload(Exercise.learning_session)]
@@ -31,6 +57,17 @@ def submit(exercise_id: int, selected_index: int) -> ExerciseResult | None:
     if exercise is None:
         return None
 
+    if exercise.type == "code":
+        return _submit_code(exercise, payload)
+    return _submit_quiz(exercise, payload)
+
+
+def _advance_progress(exercise: Exercise) -> None:
+    section_id = exercise.learning_session.section_id
+    UserProgress.get_or_create(section_id).advance_to("practiced")
+
+
+def _submit_quiz(exercise: Exercise, selected_index: Any) -> ExerciseResult:
     options = exercise.definition_json["options"]
     if not isinstance(selected_index, int) or not (0 <= selected_index < len(options)):
         raise ValueError(f"selected_index must be an integer between 0 and {len(options) - 1}")
@@ -48,8 +85,7 @@ def submit(exercise_id: int, selected_index: int) -> ExerciseResult | None:
     )
 
     if is_correct:
-        section_id = exercise.learning_session.section_id
-        UserProgress.get_or_create(section_id).advance_to("practiced")
+        _advance_progress(exercise)
 
     db.session.commit()
 
@@ -59,4 +95,59 @@ def submit(exercise_id: int, selected_index: int) -> ExerciseResult | None:
         score=score,
         correct_index=correct_index,
         explanation=exercise.definition_json["explanation"],
+    )
+
+
+def _submit_code(exercise: Exercise, outputs: Any) -> CodeExerciseResult:
+    """`outputs` must be a list with one entry per test case, in the
+    fixed `visible_test_cases` then `hidden_test_cases` order -- this
+    ordering is the wire contract with the frontend's worker runner
+    (apps/web/src/lib/code-runner.ts). Each entry is whatever value the
+    client's sandboxed run produced; a worker error/timeout is encoded
+    as a sentinel value by the client that will simply never equal a
+    real expected output, so it scores as failed without this module
+    needing to special-case it.
+    """
+    visible_cases = exercise.definition_json["visible_test_cases"]
+    hidden_cases = exercise.definition_json["hidden_test_cases"]
+    all_cases = [(case, False) for case in visible_cases] + [(case, True) for case in hidden_cases]
+
+    if not isinstance(outputs, list) or len(outputs) != len(all_cases):
+        raise ValueError(f"outputs must be a list of exactly {len(all_cases)} values")
+
+    case_results = []
+    for (case, hidden), actual_output in zip(all_cases, outputs, strict=True):
+        passed = actual_output == case["expected_output"]
+        case_results.append(
+            CodeCaseOutcome(
+                hidden=hidden,
+                input=case["input"],
+                expected_output=case["expected_output"],
+                actual_output=actual_output,
+                passed=passed,
+            )
+        )
+
+    passed_count = sum(1 for c in case_results if c.passed)
+    score = passed_count / len(case_results)
+    is_correct = score == 1.0
+
+    db.session.add(
+        ExerciseSubmission(
+            exercise_id=exercise.id,
+            result_json={"outputs": outputs},
+            score=score,
+        )
+    )
+
+    if is_correct:
+        _advance_progress(exercise)
+
+    db.session.commit()
+
+    return CodeExerciseResult(
+        exercise_id=exercise.id,
+        is_correct=is_correct,
+        score=score,
+        cases=case_results,
     )

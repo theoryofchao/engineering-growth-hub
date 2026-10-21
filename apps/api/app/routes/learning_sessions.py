@@ -9,6 +9,8 @@ from app.schemas import (
     ContentBlockDetail,
     ContentExample,
     ExerciseSummary,
+    ExerciseSummaryCode,
+    ExerciseSummaryQuiz,
     LearningSessionDetail,
     LearningSessionSummary,
     NoteDetail,
@@ -20,11 +22,30 @@ learning_sessions_bp = Blueprint("learning_sessions", __name__, url_prefix="/api
 
 
 def _exercise_summary(exercise) -> ExerciseSummary:
-    return ExerciseSummary(
+    definition = exercise.definition_json
+    if exercise.type == "code":
+        return ExerciseSummaryCode(
+            id=exercise.id,
+            type="code",
+            prompt=exercise.prompt,
+            language=definition.get("language", "javascript"),
+            function_name=definition["function_name"],
+            starter_code=definition["starter_code"],
+            timeout_ms=definition.get("timeout_ms", 2000),
+            visible_test_cases=definition["visible_test_cases"],
+            # Hidden cases are stripped down to their input only -- the
+            # expected_output answer key must not reach the client
+            # before a submission is scored. Don't "simplify" this to
+            # passing `definition["hidden_test_cases"]` through as-is.
+            hidden_test_cases=[
+                {"input": case["input"]} for case in definition["hidden_test_cases"]
+            ],
+        )
+    return ExerciseSummaryQuiz(
         id=exercise.id,
-        type=exercise.type,
+        type="multiple_choice",
         prompt=exercise.prompt,
-        options=exercise.definition_json["options"],
+        options=definition["options"],
     )
 
 

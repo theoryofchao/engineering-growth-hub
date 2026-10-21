@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Computer Science Foundations",
+    "slug": "computer-science-foundations",
+    "description": "Algorithms, memory, operating systems, networking, theory"
+  },
+  "module": {
+    "title": "Computer Science Foundations"
+  },
+  "section": {
+    "title": "Data Structures",
+    "slug": "01-data-structures",
+    "description": "Implement a structure from first principles and select it using measured access patterns.",
+    "proficiency_tier": "D"
+  }
+}

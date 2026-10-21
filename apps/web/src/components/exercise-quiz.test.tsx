@@ -5,7 +5,7 @@ import { ExerciseQuiz } from "./exercise-quiz";
 
 const exercise = {
   id: 5,
-  type: "multiple_choice",
+  type: "multiple_choice" as const,
   prompt: "Which step is skipped by background-color changes?",
   options: ["Layout", "Paint"],
 };
@@ -93,7 +93,7 @@ describe("ExerciseQuiz", () => {
   it("labels options A, B, C... in whatever order they're displayed", () => {
     const fourOptionExercise = {
       id: 6,
-      type: "multiple_choice",
+      type: "multiple_choice" as const,
       prompt: "Pick one",
       options: ["First", "Second", "Third", "Fourth"],
     };

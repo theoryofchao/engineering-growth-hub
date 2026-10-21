@@ -1,0 +1,94 @@
+{
+  "title": "Arrays, Strings, and the Two-Pointer Pattern",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Reason about arrays and strings as contiguous memory, and apply the two-pointer technique to solve in-place array and string problems in O(n) time and O(1) extra space.",
+  "content_blocks": [
+    {
+      "heading": "Why Arrays Come First",
+      "body": "Almost every data structure you'll build later in this module — a dynamic array, a hash map's bucket list, a heap's backing storage — is an array underneath, so the habits you build here carry forward everywhere. This session starts with the most basic question you can ask about a structure: what does it cost to read, insert, or remove something, and why?\n\nThe answer for an array comes directly from how it's actually laid out in memory: one contiguous block, where element `i` lives at a fixed offset from the start. That single fact explains both an array's biggest strength (instant access by index) and its biggest weakness (expensive insertion in the middle), and it's the fact every later comparison to linked lists, trees, and hash tables gets measured against.\n\nThis lesson also introduces the two-pointer pattern — one of the handful of techniques that shows up constantly once you start solving array and string problems for real, and the one this module's next session (sliding windows) builds on directly."
+    },
+    {
+      "heading": "Contiguous Memory and O(1) Access",
+      "body": "An array's elements sit back-to-back in memory, so finding element `i` is pure arithmetic: `base_address + i * element_size`. No searching, no following pointers — that's why indexed access is O(1) regardless of array size. A linked list, by contrast, has no such formula: reaching element `i` means walking `i` pointers from the head, which is O(n).\n\nThat same contiguous layout is also what makes insertion or deletion in the *middle* of an array expensive: every element after the insertion point has to physically shift over by one slot to keep the array contiguous, which is O(n) in the worst case. A linked list pays the opposite price — O(1) insertion once you're already at the right node, but O(n) just to get there without random access.\n\nNeither structure is \"better\" in the abstract — the right choice depends on which operation your access pattern actually does most often, which is exactly the kind of tradeoff this module's proficiency assessment will ask you to measure and explain, not just recite.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "You need a structure that supports frequent random access by index, with insertions and deletions happening almost exclusively at the end. Which cost profile matches an array here?",
+          "definition": {
+            "options": [
+              "O(1) random access, and O(1) amortized insert/delete at the end",
+              "O(n) random access, since every index lookup must walk from the start",
+              "O(1) random access, but O(n) insert/delete even when appending at the end",
+              "O(log n) time for every operation, the same profile as a balanced search tree"
+            ],
+            "correct_index": 0,
+            "explanation": "Indexed access is O(1) because of the fixed-offset arithmetic, and appending at the end doesn't require shifting any other elements, so it's O(1) too (amortized, once you account for occasional resizing) — this is exactly why an array is the right default when access is index-based and growth happens at the tail."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Two-Pointer Pattern: Reversing In Place",
+      "body": "The naive way to reverse an array is to build a brand new array by reading the original back-to-front — correct, but O(n) extra space for a problem that doesn't need it. The two-pointer pattern gets the same result in O(1) extra space: place one pointer at index 0 and another at the last index, swap the values they point to, then step the first pointer forward and the second one backward. Stop once they meet or cross.\n\nThis \"start from both ends and converge toward the middle\" shape is the first of two two-pointer variants you'll use constantly — the second, where both pointers move in the *same* direction at different speeds, shows up later for problems like removing duplicates from a sorted array. Recognizing which variant a problem calls for is most of the work; the loop itself is usually short.\n\nWrite `reverseInPlace` below using this converging-pointer approach — swap in place rather than allocating a second array, and return the mutated array so the result can be checked.",
+      "exercises": [
+        {
+          "type": "code",
+          "sequence": 1,
+          "prompt": "Write `reverseInPlace(nums)` that reverses the array in place using two converging pointers and returns the reversed array. Don't use `.reverse()` or allocate a second array.",
+          "definition": {
+            "language": "javascript",
+            "function_name": "reverseInPlace",
+            "starter_code": "function reverseInPlace(nums) {\n  // your code here\n  return nums;\n}",
+            "timeout_ms": 2000,
+            "visible_test_cases": [
+              { "input": [[1, 2, 3]], "expected_output": [3, 2, 1] },
+              { "input": [[]], "expected_output": [] }
+            ],
+            "hidden_test_cases": [
+              { "input": [[5]], "expected_output": [5] },
+              { "input": [[1, 1, 2, 3]], "expected_output": [3, 2, 1, 1] },
+              { "input": [[4, 2]], "expected_output": [2, 4] }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Strings as Character Arrays",
+      "body": "Algorithmically, a string is just an array of characters, and most string problems are solved by thinking of them exactly that way — the two-pointer pattern you just used on numbers applies directly to characters too. The one wrinkle in JavaScript specifically: strings are immutable, so you can't swap characters in place the way you swapped array elements a moment ago.\n\nThe usual workaround when a problem genuinely needs in-place-style mutation is to convert the string to an array of characters first (`s.split(\"\")`), do the two-pointer work on that array, then join it back into a string at the end. For a problem that only needs to *read* characters from both ends without rearranging anything — like checking whether a string is a palindrome — you don't even need that conversion; you can index directly into the original string with two pointers and never allocate anything beyond them.\n\nThat second case is what you'll build next: no new array, just two indices walking toward each other, comparing as they go."
+    },
+    {
+      "heading": "Two Pointers for Palindrome Checking",
+      "body": "A palindrome reads the same forwards and backwards, which is exactly the kind of property two converging pointers are built to check: start one at the front and one at the back, compare the characters they point to, and if they ever disagree, the string isn't a palindrome — stop immediately rather than continuing to scan. If the pointers meet or cross without ever disagreeing, it is one.\n\nThis is strictly better than the naive approach of reversing the whole string and comparing it to the original: that's correct, but it's O(n) extra space for the reversed copy and does no better on time. The two-pointer version is O(n) time and O(1) extra space, and — just as importantly for a real conversation about this problem — it can often return `false` early, without ever looking at most of the string, the moment it finds a mismatch.\n\nWrite `isPalindrome(s)` below assuming `s` is already lowercase alphanumeric characters only (no punctuation or spaces to skip over) — that simplification keeps the core two-pointer idea the whole focus here.",
+      "exercises": [
+        {
+          "type": "code",
+          "sequence": 1,
+          "prompt": "Write `isPalindrome(s)` that returns true if the lowercase alphanumeric string `s` reads the same forwards and backwards, using two pointers, and false otherwise.",
+          "definition": {
+            "language": "javascript",
+            "function_name": "isPalindrome",
+            "starter_code": "function isPalindrome(s) {\n  // your code here\n}",
+            "timeout_ms": 2000,
+            "visible_test_cases": [
+              { "input": ["racecar"], "expected_output": true },
+              { "input": ["hello"], "expected_output": false }
+            ],
+            "hidden_test_cases": [
+              { "input": [""], "expected_output": true },
+              { "input": ["a"], "expected_output": true },
+              { "input": ["ab"], "expected_output": false }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Arrays earn their O(1) random access through contiguous memory layout, and pay for it with O(n) insertion or deletion away from the end — a tradeoff worth stating out loud whenever you choose an array over an alternative, not just something to know silently. The two-pointer pattern you used twice in this session (converging from both ends) is the simplest member of a family of techniques that turn an apparent O(n²) brute-force scan into a single O(n) pass by being deliberate about what each pointer represents and when it moves.\n\nThe next session in this module picks up the same family from a different angle: fixed-size sliding windows, and a second two-pointer variant where both pointers move in the same direction rather than converging. Recognizing *which* variant a new problem actually calls for — converging, same-direction, or windowed — is the skill this short arc is building toward, one worked problem at a time."
+    }
+  ]
+}

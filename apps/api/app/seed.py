@@ -125,6 +125,30 @@ def load_curriculum_map(path: Path) -> None:
     db.session.commit()
 
 
+_CODE_EXERCISE_REQUIRED_KEYS = (
+    "function_name",
+    "starter_code",
+    "visible_test_cases",
+    "hidden_test_cases",
+)
+
+
+def _validate_exercise_definition(exercise_data: dict) -> None:
+    """Fail loudly at seed time rather than at first page load: a
+    malformed `code` exercise would otherwise surface as a KeyError deep
+    in `_exercise_summary` (app/routes/learning_sessions.py) the next
+    time a learner opens that lesson.
+    """
+    if exercise_data["type"] != "code":
+        return
+    definition = exercise_data["definition"]
+    missing = [key for key in _CODE_EXERCISE_REQUIRED_KEYS if key not in definition]
+    if missing:
+        raise ValueError(
+            f"code exercise {exercise_data['prompt'][:60]!r} is missing definition keys: {missing}"
+        )
+
+
 def _load_session(section: Section, session_data: dict) -> None:
     """Upsert one learning session -- plus its content blocks and
     exercises -- under `section`. Shared by `load_section_dir` regardless
@@ -171,6 +195,7 @@ def _load_session(section: Section, session_data: dict) -> None:
             block.examples = block_data.get("examples", [])
 
         for exercise_index, exercise_data in enumerate(block_exercises_data, start=1):
+            _validate_exercise_definition(exercise_data)
             existing = Exercise.query.filter_by(
                 content_block_id=block.id, sequence=exercise_index
             ).first()
@@ -193,6 +218,7 @@ def _load_session(section: Section, session_data: dict) -> None:
     # Lesson-level (not pinned to a slide) exercises — kept for the
     # 2 pre-existing lessons seeded before per-block exercises existed.
     for exercise_data in exercises_data:
+        _validate_exercise_definition(exercise_data)
         existing = Exercise.query.filter_by(
             learning_session_id=learning_session.id,
             content_block_id=None,
