@@ -13,6 +13,7 @@ from app.schemas import (
     CompetencySummary,
     LeadershipStoryDetail,
     LeadershipStorySummary,
+    RubricDimension,
 )
 from app.services import leadership_service
 
@@ -31,6 +32,8 @@ def _story_summary(story: LeadershipStory) -> LeadershipStorySummary:
         title=story.title,
         competency=_competency_summary(story.section),
         result=story.result,
+        rubric_scores=story.rubric_scores,
+        overall_score=leadership_service.compute_overall_score(story.rubric_scores),
         created_at=story.created_at,
         updated_at=story.updated_at,
     )
@@ -47,6 +50,8 @@ def _story_detail(story: LeadershipStory) -> LeadershipStoryDetail:
         result=story.result,
         reflection=story.reflection,
         quantified_outcome=story.quantified_outcome,
+        rubric_scores=story.rubric_scores,
+        overall_score=leadership_service.compute_overall_score(story.rubric_scores),
         created_at=story.created_at,
         updated_at=story.updated_at,
     )
@@ -59,6 +64,13 @@ def _question_summary(question: BehavioralQuestion) -> BehavioralQuestionSummary
         source=question.source,
         competency=_competency_summary(question.section),
         created_at=question.created_at,
+    )
+
+
+@leadership_bp.get("/rubric-dimensions")
+def list_rubric_dimensions():
+    return jsonify(
+        [RubricDimension(**dimension).model_dump() for dimension in leadership_service.RUBRIC_DIMENSIONS]
     )
 
 
@@ -89,6 +101,7 @@ def create_story():
             result=data.get("result"),
             reflection=data.get("reflection"),
             quantified_outcome=data.get("quantified_outcome"),
+            rubric_scores=data.get("rubric_scores"),
         )
     except ValueError as error:
         abort(400, description=str(error))
@@ -121,6 +134,7 @@ def update_story(story_id: int):
             "result",
             "reflection",
             "quantified_outcome",
+            "rubric_scores",
         )
     }
 

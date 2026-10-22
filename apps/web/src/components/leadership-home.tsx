@@ -16,6 +16,7 @@ type StorySummary = {
   title: string;
   competency: Competency;
   result: string;
+  overall_score: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -53,6 +54,17 @@ export function LeadershipHome() {
   const competencies = competenciesState.data;
   const stories = storiesState.data;
 
+  // "Needs work": split into two groups rather than one sorted list --
+  // an unscored story isn't necessarily worse than a genuinely low-
+  // scored one, so interleaving them by a single sort key would be
+  // misleading. Low-scoring (rated, below the threshold) comes first,
+  // since that's a known weak spot; unscored is just "not reviewed yet."
+  const RUBRIC_THRESHOLD = 4;
+  const lowScoringStories = stories
+    .filter((s) => typeof s.overall_score === "number" && s.overall_score < RUBRIC_THRESHOLD)
+    .sort((a, b) => (a.overall_score ?? 0) - (b.overall_score ?? 0));
+  const unscoredStories = stories.filter((s) => typeof s.overall_score !== "number");
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -74,6 +86,48 @@ export function LeadershipHome() {
           </Link>
         </div>
       </div>
+
+      {(lowScoringStories.length > 0 || unscoredStories.length > 0) && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+          <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">Needs work</h2>
+          {lowScoringStories.length > 0 && (
+            <ul className="mt-2 flex flex-col gap-1">
+              {lowScoringStories.map((story) => (
+                <li key={story.id}>
+                  <Link
+                    href={`/leadership/stories/${story.id}`}
+                    className="flex items-center justify-between rounded px-2 py-1 text-sm text-amber-900 hover:bg-amber-100 hover:underline dark:text-amber-200 dark:hover:bg-amber-900"
+                  >
+                    {story.title}
+                    <span className="text-xs tabular-nums">
+                      {story.overall_score!.toFixed(1)} / 5
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {unscoredStories.length > 0 && (
+            <>
+              <p className="mt-3 text-xs font-medium text-amber-800 dark:text-amber-300">
+                Not yet scored:
+              </p>
+              <ul className="mt-1 flex flex-col gap-1">
+                {unscoredStories.map((story) => (
+                  <li key={story.id}>
+                    <Link
+                      href={`/leadership/stories/${story.id}`}
+                      className="block rounded px-2 py-1 text-sm text-amber-900 hover:bg-amber-100 hover:underline dark:text-amber-200 dark:hover:bg-amber-900"
+                    >
+                      {story.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
         {competencies.map((competency) => {
@@ -104,9 +158,14 @@ export function LeadershipHome() {
                     <li key={story.id}>
                       <Link
                         href={`/leadership/stories/${story.id}`}
-                        className="block rounded px-2 py-1 text-sm text-zinc-700 hover:bg-zinc-100 hover:underline dark:text-zinc-300 dark:hover:bg-zinc-900"
+                        className="flex items-center justify-between rounded px-2 py-1 text-sm text-zinc-700 hover:bg-zinc-100 hover:underline dark:text-zinc-300 dark:hover:bg-zinc-900"
                       >
                         {story.title}
+                        {typeof story.overall_score === "number" && (
+                          <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+                            {story.overall_score.toFixed(1)} / 5
+                          </span>
+                        )}
                       </Link>
                     </li>
                   ))}

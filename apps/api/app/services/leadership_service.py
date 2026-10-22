@@ -18,6 +18,59 @@ LEADERSHIP_TOPIC_NAME = "Leadership & Strategy"
 
 _REQUIRED_STORY_FIELDS = ("title", "situation", "task", "action", "result")
 
+# Fixed self-assessment rubric (ADR 0034) -- not author- or
+# learner-configurable, same posture as BREAK_MINUTES/PROGRESS_STATUS_RANK
+# elsewhere in this codebase: a small, hardcoded set rather than its own
+# taxonomy table.
+RUBRIC_DIMENSIONS = [
+    {
+        "key": "clarity",
+        "label": "Clarity",
+        "description": "Is the Situation/Task easy to follow, without unexplained jargon?",
+    },
+    {
+        "key": "specificity",
+        "label": "Specificity of Action",
+        "description": "Are the actions concrete things YOU did, not a vague team action?",
+    },
+    {
+        "key": "quantified_result",
+        "label": "Quantified Result",
+        "description": "Does the Result include a measurable outcome?",
+    },
+    {
+        "key": "relevance",
+        "label": "Relevance to Competency",
+        "description": "Does this story actually demonstrate the competency it's tagged to?",
+    },
+    {
+        "key": "reflection_growth",
+        "label": "Reflection & Growth",
+        "description": "Does the Reflection show genuine learning, not just a recap of the Result?",
+    },
+]
+RUBRIC_DIMENSION_KEYS = {dimension["key"] for dimension in RUBRIC_DIMENSIONS}
+
+
+def compute_overall_score(rubric_scores: dict) -> float | None:
+    """None until every dimension has been scored -- a partial average
+    would misrepresent a not-yet-assessed story as weaker than it's
+    actually been found to be.
+    """
+    if set(rubric_scores) != RUBRIC_DIMENSION_KEYS:
+        return None
+    return round(sum(rubric_scores.values()) / len(rubric_scores), 1)
+
+
+def _validate_rubric_scores(rubric_scores: dict) -> None:
+    if not isinstance(rubric_scores, dict):
+        raise ValueError("rubric_scores must be an object")
+    for key, value in rubric_scores.items():
+        if key not in RUBRIC_DIMENSION_KEYS:
+            raise ValueError(f"unknown rubric dimension: {key}")
+        if not isinstance(value, int) or isinstance(value, bool) or not (1 <= value <= 5):
+            raise ValueError(f"{key} score must be an integer from 1 to 5")
+
 
 def list_competencies() -> list[Section]:
     return (
@@ -50,6 +103,8 @@ def _validate_fields(fields: dict) -> None:
             raise ValueError(f"{name} is required")
     if "section_id" in fields and not _is_valid_competency(fields["section_id"]):
         raise ValueError("section_id must be one of the Leadership & Strategy competencies")
+    if "rubric_scores" in fields:
+        _validate_rubric_scores(fields["rubric_scores"])
 
 
 def create_story(
@@ -62,6 +117,7 @@ def create_story(
     result: str,
     reflection: str | None = None,
     quantified_outcome: str | None = None,
+    rubric_scores: dict | None = None,
 ) -> LeadershipStory:
     fields = {
         "section_id": section_id,
@@ -71,6 +127,8 @@ def create_story(
         "action": action,
         "result": result,
     }
+    if rubric_scores is not None:
+        fields["rubric_scores"] = rubric_scores
     _validate_fields(fields)
 
     story = LeadershipStory(
@@ -82,6 +140,7 @@ def create_story(
         result=result,
         reflection=reflection,
         quantified_outcome=quantified_outcome,
+        rubric_scores=rubric_scores or {},
     )
     db.session.add(story)
     db.session.commit()

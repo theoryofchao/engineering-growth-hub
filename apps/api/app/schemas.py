@@ -268,6 +268,8 @@ class LeadershipStorySummary(BaseModel):
     title: str
     competency: CompetencySummary
     result: str
+    rubric_scores: dict[str, int] = {}
+    overall_score: float | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -282,8 +284,16 @@ class LeadershipStoryDetail(BaseModel):
     result: str
     reflection: str | None
     quantified_outcome: str | None
+    rubric_scores: dict[str, int] = {}
+    overall_score: float | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class RubricDimension(BaseModel):
+    key: str
+    label: str
+    description: str
 
 
 class BehavioralQuestionSummary(BaseModel):

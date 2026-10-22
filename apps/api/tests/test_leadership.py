@@ -271,3 +271,106 @@ def test_get_question_404_for_missing_id(client):
 def test_delete_question_404_for_missing_id(client):
     response = client.delete("/api/v1/leadership/questions/999999")
     assert response.status_code == 404
+
+
+def test_list_rubric_dimensions_returns_five_fixed_dimensions(client):
+    response = client.get("/api/v1/leadership/rubric-dimensions")
+
+    assert response.status_code == 200
+    dimensions = response.get_json()
+    assert len(dimensions) == 5
+    keys = {d["key"] for d in dimensions}
+    assert keys == {
+        "clarity",
+        "specificity",
+        "quantified_result",
+        "relevance",
+        "reflection_growth",
+    }
+
+
+def test_story_has_no_overall_score_until_fully_rated(app, client):
+    section_id = _technical_leadership_id(app)
+
+    create_response = client.post(
+        "/api/v1/leadership/stories",
+        json={
+            "section_id": section_id,
+            "title": "Unscored story",
+            "situation": "s",
+            "task": "t",
+            "action": "a",
+            "result": "r",
+        },
+    )
+    assert create_response.get_json()["overall_score"] is None
+    story_id = create_response.get_json()["id"]
+
+    partial_response = client.patch(
+        f"/api/v1/leadership/stories/{story_id}",
+        json={"rubric_scores": {"clarity": 4, "specificity": 3}},
+    )
+    assert partial_response.get_json()["overall_score"] is None
+
+    full_response = client.patch(
+        f"/api/v1/leadership/stories/{story_id}",
+        json={
+            "rubric_scores": {
+                "clarity": 4,
+                "specificity": 3,
+                "quantified_result": 5,
+                "relevance": 4,
+                "reflection_growth": 4,
+            }
+        },
+    )
+    assert full_response.status_code == 200
+    assert full_response.get_json()["overall_score"] == 4.0
+
+
+def test_rubric_scores_rejects_unknown_dimension(app, client):
+    section_id = _technical_leadership_id(app)
+    create_response = client.post(
+        "/api/v1/leadership/stories",
+        json={
+            "section_id": section_id,
+            "title": "Story",
+            "situation": "s",
+            "task": "t",
+            "action": "a",
+            "result": "r",
+        },
+    )
+    story_id = create_response.get_json()["id"]
+
+    response = client.patch(
+        f"/api/v1/leadership/stories/{story_id}",
+        json={"rubric_scores": {"not_a_real_dimension": 5}},
+    )
+
+    assert response.status_code == 400
+    assert "unknown rubric dimension" in response.get_json()["error"]
+
+
+def test_rubric_scores_rejects_out_of_range_value(app, client):
+    section_id = _technical_leadership_id(app)
+    create_response = client.post(
+        "/api/v1/leadership/stories",
+        json={
+            "section_id": section_id,
+            "title": "Story",
+            "situation": "s",
+            "task": "t",
+            "action": "a",
+            "result": "r",
+        },
+    )
+    story_id = create_response.get_json()["id"]
+
+    response = client.patch(
+        f"/api/v1/leadership/stories/{story_id}",
+        json={"rubric_scores": {"clarity": 6}},
+    )
+
+    assert response.status_code == 400
+    assert "1 to 5" in response.get_json()["error"]

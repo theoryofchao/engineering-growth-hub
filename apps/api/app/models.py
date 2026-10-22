@@ -415,6 +415,11 @@ class LeadershipStory(db.Model):
     result = db.Column(db.Text, nullable=False)
     reflection = db.Column(db.Text, nullable=True)
     quantified_outcome = db.Column(db.Text, nullable=True)
+    # Self-assessment against the fixed rubric (ADR 0034):
+    # {dimension_key: 1-5}. A dimension absent from this dict just means
+    # "not yet scored" -- not a 0 -- so the overall score (computed, not
+    # stored) can tell "unscored" apart from "scored and weak."
+    rubric_scores = db.Column(db.JSON, nullable=False, default=dict)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
     updated_at = db.Column(
         db.DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow

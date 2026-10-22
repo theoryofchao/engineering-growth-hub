@@ -23,12 +23,22 @@ const storyFixture = {
   result: "r",
   reflection: null,
   quantified_outcome: null,
+  rubric_scores: {},
+  overall_score: null as number | null,
 };
+
+const rubricDimensionsFixture = [
+  { key: "clarity", label: "Clarity", description: "Is it easy to follow?" },
+  { key: "specificity", label: "Specificity of Action", description: "Concrete actions?" },
+];
 
 function mockFetchFor(competencies = competenciesFixture, story = storyFixture) {
   (fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
     if (url.includes("/competencies")) {
       return Promise.resolve({ ok: true, status: 200, json: async () => competencies });
+    }
+    if (url.includes("/rubric-dimensions")) {
+      return Promise.resolve({ ok: true, status: 200, json: async () => rubricDimensionsFixture });
     }
     if (url.includes("/stories/")) {
       return Promise.resolve({ ok: true, status: 200, json: async () => story });
@@ -155,6 +165,52 @@ describe("StoryForm", () => {
       expect.stringContaining("/leadership/stories/5"),
       expect.objectContaining({ method: "DELETE" }),
     );
+  });
+
+  it("does not show the rubric section in create mode", async () => {
+    mockFetchFor();
+
+    render(<StoryForm mode="create" />);
+
+    await waitFor(() => expect(screen.getByText("Select a competency")).toBeInTheDocument());
+    expect(screen.queryByText("Self-assessment rubric")).not.toBeInTheDocument();
+  });
+
+  it("shows the rubric section with fetched dimensions in edit mode", async () => {
+    mockFetchFor();
+
+    render(<StoryForm mode="edit" storyId={5} />);
+
+    await waitFor(() => expect(screen.getByText("Self-assessment rubric")).toBeInTheDocument());
+    expect(screen.getByText("Clarity")).toBeInTheDocument();
+    expect(screen.getByText("Specificity of Action")).toBeInTheDocument();
+  });
+
+  it("shows the overall score once the story already has one", async () => {
+    mockFetchFor(competenciesFixture, { ...storyFixture, overall_score: 3.4 });
+
+    render(<StoryForm mode="edit" storyId={5} />);
+
+    await waitFor(() => expect(screen.getByText("3.4 / 5 overall")).toBeInTheDocument());
+  });
+
+  it("includes rubric scores in the save payload", async () => {
+    mockFetchFor();
+
+    render(<StoryForm mode="edit" storyId={5} />);
+    await waitFor(() => expect(screen.getByText("Clarity")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByText("Clarity").closest("label")!.querySelector("select")!, {
+      target: { value: "4" },
+    });
+    fireEvent.click(screen.getByText("Save changes"));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/leadership"));
+    const patchCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([, init]) => init?.method === "PATCH",
+    );
+    const body = JSON.parse(patchCall![1].body);
+    expect(body.rubric_scores).toEqual({ clarity: 4 });
   });
 
   it("shows a not-found state for a missing story", async () => {

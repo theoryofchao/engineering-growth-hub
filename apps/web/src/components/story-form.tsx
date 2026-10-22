@@ -8,6 +8,8 @@ import { API_BASE_URL } from "@/lib/config";
 
 type Competency = { id: number; title: string; slug: string; description: string | null };
 
+type RubricDimension = { key: string; label: string; description: string };
+
 type StoryDetail = {
   id: number;
   title: string;
@@ -18,6 +20,8 @@ type StoryDetail = {
   result: string;
   reflection: string | null;
   quantified_outcome: string | null;
+  rubric_scores: Record<string, number>;
+  overall_score: number | null;
 };
 
 type FormFields = {
@@ -29,6 +33,7 @@ type FormFields = {
   result: string;
   reflection: string;
   quantifiedOutcome: string;
+  rubricScores: Record<string, number>;
 };
 
 const EMPTY_FIELDS: FormFields = {
@@ -40,6 +45,7 @@ const EMPTY_FIELDS: FormFields = {
   result: "",
   reflection: "",
   quantifiedOutcome: "",
+  rubricScores: {},
 };
 
 type SubmitState =
@@ -50,6 +56,11 @@ export function StoryForm({ mode, storyId }: { mode: "create" | "edit"; storyId?
   const competenciesState = useFetch<Competency[]>("/api/v1/leadership/competencies");
   const storyState = useFetch<StoryDetail>(
     mode === "edit" && storyId ? `/api/v1/leadership/stories/${storyId}` : null,
+  );
+  // Only needed to render the rubric section, which only exists in edit
+  // mode -- a story can't be self-assessed before it's been written.
+  const rubricDimensionsState = useFetch<RubricDimension[]>(
+    mode === "edit" ? "/api/v1/leadership/rubric-dimensions" : null,
   );
 
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
@@ -72,11 +83,24 @@ export function StoryForm({ mode, storyId }: { mode: "create" | "edit"; storyId?
       result: story.result,
       reflection: story.reflection ?? "",
       quantifiedOutcome: story.quantified_outcome ?? "",
+      rubricScores: story.rubric_scores,
     });
   }
 
   function updateField<K extends keyof FormFields>(key: K, value: FormFields[K]) {
     setFields((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateRubricScore(dimensionKey: string, value: number | null) {
+    setFields((current) => {
+      const rubricScores = { ...current.rubricScores };
+      if (value === null) {
+        delete rubricScores[dimensionKey];
+      } else {
+        rubricScores[dimensionKey] = value;
+      }
+      return { ...current, rubricScores };
+    });
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -92,6 +116,7 @@ export function StoryForm({ mode, storyId }: { mode: "create" | "edit"; storyId?
       result: fields.result,
       reflection: fields.reflection || null,
       quantified_outcome: fields.quantifiedOutcome || null,
+      ...(mode === "edit" ? { rubric_scores: fields.rubricScores } : {}),
     };
 
     try {
@@ -273,6 +298,43 @@ export function StoryForm({ mode, storyId }: { mode: "create" | "edit"; storyId?
           placeholder="e.g. -30% latency, $2M saved, 4 engineers onboarded"
         />
       </label>
+
+      {mode === "edit" && rubricDimensionsState.phase === "success" && (
+        <div className="flex flex-col gap-3 rounded-lg border border-zinc-300 p-4 dark:border-zinc-700">
+          <div className="flex items-center justify-between">
+            <h2 className={labelClass}>Self-assessment rubric</h2>
+            {storyState.phase === "success" &&
+              typeof storyState.data.overall_score === "number" && (
+                <span className="rounded bg-zinc-200 px-2 py-0.5 text-xs font-medium tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                  {storyState.data.overall_score.toFixed(1)} / 5 overall
+                </span>
+              )}
+          </div>
+          {rubricDimensionsState.data.map((dimension) => (
+            <label key={dimension.key} className="flex flex-col gap-1">
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">{dimension.label}</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                {dimension.description}
+              </span>
+              <select
+                value={fields.rubricScores[dimension.key] ?? ""}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  updateRubricScore(dimension.key, raw === "" ? null : Number(raw));
+                }}
+                className={fieldClass}
+              >
+                <option value="">Not yet scored</option>
+                {[1, 2, 3, 4, 5].map((score) => (
+                  <option key={score} value={score}>
+                    {score}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+      )}
 
       {submitState.phase === "error" && (
         <div
