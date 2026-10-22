@@ -188,7 +188,7 @@ export function LessonContent({
           Lesson
         </h2>
         <div className="mt-2">
-          <ContentBlocks initialBlocks={data.content_blocks} />
+          <ContentBlocks initialBlocks={data.content_blocks} learningSessionId={data.id} />
         </div>
       </section>
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Backend (slice 1) and the frontend local store + sync engine (slice 2) are both built; the checkmark/lesson-banner/jump-to-incomplete UI (slice 3) is the remaining, not-yet-built piece.
+Accepted. All three slices are built: backend, frontend local store + sync engine, and the checkmark/lesson-banner/jump-to-incomplete UI.
 
 ## Context
 
@@ -35,7 +35,22 @@ Three design points were decided with the user up front:
 10. **`lib/completion-sync.ts`** implements the three agreed triggers: `scheduleDebouncedFlush` (resets a 5s timer per toggle), `startPeriodicFlush` (a 2-minute safety-net interval, returns a stop function), and `flushViaBeacon` (best-effort, for `visibilitychange`/`pagehide`, via `navigator.sendBeacon` since a normal `fetch` can get cancelled mid-unload). `flush()` guards against overlapping requests with an in-flight flag; a failed or rejected flush simply leaves entries dirty for the next trigger to retry — safe because the batch endpoint is idempotent.
 11. **`hooks/use-block-completions.ts`** (reactive map + `toggle`, for the slide/block checkmark UI) and **`hooks/use-completion-sync.ts`** (mounts the periodic timer and unload listeners once) are built but not yet wired into any component — that wiring is slice 3's job, alongside the actual checkmark/banner/jump-to-incomplete UI.
 
-## Consequences (frontend slice)
+## Consequences (frontend local store + sync engine slice)
 
 - `vitest run`: 171 passed (143 before this slice + 28 new, across `completion-store.test.ts`, `completion-sync.test.ts`, and `use-block-completions.test.ts`), covering toggle/dirty/hydrate/markSynced merge semantics, debounce coalescing, periodic-interval start/stop, in-flight-flush dedup, stale/failed-flush retry-ability, and `sendBeacon` behavior (including when unsupported). `tsc --noEmit`, `eslint`, and `prettier --check` all clean.
-- No UI changes this slice — `use-block-completions.ts` and `use-completion-sync.ts` have no callers yet.
+- No UI changes this slice — `use-block-completions.ts` and `use-completion-sync.ts` had no callers yet.
+
+## Decisions (checkmark UI slice)
+
+12. **`ContentBlocks` takes a new required `learningSessionId` prop** (threaded through from `lesson-content.tsx`, which already fetches the session and knows `data.id`) and fetches `GET /api/v1/learning-sessions/<id>/completions` once on mount to call `hydrateFromServer`. This is an independent fetch-on-mount inside a client component, the same style `pomodoro-timer.tsx` already uses for its own state — not a second fetch bolted onto `use-fetch.ts`'s single-purpose hook.
+13. **A `CompletionToggle` button** (small inline-SVG checkmark circle, same "no new icon library" posture as the settings gear in `site-settings.tsx`) is the one piece of UI reused in three places: per-block in page view, for the current slide in slide view, and nowhere else. `useBlockCompletions()` supplies the reactive map and a `toggle()` that both flips local state and schedules the debounced flush.
+14. **Lesson completion and the "X/Y complete" count are computed in the render, not stored in state** — `completedCount`/`allBlocksComplete` are derived directly from `completions` each render, consistent with decision 3 (no stored lesson-level flag). The count and a "Lesson complete ✓" banner sit in the shared toolbar/header above both view modes, so they're visible regardless of which view is active.
+15. **"Show only incomplete"** (page view) is a plain, unpersisted `useState` — unlike "Show section boundaries" it has no site-wide default, since the user didn't ask for one and this keeps the slice scoped to what was asked. It filters which blocks render, not the underlying `blocks` state, so note-taking/exercise state for a hidden block isn't affected.
+16. **"Jump to next incomplete slide"** (slide view only) searches forward from the current slide index, wrapping around, and is hidden once `allBlocksComplete`. Page view has no equivalent jump control — "Show only incomplete" already answers "what haven't I done" there without needing one.
+17. **`CompletionSyncMount`** (renders `null`, calls `useCompletionSync()`) is mounted once in `RootLayout` next to the existing `SiteSettings` global client component, giving the periodic-flush and tab-hide/unload triggers an app-wide lifetime independent of any one lesson page.
+
+## Consequences (checkmark UI slice)
+
+- `vitest run`: 177 passed (171 before this slice + 6 new in `content-blocks.test.tsx`, covering toggle-updates-count, toggle-back-off, the incomplete filter, the lesson-complete banner, and jump-to-incomplete appearing/disappearing). `tsc --noEmit`, `eslint` (one pre-existing, unrelated warning on an arrow-key effect from before this ADR), and `prettier --check` all clean.
+- Verified against the live dev stack (`docker compose`, real Postgres) with a real browser (Playwright): checking a block in page view updates the count; "Show only incomplete" hides it; switching to slide view, using "Jump to next incomplete slide" and checking the remaining two blocks reaches 3/3 and shows the "Lesson complete ✓" banner with the jump control gone; reloading the page after the 5s debounce window shows the same 3/3 state, confirmed independently against the `GET .../completions` response. Zero console/page errors.
+- **A real last-write-wins edge case was hit and diagnosed during this verification, not a code bug**: an earlier manual `curl` test (slice 1) had left `block_completions` rows with `updated_at` stamped `23:59:59` *that same day* — later than the real wall-clock time the later browser test ran at — so the backend correctly rejected the browser test's genuine, newer-in-real-time toggle as "stale" by the stored (but artificially-forward) timestamp. Resolved by deleting those leftover rows directly in Postgres rather than fighting through the API (an API-level "reset" is itself subject to the same last-write-wins rule, so it can't reliably override a stuck-in-the-future timestamp). No code change resulted; this is the conflict rule working as designed, and the DB was left clean afterward.

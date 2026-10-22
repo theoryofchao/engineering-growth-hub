@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 
+import { CompletionSyncMount } from "@/components/completion-sync-mount";
 import { SiteSettings } from "@/components/site-settings";
 import "./globals.css";
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           storageKey="egh:theme"
         >
           <SiteSettings />
+          <CompletionSyncMount />
           {children}
         </ThemeProvider>
       </body>
