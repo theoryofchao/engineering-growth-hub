@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Backend (slice 1) and the question-bank browsing page (slice 2) are both built; the React Flow decision-tree visualization (slice 3) is the remaining, not-yet-built piece.
+Accepted. All three slices are built: backend, the question-bank browsing page, and the React Flow decision-tree visualization.
 
 ## Context
 
@@ -36,4 +36,16 @@ Two design points confirmed with the user up front:
 
 - `vitest run`: 189 passed (183 before this slice + 6 new, across `questions-home.test.tsx` and one added to `leadership-home.test.tsx`), covering grouping, the seed-vs-custom delete-button distinction, add, delete, and the error state. `tsc --noEmit`, `eslint`, `prettier --check` all clean.
 - Verified against the live dev stack with a real browser (Playwright): the "Practice questions" link navigates correctly; all 15 seeded questions render grouped by competency; adding a custom question shows it immediately with a Delete action (seeded questions have none); deleting it (with the confirm dialog accepted) removes it from the page; confirmed via a follow-up `curl` that the database was left with exactly the original 15 seeded rows, no leftover test data. Zero console/page errors.
-- Not done this slice (by design): the React Flow decision-tree visualization (`/leadership/questions/[id]`) is the remaining slice — clicking a question currently links to a route that doesn't exist yet (expected, not a bug, until that slice ships).
+## Decisions (React Flow decision-tree visualization slice)
+
+10. **`@xyflow/react@12.12.0`** (the actively-maintained package; the old `reactflow` name is a legacy alias) added to `apps/web/package.json` -- the first graph/diagram library in this repo. `npm install` surfaced 7 pre-existing vulnerabilities (via `monaco-editor`'s `dompurify` and `eslint-config-next`'s `braces`), neither caused by this addition; not fixed here, out of scope.
+11. **Fixed, hand-placed node positions, not an auto-layout library** (e.g. dagre). This is always exactly a 3-level tree (one question, one competency, a handful of stories) with no real layout ambiguity, so a layout engine would be solving a problem that doesn't exist here.
+12. **`DecisionTree` fetches the question, then its competency's stories as a second, dependent `useFetch` call** (path is `null` until the competency id is known, the same conditional-fetch pattern `story-form.tsx` already uses). Stories render as green leaf nodes (clicking navigates to `/leadership/stories/<id>` via `useRouter().push`); an empty competency renders one amber "No stories yet — add one" node instead (clicking it goes to `/leadership/stories/new`), rather than an empty canvas.
+13. **Interaction is view-only**: `nodesDraggable`, `nodesConnectable`, and `elementsSelectable` are all disabled. This is a read-only visualization of an existing relationship, not an editor — nothing about question/competency/story linkage should be changeable by dragging nodes around.
+14. **Route typed with a plain `params: Promise<{ id: string }>` instead of Next's generated `PageProps<"/leadership/questions/[id]">` helper** used by the sibling `leadership/stories/[id]` route. Discovered mid-slice: this host's `apps/web/.next` directory is root-owned (pre-existing, unrelated to this change -- likely leftover from some earlier root-context command), which blocks `next typegen`/`next dev` from regenerating the route-literal union that helper depends on, and `sudo` isn't usable non-interactively here. The plain type is behaviorally identical and avoids the dependency; worth switching back to the generated helper once that directory's ownership is fixed, for consistency with the rest of the app's dynamic routes.
+
+## Consequences (React Flow decision-tree visualization slice)
+
+- `vitest run`: 192 passed (189 before this slice + 3 new, in `decision-tree.test.tsx`), covering node/edge rendering with stories present, the empty-competency placeholder, and a not-found question. Required a minimal `ResizeObserver` stub in the test (jsdom doesn't implement it, and `@xyflow/react` needs it to size its viewport) — scoped to this one test file, not added to the shared `vitest.setup.ts` since nothing else needs it yet. `tsc --noEmit`, `eslint`, `prettier --check` all clean.
+- Verified against the live dev stack with a real browser (Playwright): visited a question with no stories yet (showed the question, competency, and placeholder nodes correctly); created a real story via the API, reloaded, confirmed the story node appeared and clicking it navigated to `/leadership/stories/<id>`; deleted the test story afterward, confirmed via a follow-up `curl` that no stories remain. Zero console/page errors.
+- The npm-container split in this project (`web-node-modules` is a separate Docker volume, not the bind-mounted source tree) meant the new dependency needed `npm install` run both on the host and inside the running container (`docker compose exec web npm install`) before the live dev server could resolve it — noted here since it's easy to forget when adding any future frontend dependency.
