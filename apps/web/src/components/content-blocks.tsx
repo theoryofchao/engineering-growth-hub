@@ -89,6 +89,27 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
     setSlideIndex(newIndex);
   }
 
+  // Arrow-key slide navigation, mirroring the Prev/Next buttons' bounds
+  // checks. Ignored while typing in a text field (e.g. the notes draft)
+  // so arrow keys there move the cursor instead of the slide.
+  useEffect(() => {
+    if (viewMode !== "slide") return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA"].includes(target.tagName)) return;
+
+      if (event.key === "ArrowLeft" && slideIndex > 0) {
+        goToSlide(slideIndex - 1);
+      } else if (event.key === "ArrowRight" && slideIndex < blocks.length - 1) {
+        goToSlide(slideIndex + 1);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [viewMode, slideIndex, blocks.length]);
+
   // Previous/Next inside the notes panel: in slide view this moves the
   // actual slide (so the panel always reflects what's on screen); in
   // page view there's no single "current" position outside the panel,
@@ -229,7 +250,7 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
             )}
           </div>
 
-          <div className="flex justify-between">
+          <div className="flex items-center justify-between">
             <button
               type="button"
               disabled={slideIndex === 0}
@@ -238,6 +259,9 @@ export function ContentBlocks({ initialBlocks }: { initialBlocks: Block[] }) {
             >
               ← Previous
             </button>
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">
+              Use ← → to navigate
+            </span>
             <button
               type="button"
               disabled={slideIndex === blocks.length - 1}
