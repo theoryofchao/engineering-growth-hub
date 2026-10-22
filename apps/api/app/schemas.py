@@ -76,6 +76,29 @@ class NoteDetail(BaseModel):
     updated_at: datetime
 
 
+class BlockCompletionDetail(BaseModel):
+    """`updated_at` is None for a block that has never been toggled."""
+
+    content_block_id: int
+    completed: bool
+    updated_at: datetime | None
+
+
+class BlockCompletionBatchItem(BaseModel):
+    """One queued local toggle. `client_updated_at` is the client's own
+    clock reading at the moment of the toggle, used for last-write-wins
+    conflict resolution -- not the time the server receives the request.
+    """
+
+    content_block_id: int
+    completed: bool
+    client_updated_at: datetime
+
+
+class BlockCompletionBatchRequest(BaseModel):
+    completions: list[BlockCompletionBatchItem]
+
+
 class ContentExample(BaseModel):
     label: str
     content: str

@@ -30,6 +30,7 @@ def create_app(config_name: str | None = None) -> Flask:
         resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}},
     )
 
+    from app.routes.completions import completions_bp
     from app.routes.dashboard import dashboard_bp
     from app.routes.exercises import exercises_bp
     from app.routes.health import health_bp
@@ -49,6 +50,7 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(sections_bp)
     app.register_blueprint(notes_bp)
     app.register_blueprint(leadership_bp)
+    app.register_blueprint(completions_bp)
 
     @app.errorhandler(404)
     def handle_not_found(error):

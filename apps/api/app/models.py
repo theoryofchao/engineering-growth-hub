@@ -172,6 +172,7 @@ class ContentBlock(db.Model):
 
     learning_session = db.relationship("LearningSession", back_populates="content_blocks")
     note = db.relationship("Note", back_populates="content_block", uselist=False)
+    completion = db.relationship("BlockCompletion", back_populates="content_block", uselist=False)
     exercises = db.relationship(
         "Exercise", back_populates="content_block", order_by="Exercise.sequence"
     )
@@ -211,6 +212,29 @@ class Note(db.Model):
             note.body = body
             note.updated_at = _utcnow()
         return note
+
+
+class BlockCompletion(db.Model):
+    """Whether a learner has checked a content block off as read/done.
+
+    `completed_at` is nullable rather than a boolean so a reversible
+    uncheck is just clearing it back to None. `updated_at` is stamped
+    from the client's own clock reading at toggle time (not server
+    receipt time) so a batch flush from apps/web's local-first queue
+    can resolve last-write-wins across out-of-order or stale retries.
+    No `user_id` yet -- single-user MVP, same as the rest of this schema.
+    """
+
+    __tablename__ = "block_completions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    content_block_id = db.Column(
+        db.Integer, db.ForeignKey("content_blocks.id"), nullable=False, unique=True
+    )
+    completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
+
+    content_block = db.relationship("ContentBlock", back_populates="completion")
 
 
 class StudySession(db.Model):
