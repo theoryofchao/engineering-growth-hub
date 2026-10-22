@@ -121,6 +121,7 @@ class LearningSessionSummary(BaseModel):
     title: str
     sequence: int
     duration_minutes: int
+    is_complete: bool
 
 
 class LearningSessionDetail(BaseModel):
@@ -231,6 +232,7 @@ class SectionDetail(BaseModel):
     status: str
     is_locked: bool
     learning_sessions: list[LearningSessionSummary]
+    is_fully_complete: bool
     prerequisites: list[PrerequisiteSummary]
     unmet_prerequisites: list[PrerequisiteSummary]
     dev_prerequisites_bypassed: bool = False

@@ -173,6 +173,41 @@ describe("LessonContent", () => {
     );
   });
 
+  it("shows a completion check next to a fully-completed lesson in the nav", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () =>
+        baseLessonResponse({
+          section_sessions: [
+            {
+              id: 1,
+              title: "Critical Rendering Path",
+              sequence: 1,
+              duration_minutes: 25,
+              is_complete: true,
+            },
+            {
+              id: 2,
+              title: "Compositing",
+              sequence: 2,
+              duration_minutes: 25,
+              is_complete: false,
+            },
+          ],
+        }),
+    });
+
+    render(<LessonContent {...baseProps} />);
+
+    const nav = await screen.findByRole("navigation", { name: "Lessons in this section" });
+    const currentItem = within(nav).getByText("1. Critical Rendering Path").closest("li");
+    expect(currentItem?.querySelector("svg")).not.toBeNull();
+
+    const otherItem = within(nav).getByRole("link", { name: "2. Compositing" });
+    expect(otherItem.querySelector("svg")).toBeNull();
+  });
+
   it("renders a not-found state for a missing lesson", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: false,

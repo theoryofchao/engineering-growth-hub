@@ -16,7 +16,7 @@ from app.schemas import (
     NoteDetail,
     SectionSummary,
 )
-from app.services import learning_sessions_service
+from app.services import completions_service, learning_sessions_service
 
 learning_sessions_bp = Blueprint("learning_sessions", __name__, url_prefix="/api/v1")
 
@@ -52,6 +52,11 @@ def _exercise_summary(exercise) -> ExerciseSummary:
 def _serialize(learning_session: LearningSession) -> dict:
     session_level_exercises = [e for e in learning_session.exercises if e.content_block_id is None]
 
+    section_sessions = learning_session.section.learning_sessions
+    completion_counts = completions_service.get_completion_counts_for_learning_sessions(
+        [s.id for s in section_sessions]
+    )
+
     body = LearningSessionDetail(
         id=learning_session.id,
         title=learning_session.title,
@@ -62,9 +67,13 @@ def _serialize(learning_session: LearningSession) -> dict:
         section=SectionSummary.model_validate(learning_session.section),
         section_sessions=[
             LearningSessionSummary(
-                id=s.id, title=s.title, sequence=s.sequence, duration_minutes=s.duration_minutes
+                id=s.id,
+                title=s.title,
+                sequence=s.sequence,
+                duration_minutes=s.duration_minutes,
+                is_complete=completions_service.is_fully_complete(*completion_counts.get(s.id, (0, 0))),
             )
-            for s in learning_session.section.learning_sessions
+            for s in section_sessions
         ],
         content_blocks=[
             ContentBlockDetail(

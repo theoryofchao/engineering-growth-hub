@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 
 from app.extensions import db
@@ -53,6 +54,38 @@ def get_completions_for_session(learning_session_id: int) -> list[CompletionStat
         )
         for block in learning_session.content_blocks
     ]
+
+
+def get_completion_counts_for_learning_sessions(
+    learning_session_ids: list[int],
+) -> dict[int, tuple[int, int]]:
+    """Returns `{learning_session_id: (total_blocks, completed_blocks)}`
+    for every id given, via one aggregate query regardless of how many
+    ids are passed -- used to compute per-lesson and section-wide "fully
+    complete" status without an N+1 per lesson (ADR 0019's pattern).
+    """
+    if not learning_session_ids:
+        return {}
+
+    rows = (
+        db.session.query(
+            ContentBlock.learning_session_id,
+            func.count(ContentBlock.id),
+            func.count(BlockCompletion.completed_at),
+        )
+        .outerjoin(BlockCompletion, BlockCompletion.content_block_id == ContentBlock.id)
+        .filter(ContentBlock.learning_session_id.in_(learning_session_ids))
+        .group_by(ContentBlock.learning_session_id)
+        .all()
+    )
+    return {session_id: (total, completed) for session_id, total, completed in rows}
+
+
+def is_fully_complete(total_blocks: int, completed_blocks: int) -> bool:
+    """A lesson/section with no content blocks is never "complete" --
+    there's nothing to have finished, so this must stay false rather
+    than vacuously true."""
+    return total_blocks > 0 and completed_blocks == total_blocks
 
 
 def apply_batch(items: list[dict]) -> list[CompletionState]:

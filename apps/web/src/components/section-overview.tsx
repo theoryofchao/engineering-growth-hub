@@ -23,6 +23,7 @@ type LearningSessionSummary = {
   title: string;
   sequence: number;
   duration_minutes: number;
+  is_complete: boolean;
 };
 
 type SectionDetail = {
@@ -35,10 +36,24 @@ type SectionDetail = {
   status: string;
   is_locked: boolean;
   learning_sessions: LearningSessionSummary[];
+  is_fully_complete: boolean;
   prerequisites: PrerequisiteSummary[];
   unmet_prerequisites: PrerequisiteSummary[];
   dev_prerequisites_bypassed: boolean;
 };
+
+function CompleteCheck({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+      className={`h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-500 ${className}`}
+    >
+      <path d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.8 3.8 6.8-6.8a1 1 0 0 1 1.4 0Z" />
+    </svg>
+  );
+}
 
 const TIER_LABELS: Record<string, string> = {
   D: "Deep mastery",
@@ -108,8 +123,13 @@ export function SectionOverview({
         {data.description && (
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{data.description}</p>
         )}
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
           Status: {STATUS_LABELS[data.status] ?? data.status}
+          {data.is_fully_complete && (
+            <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-500">
+              <CompleteCheck /> Section complete
+            </span>
+          )}
         </p>
       </header>
 
@@ -170,8 +190,9 @@ export function SectionOverview({
                     href={`/learn/${topicSlug}/${sectionSlug}/${session.id}`}
                     className="flex items-center justify-between rounded-lg border border-zinc-300 px-4 py-3 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
                   >
-                    <span className="font-medium text-black dark:text-zinc-50">
+                    <span className="flex items-center gap-1.5 font-medium text-black dark:text-zinc-50">
                       {session.sequence}. {session.title}
+                      {session.is_complete && <CompleteCheck />}
                     </span>
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">
                       {session.duration_minutes} min

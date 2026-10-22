@@ -9,7 +9,7 @@ from __future__ import annotations
 from flask import Blueprint, abort, current_app, jsonify
 
 from app.schemas import LearningSessionSummary, PrerequisiteSummary, SectionDetail, TopicRef
-from app.services import sections_service
+from app.services import completions_service, sections_service
 
 sections_bp = Blueprint("sections", __name__, url_prefix="/api/v1")
 
@@ -41,6 +41,22 @@ def get_section(section_slug: str):
         abort(404, description="Section not found")
 
     section = section_status.section
+    completion_counts = completions_service.get_completion_counts_for_learning_sessions(
+        [session.id for session in section.learning_sessions]
+    )
+    learning_sessions = [
+        LearningSessionSummary(
+            id=session.id,
+            title=session.title,
+            sequence=session.sequence,
+            duration_minutes=session.duration_minutes,
+            is_complete=completions_service.is_fully_complete(
+                *completion_counts.get(session.id, (0, 0))
+            ),
+        )
+        for session in section.learning_sessions
+    ]
+
     body = SectionDetail(
         id=section.id,
         title=section.title,
@@ -50,15 +66,9 @@ def get_section(section_slug: str):
         proficiency_tier=section.proficiency_tier,
         status=section_status.status,
         is_locked=section_status.is_locked,
-        learning_sessions=[
-            LearningSessionSummary(
-                id=session.id,
-                title=session.title,
-                sequence=session.sequence,
-                duration_minutes=session.duration_minutes,
-            )
-            for session in section.learning_sessions
-        ],
+        learning_sessions=learning_sessions,
+        is_fully_complete=len(learning_sessions) > 0
+        and all(session.is_complete for session in learning_sessions),
         prerequisites=[_prerequisite_summary(p) for p in section_status.prerequisites],
         unmet_prerequisites=[_prerequisite_summary(p) for p in section_status.unmet_prerequisites],
         dev_prerequisites_bypassed=section_status.dev_bypassed,

@@ -14,7 +14,21 @@ type SectionSessionSummary = {
   title: string;
   sequence: number;
   duration_minutes: number;
+  is_complete: boolean;
 };
+
+function CompleteCheck({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+      className={`h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-500 ${className}`}
+    >
+      <path d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.8 3.8 6.8-6.8a1 1 0 0 1 1.4 0Z" />
+    </svg>
+  );
+}
 
 type LearningSession = {
   id: number;
@@ -67,17 +81,19 @@ function SectionLessonNav({
           s.id === currentId ? (
             <li
               key={s.id}
-              className="rounded px-2 py-1 text-sm font-medium text-black dark:text-zinc-50"
+              className="flex items-center gap-1.5 rounded px-2 py-1 text-sm font-medium text-black dark:text-zinc-50"
             >
               {s.sequence}. {s.title}
+              {s.is_complete && <CompleteCheck />}
             </li>
           ) : (
             <li key={s.id}>
               <Link
                 href={hrefFor(s.id)}
-                className="block rounded px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-black dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
+                className="flex items-center gap-1.5 rounded px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-black dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
               >
                 {s.sequence}. {s.title}
+                {s.is_complete && <CompleteCheck />}
               </Link>
             </li>
           ),

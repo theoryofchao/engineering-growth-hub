@@ -41,6 +41,35 @@ def test_section_sessions_lists_every_lesson_in_the_section_for_navigation(app, 
     sequences = [s["sequence"] for s in body["section_sessions"]]
     assert sequences == sorted(sequences)  # ordered, so nav renders in lesson order
     assert body["section_sessions"][0]["id"] == first_session_id
+    assert all(s["is_complete"] is False for s in body["section_sessions"])
+
+
+def test_section_sessions_marks_a_lesson_complete_once_every_block_is_done(app, client):
+    with app.app_context():
+        seed_all()
+        section = Section.query.filter_by(slug="browser-rendering").first()
+        session_id = section.learning_sessions[0].id
+        block_ids = [b.id for b in section.learning_sessions[0].content_blocks]
+
+    client.post(
+        "/api/v1/content-blocks/completions/batch",
+        json={
+            "completions": [
+                {
+                    "content_block_id": block_id,
+                    "completed": True,
+                    "client_updated_at": "2026-10-23T00:00:00Z",
+                }
+                for block_id in block_ids
+            ]
+        },
+    )
+
+    response = client.get(f"/api/v1/learning-sessions/{session_id}")
+    body = response.get_json()
+
+    matching = next(s for s in body["section_sessions"] if s["id"] == session_id)
+    assert matching["is_complete"] is True
 
 
 def test_get_learning_session_404_for_missing_id(client):

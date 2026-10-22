@@ -18,7 +18,10 @@ const lockedSectionFixture = {
   proficiency_tier: "D",
   status: "not_started",
   is_locked: true,
-  learning_sessions: [{ id: 9, title: "Framing the Problem", sequence: 1, duration_minutes: 25 }],
+  learning_sessions: [
+    { id: 9, title: "Framing the Problem", sequence: 1, duration_minutes: 25, is_complete: false },
+  ],
+  is_fully_complete: false,
   prerequisites: [
     {
       id: 1,
@@ -156,5 +159,79 @@ describe("SectionOverview", () => {
     );
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
+
+  it("shows a completion check next to a completed lesson, but not an incomplete one", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ...unlockedSectionFixture,
+        learning_sessions: [
+          {
+            id: 9,
+            title: "Framing the Problem",
+            sequence: 1,
+            duration_minutes: 25,
+            is_complete: true,
+          },
+          {
+            id: 10,
+            title: "Driving to a Decision",
+            sequence: 2,
+            duration_minutes: 25,
+            is_complete: false,
+          },
+        ],
+      }),
+    });
+
+    render(
+      <SectionOverview
+        topicSlug="software-architecture"
+        sectionSlug="33-system-design-methodology"
+      />,
+    );
+
+    const completeLink = await waitFor(() => screen.getByText(/Framing the Problem/).closest("a"));
+    expect(completeLink?.querySelector("svg")).not.toBeNull();
+
+    const incompleteLink = screen.getByText(/Driving to a Decision/).closest("a");
+    expect(incompleteLink?.querySelector("svg")).toBeNull();
+  });
+
+  it("shows 'Section complete' once is_fully_complete is true", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ...unlockedSectionFixture, is_fully_complete: true }),
+    });
+
+    render(
+      <SectionOverview
+        topicSlug="software-architecture"
+        sectionSlug="33-system-design-methodology"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Section complete")).toBeInTheDocument());
+  });
+
+  it("does not show 'Section complete' when it isn't fully complete", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => unlockedSectionFixture,
+    });
+
+    render(
+      <SectionOverview
+        topicSlug="software-architecture"
+        sectionSlug="33-system-design-methodology"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("System Design Methodology")).toBeInTheDocument());
+    expect(screen.queryByText("Section complete")).not.toBeInTheDocument();
   });
 });
