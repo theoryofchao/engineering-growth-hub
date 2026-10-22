@@ -44,6 +44,23 @@ describe("LeadershipHome", () => {
     expect(screen.getByText("0 stories")).toBeInTheDocument();
   });
 
+  it("links to the practice-questions page", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes("/competencies")) {
+        return Promise.resolve({ ok: true, status: 200, json: async () => competenciesFixture });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => [] });
+    });
+
+    render(<LeadershipHome />);
+
+    await waitFor(() => expect(screen.getByText("Practice questions")).toBeInTheDocument());
+    expect(screen.getByText("Practice questions").closest("a")).toHaveAttribute(
+      "href",
+      "/leadership/questions",
+    );
+  });
+
   it("links to the new-story page", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       if (url.includes("/competencies")) {

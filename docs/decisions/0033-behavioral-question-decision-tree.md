@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (backend slice only — the question-bank browsing page and the React Flow decision-tree visualization are separate, not-yet-built slices)
+Accepted. Backend (slice 1) and the question-bank browsing page (slice 2) are both built; the React Flow decision-tree visualization (slice 3) is the remaining, not-yet-built piece.
 
 ## Context
 
@@ -20,8 +20,20 @@ Two design points confirmed with the user up front:
 4. **New seed content** at `content/leadership/behavioral-questions.json` — 15 real, well-established behavioral-interview question archetypes (3 per competency), loaded by a new `seed.py::load_behavioral_questions()` called from `seed_all()`. Idempotent by `(section_id, prompt text, source="seed")` rather than a stable numeric id — a deliberately lighter contract than the sequence-based upsert used for lesson content (ADR 0009), since nothing yet links a question to anything by id and editing a seeded question's wording later will add a new row rather than updating in place. Good enough for a first pass; revisit if that ever causes real duplicate-question clutter.
 5. **Migration quirk discovered, not caused by this change**: running `flask seed` via `docker compose exec api` fails with `IndexError` on `CONTENT_DIR`'s `Path(__file__).resolve().parents[3]` — the container's bind mount (`./apps/api:/app`) puts `seed.py` fewer directory levels deep than the path math assumes, and `content/` isn't mounted into the container at all. This is a pre-existing condition (identical math already governed `CONTENT_DIR` before this slice); seeding has evidently always been run from the host venv against the exposed Postgres port instead. Not fixed here — out of scope for this feature, flagged for whoever next touches the dev-seeding workflow.
 
-## Consequences
+## Consequences (backend slice)
 
 - `pytest`: 112 passed (98 before this slice + 14 new, across `test_leadership.py`, `test_leadership_service.py`, and `test_seed.py`), covering create/list/filter/get/delete for questions, blank-prompt and invalid-competency rejection, seeded-question delete rejection, and seed-bank idempotency.
 - Verified against the live dev stack (real Postgres, seeded from the host venv per the quirk noted above): `GET /api/v1/leadership/questions` returns all 15 seeded questions with correct competency linkage; re-running `flask seed` confirmed idempotency (still 15, no duplicates).
-- Not done this slice (by design, per the agreed plan): the `/leadership/questions` browsing page (list + "add your own" form) and the React Flow decision-tree visualization page are separate follow-up slices — this ADR covers only the backend contract they'll be built against.
+
+## Decisions (question-bank browsing page slice)
+
+6. **New `QuestionsHome` component** (`apps/web/src/components/questions-home.tsx`), mirroring `leadership-home.tsx`'s shape: two `useFetch` calls (competencies + questions), grouped by competency via inline `Array.filter` in the render loop, one card per competency (always rendered, "No questions yet." when empty — matching `LeadershipHome` always showing a competency card regardless of story count, not hiding empty ones).
+7. **Local state mutated directly on add/delete, no refetch.** `useFetch` has no refetch/mutate escape hatch, so the questions list is synced from the fetch once (the same "adjust during render on first success" bail-out pattern `story-form.tsx` already uses for its edit-mode prefill), then `setQuestions` is updated directly from each POST/DELETE response — avoids inventing a cache-busting query-param hack or changing the shared `useFetch` hook's contract for one page.
+8. **The "add your own question" form lives inline on the same page**, not a separate `/questions/new` route like stories have — it's two fields (competency + prompt) versus the STAR form's eight, and keeping it inline means an added question shows up immediately in its competency group without a navigation round-trip. A per-question "Delete" action appears only next to `source: "custom"` questions (seeded ones have no delete control at all, consistent with the backend already rejecting that server-side).
+9. **A "Practice questions" link added to `leadership-home.tsx`'s header**, next to the existing "+ New story" button, as the discovery path into the new page.
+
+## Consequences (question-bank browsing page slice)
+
+- `vitest run`: 189 passed (183 before this slice + 6 new, across `questions-home.test.tsx` and one added to `leadership-home.test.tsx`), covering grouping, the seed-vs-custom delete-button distinction, add, delete, and the error state. `tsc --noEmit`, `eslint`, `prettier --check` all clean.
+- Verified against the live dev stack with a real browser (Playwright): the "Practice questions" link navigates correctly; all 15 seeded questions render grouped by competency; adding a custom question shows it immediately with a Delete action (seeded questions have none); deleting it (with the confirm dialog accepted) removes it from the page; confirmed via a follow-up `curl` that the database was left with exactly the original 15 seeded rows, no leftover test data. Zero console/page errors.
+- Not done this slice (by design): the React Flow decision-tree visualization (`/leadership/questions/[id]`) is the remaining slice — clicking a question currently links to a route that doesn't exist yet (expected, not a bug, until that slice ships).

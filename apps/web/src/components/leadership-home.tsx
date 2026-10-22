@@ -59,12 +59,20 @@ export function LeadershipHome() {
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           STAR-method stories, tagged to a leadership competency.
         </p>
-        <Link
-          href="/leadership/stories/new"
-          className="shrink-0 rounded-lg bg-black px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-200"
-        >
-          + New story
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/leadership/questions"
+            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+          >
+            Practice questions
+          </Link>
+          <Link
+            href="/leadership/stories/new"
+            className="rounded-lg bg-black px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-200"
+          >
+            + New story
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">
