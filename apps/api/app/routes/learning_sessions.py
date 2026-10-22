@@ -14,6 +14,7 @@ from app.schemas import (
     LearningSessionDetail,
     LearningSessionSummary,
     NoteDetail,
+    ReferenceLink,
     SectionSummary,
 )
 from app.services import completions_service, learning_sessions_service
@@ -88,6 +89,7 @@ def _serialize(learning_session: LearningSession) -> dict:
                 ),
                 exercises=[_exercise_summary(e) for e in block.exercises],
                 examples=[ContentExample(**example) for example in block.examples],
+                reference_links=[ReferenceLink(**link) for link in block.reference_links],
             )
             for block in learning_session.content_blocks
         ],

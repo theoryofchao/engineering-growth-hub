@@ -168,6 +168,10 @@ class ContentBlock(db.Model):
     # e.g. a longer code/config sample that would otherwise bloat the
     # prose. Each item is `{"label": str, "content": str}`.
     examples = db.Column(db.JSON, nullable=False, default=list)
+    # External citations/further-reading links, authored alongside the
+    # block's content (not learner-generated, unlike Note). Each item is
+    # `{"label": str, "url": str}`.
+    reference_links = db.Column(db.JSON, nullable=False, default=list)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
 
     learning_session = db.relationship("LearningSession", back_populates="content_blocks")

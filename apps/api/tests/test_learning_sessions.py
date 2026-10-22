@@ -72,6 +72,31 @@ def test_section_sessions_marks_a_lesson_complete_once_every_block_is_done(app, 
     assert matching["is_complete"] is True
 
 
+def test_content_block_reference_links_are_serialized(app, client):
+    with app.app_context():
+        seed_all()
+        section = Section.query.filter_by(slug="browser-rendering").first()
+        learning_session = section.learning_sessions[0]
+        block = learning_session.content_blocks[0]
+        block.reference_links = [
+            {"label": "MDN: Critical rendering path", "url": "https://example.com/mdn-crp"}
+        ]
+        db.session.commit()
+        session_id = learning_session.id
+        block_id = block.id
+
+    response = client.get(f"/api/v1/learning-sessions/{session_id}")
+    body = response.get_json()
+
+    matching = next(b for b in body["content_blocks"] if b["id"] == block_id)
+    assert matching["reference_links"] == [
+        {"label": "MDN: Critical rendering path", "url": "https://example.com/mdn-crp"}
+    ]
+
+    other_block = next(b for b in body["content_blocks"] if b["id"] != block_id)
+    assert other_block["reference_links"] == []
+
+
 def test_get_learning_session_404_for_missing_id(client):
     response = client.get("/api/v1/learning-sessions/999")
 

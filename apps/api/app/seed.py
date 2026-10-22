@@ -186,6 +186,7 @@ def _load_session(section: Section, session_data: dict) -> None:
                 heading=block_data["heading"],
                 body=block_data["body"],
                 examples=block_data.get("examples", []),
+                reference_links=block_data.get("reference_links", []),
             )
             db.session.add(block)
             db.session.flush()
@@ -193,6 +194,7 @@ def _load_session(section: Section, session_data: dict) -> None:
             block.heading = block_data["heading"]
             block.body = block_data["body"]
             block.examples = block_data.get("examples", [])
+            block.reference_links = block_data.get("reference_links", [])
 
         for exercise_index, exercise_data in enumerate(block_exercises_data, start=1):
             _validate_exercise_definition(exercise_data)

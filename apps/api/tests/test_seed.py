@@ -223,3 +223,16 @@ def test_seed_all_imports_block_examples(app):
         # not a missing key -- the API contract is "always a list".
         other_block = session.content_blocks[0]
         assert other_block.examples == []
+
+
+def test_seed_all_defaults_reference_links_to_empty_list(app):
+    """No currently-authored content uses `reference_links` yet (ADR
+    0032), so every seeded block must still default to an empty list --
+    same "always a list, never a missing key" contract as `examples`.
+    """
+    with app.app_context():
+        seed_all()
+
+        section = Section.query.filter_by(slug="browser-rendering").first()
+        block = section.learning_sessions[0].content_blocks[0]
+        assert block.reference_links == []

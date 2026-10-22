@@ -43,6 +43,7 @@ type LearningSession = {
     note: Note | null;
     exercises: ExerciseSummary[];
     examples?: { label: string; content: string }[];
+    reference_links?: { label: string; url: string }[];
   }[];
   access_tier: string;
   section: { id: number; title: string; slug: string };

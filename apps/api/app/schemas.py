@@ -104,6 +104,11 @@ class ContentExample(BaseModel):
     content: str
 
 
+class ReferenceLink(BaseModel):
+    label: str
+    url: str
+
+
 class ContentBlockDetail(BaseModel):
     id: int
     sequence: int
@@ -112,6 +117,7 @@ class ContentBlockDetail(BaseModel):
     note: NoteDetail | None = None
     exercises: list[ExerciseSummary] = []
     examples: list[ContentExample] = []
+    reference_links: list[ReferenceLink] = []
 
 
 class LearningSessionSummary(BaseModel):

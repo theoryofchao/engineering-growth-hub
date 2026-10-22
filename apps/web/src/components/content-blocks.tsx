@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ContentExample, ExampleAccordion } from "@/components/example-accordion";
 import { ExerciseSwitch } from "@/components/exercise-switch";
 import { Note, NotesPanel } from "@/components/notes-panel";
+import { ReferenceLink, ReferenceLinks } from "@/components/reference-links";
 import { useBlockCompletions } from "@/hooks/use-block-completions";
 import { useDefaultViewMode } from "@/hooks/use-default-view-mode";
 import { useNoteDraft } from "@/hooks/use-note-draft";
@@ -21,6 +22,7 @@ type Block = {
   note: Note | null;
   exercises: ExerciseSummary[];
   examples?: ContentExample[];
+  reference_links?: ReferenceLink[];
 };
 
 type ViewMode = "page" | "slide";
@@ -333,6 +335,7 @@ export function ContentBlocks({
                     {block.body}
                   </p>
                   <ExampleAccordion examples={block.examples ?? []} />
+                  <ReferenceLinks links={block.reference_links ?? []} />
                   {block.exercises.length > 0 && (
                     <div className="mt-3 flex flex-col gap-3">
                       {block.exercises.map((exercise) => (
@@ -371,6 +374,7 @@ export function ContentBlocks({
               {blocks[slideIndex].body}
             </p>
             <ExampleAccordion examples={blocks[slideIndex].examples ?? []} />
+            <ReferenceLinks links={blocks[slideIndex].reference_links ?? []} />
             {blocks[slideIndex].exercises.length > 0 && (
               <div className="mt-3 flex flex-col gap-3">
                 {blocks[slideIndex].exercises.map((exercise) => (
