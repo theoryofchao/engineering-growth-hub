@@ -1,8 +1,8 @@
-# ADR 0030: Per-block/lesson completion tracking — backend slice (local-first batched sync)
+# ADR 0030: Per-block/lesson completion tracking — local-first batched sync
 
 ## Status
 
-Accepted (backend slice only — frontend local store, sync engine, and checkmark UI are separate, not-yet-built slices per the plan agreed with the user)
+Accepted. Backend (slice 1) and the frontend local store + sync engine (slice 2) are both built; the checkmark/lesson-banner/jump-to-incomplete UI (slice 3) is the remaining, not-yet-built piece.
 
 ## Context
 
@@ -23,8 +23,19 @@ Three design points were decided with the user up front:
 6. **New `completions_bp` blueprint** (`app/routes/completions.py`), registered in `app/__init__.py` alongside the others — no route-registration pattern changes.
 7. **Migration** `6f7371823939_add_block_completions_table.py`, generated via `flask db migrate` against the live dev Postgres container and hand-tidied (quote style, dropped the autogenerate comment markers) to match the rest of the migration history; chains from the existing head (`e47746f88a8c`).
 
-## Consequences
+## Consequences (backend slice)
 
 - `pytest`: 92 passed (85 before this slice + 7 new, in `tests/test_completions.py`), including coverage for defaulting to incomplete, mark/unmark, multi-block batches, stale-write rejection, missing-block 404, and malformed-body 400.
 - Verified against the live dev stack (`docker compose`, real Postgres) via `curl`: `GET .../completions` returns all three blocks of a real lesson as not-completed; a batch mark persists and is reflected on a subsequent `GET`; a batch write with an older `client_updated_at` than the stored one is correctly ignored (confirmed the `completed: true` state survives the stale write attempt). Test data was reset to its prior unmarked state afterward.
-- Not done this slice (by design, per the agreed plan): the `localStorage` queue, debounce/periodic/unload sync engine, and the checkmark/lesson-banner/jump-to-incomplete UI are separate follow-up slices — this ADR covers only the backend contract they'll be built against.
+
+## Decisions (frontend local store + sync engine slice)
+
+8. **`lib/completion-store.ts`** owns the `localStorage` queue (key `egh:block-completions`, following the existing `egh:` prefix convention): a `Record<blockId, {completed, updatedAt, dirty}>`. `toggleCompletion` flips a block and stamps `updatedAt` from the client's own clock (the same field the backend uses for last-write-wins). `hydrateFromServer` applies the server's baseline on load but never overwrites a `dirty` (unsynced) entry — the local optimistic value wins until it's actually flushed. `markSynced` applies a flush's result but checks the entry's `updatedAt` hasn't moved since it was read for that flush; if a newer toggle queued while the request was in flight, the confirmation is skipped rather than clobbering the newer write, which stays dirty for the next flush.
+9. **Snapshot caching to avoid a `useSyncExternalStore` instability bug**: naively re-parsing `localStorage` into a fresh object on every `readAll()` call would return a new reference every time even when nothing changed, which `useSyncExternalStore` can treat as "store is tearing" (React warns about, and can loop on, an uncached snapshot for object/array state — unlike the existing scalar-valued hooks like `use-default-view-mode.ts`, which don't hit this because string equality is referential-equality-safe). Fixed by caching on the raw stored string and only re-parsing/re-allocating when it actually changes.
+10. **`lib/completion-sync.ts`** implements the three agreed triggers: `scheduleDebouncedFlush` (resets a 5s timer per toggle), `startPeriodicFlush` (a 2-minute safety-net interval, returns a stop function), and `flushViaBeacon` (best-effort, for `visibilitychange`/`pagehide`, via `navigator.sendBeacon` since a normal `fetch` can get cancelled mid-unload). `flush()` guards against overlapping requests with an in-flight flag; a failed or rejected flush simply leaves entries dirty for the next trigger to retry — safe because the batch endpoint is idempotent.
+11. **`hooks/use-block-completions.ts`** (reactive map + `toggle`, for the slide/block checkmark UI) and **`hooks/use-completion-sync.ts`** (mounts the periodic timer and unload listeners once) are built but not yet wired into any component — that wiring is slice 3's job, alongside the actual checkmark/banner/jump-to-incomplete UI.
+
+## Consequences (frontend slice)
+
+- `vitest run`: 171 passed (143 before this slice + 28 new, across `completion-store.test.ts`, `completion-sync.test.ts`, and `use-block-completions.test.ts`), covering toggle/dirty/hydrate/markSynced merge semantics, debounce coalescing, periodic-interval start/stop, in-flight-flush dedup, stale/failed-flush retry-ability, and `sendBeacon` behavior (including when unsupported). `tsc --noEmit`, `eslint`, and `prettier --check` all clean.
+- No UI changes this slice — `use-block-completions.ts` and `use-completion-sync.ts` have no callers yet.
