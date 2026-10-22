@@ -93,6 +93,23 @@ flask db migrate -m "describe the change"
 flask db upgrade
 ```
 
+## Troubleshooting
+
+- **`apps/web/.next` owned by `root` on the host.** If `npx tsc --noEmit` in `apps/web` fails with `Type "..." does not satisfy the constraint 'AppRoutes'` for a route that otherwise looks correct, or `next dev`/`next typegen` can't write there, check `ls -la apps/web/.next` — if it's root-owned, fix it with:
+
+  ```bash
+  sudo rm -rf apps/web/.next
+  ```
+
+  It's pure build cache (regenerated automatically, never committed), so this is always safe. Until it's fixed, new dynamic routes should type `params` as a plain `Promise<{ id: string }>` instead of Next's generated `PageProps<"/exact/route">` helper, which depends on that directory being writable.
+
+- **Added a frontend npm dependency but the running dev container can't resolve it.** `apps/web`'s `node_modules` inside the `web` container is a separate Docker volume (`web-node-modules`), not the bind-mounted source tree — installing on the host alone doesn't reach the container. Run both:
+
+  ```bash
+  cd apps/web && npm install
+  docker compose exec web npm install
+  ```
+
 ## What's intentionally not here yet
 
 - No curriculum content (domains/topics/lessons) is seeded — that's Milestone 1.
