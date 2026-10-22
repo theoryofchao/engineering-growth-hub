@@ -191,6 +191,7 @@ function GearIcon() {
       stroke="currentColor"
       strokeWidth="2"
       aria-hidden="true"
+      suppressHydrationWarning
     >
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
       <path
