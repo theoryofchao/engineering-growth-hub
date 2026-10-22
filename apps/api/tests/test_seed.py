@@ -1,7 +1,7 @@
 import pytest
 
 from app.extensions import db
-from app.models import ContentBlock, Exercise, LearningSession, Section, Topic
+from app.models import BehavioralQuestion, ContentBlock, Exercise, LearningSession, Section, Topic
 from app.seed import _validate_no_prerequisite_cycles, seed_all
 
 
@@ -223,6 +223,27 @@ def test_seed_all_imports_block_examples(app):
         # not a missing key -- the API contract is "always a list".
         other_block = session.content_blocks[0]
         assert other_block.examples == []
+
+
+def test_seed_all_imports_behavioral_question_bank(app):
+    with app.app_context():
+        seed_all()
+
+        questions = BehavioralQuestion.query.filter_by(source="seed").all()
+        assert len(questions) == 15
+        assert all(q.section is not None for q in questions)
+
+        technical = Section.query.filter_by(slug="76-technical-leadership").first()
+        technical_questions = [q for q in questions if q.section_id == technical.id]
+        assert len(technical_questions) == 3
+
+
+def test_seed_all_is_idempotent_for_behavioral_questions(app):
+    with app.app_context():
+        seed_all()
+        seed_all()
+
+        assert BehavioralQuestion.query.filter_by(source="seed").count() == 15
 
 
 def test_seed_all_defaults_reference_links_to_empty_list(app):

@@ -1,11 +1,19 @@
-"""Competency catalog and STAR-method leadership story CRUD."""
+"""Competency catalog, STAR-method leadership story CRUD, and the
+behavioral-question bank used by the question -> competency -> story
+decision-tree view (ADR 0033).
+"""
 
 from __future__ import annotations
 
 from flask import Blueprint, abort, jsonify, request
 
-from app.models import LeadershipStory, Section
-from app.schemas import CompetencySummary, LeadershipStoryDetail, LeadershipStorySummary
+from app.models import BehavioralQuestion, LeadershipStory, Section
+from app.schemas import (
+    BehavioralQuestionSummary,
+    CompetencySummary,
+    LeadershipStoryDetail,
+    LeadershipStorySummary,
+)
 from app.services import leadership_service
 
 leadership_bp = Blueprint("leadership", __name__, url_prefix="/api/v1/leadership")
@@ -41,6 +49,16 @@ def _story_detail(story: LeadershipStory) -> LeadershipStoryDetail:
         quantified_outcome=story.quantified_outcome,
         created_at=story.created_at,
         updated_at=story.updated_at,
+    )
+
+
+def _question_summary(question: BehavioralQuestion) -> BehavioralQuestionSummary:
+    return BehavioralQuestionSummary(
+        id=question.id,
+        prompt=question.prompt,
+        source=question.source,
+        competency=_competency_summary(question.section),
+        created_at=question.created_at,
     )
 
 
@@ -122,5 +140,48 @@ def delete_story(story_id: int):
     deleted = leadership_service.delete_story(story_id)
     if not deleted:
         abort(404, description="Leadership story not found")
+
+    return "", 204
+
+
+@leadership_bp.get("/questions")
+def list_questions():
+    competency_id = request.args.get("competency_id", type=int)
+    questions = leadership_service.list_questions(competency_id)
+    return jsonify([_question_summary(q).model_dump() for q in questions])
+
+
+@leadership_bp.post("/questions")
+def create_question():
+    data = request.get_json(silent=True) or {}
+
+    try:
+        question = leadership_service.create_question(
+            section_id=data.get("section_id"), prompt=data.get("prompt")
+        )
+    except ValueError as error:
+        abort(400, description=str(error))
+
+    return jsonify(_question_summary(question).model_dump()), 201
+
+
+@leadership_bp.get("/questions/<int:question_id>")
+def get_question(question_id: int):
+    question = leadership_service.get_question(question_id)
+    if question is None:
+        abort(404, description="Behavioral question not found")
+
+    return jsonify(_question_summary(question).model_dump())
+
+
+@leadership_bp.delete("/questions/<int:question_id>")
+def delete_question(question_id: int):
+    try:
+        deleted = leadership_service.delete_question(question_id)
+    except ValueError as error:
+        abort(400, description=str(error))
+
+    if not deleted:
+        abort(404, description="Behavioral question not found")
 
     return "", 204

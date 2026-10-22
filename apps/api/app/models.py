@@ -421,3 +421,29 @@ class LeadershipStory(db.Model):
     )
 
     section = db.relationship("Section", backref="leadership_stories")
+
+
+class BehavioralQuestion(db.Model):
+    """A behavioral-interview question tagged to a competency, used by
+    the question -> competency -> story "decision tree" view (ADR 0033).
+
+    `source` distinguishes author-seeded questions (visible to everyone,
+    not deletable through the API) from learner-added ones. No `user_id`
+    yet (single-user MVP, matching LeadershipStory) -- a learner-added
+    question is "private" only in the sense that nothing else reads it
+    yet, not via any real access control.
+    """
+
+    __tablename__ = "behavioral_questions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    section_id = db.Column(db.Integer, db.ForeignKey("sections.id"), nullable=False)
+    prompt = db.Column(db.Text, nullable=False)
+    source = db.Column(db.String(20), nullable=False, default="custom")
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
+
+    section = db.relationship("Section", backref="behavioral_questions")
+
+    __table_args__ = (
+        db.CheckConstraint("source in ('seed', 'custom')", name="ck_behavioral_question_source"),
+    )

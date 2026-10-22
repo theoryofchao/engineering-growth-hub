@@ -1,4 +1,4 @@
-from app.models import Section
+from app.models import BehavioralQuestion, Section
 from app.seed import seed_all
 
 
@@ -167,4 +167,107 @@ def test_update_story_404_for_missing_id(client):
 
 def test_delete_story_404_for_missing_id(client):
     response = client.delete("/api/v1/leadership/stories/999999")
+    assert response.status_code == 404
+
+
+def test_create_question_success(app, client):
+    section_id = _technical_leadership_id(app)
+
+    response = client.post(
+        "/api/v1/leadership/questions",
+        json={"section_id": section_id, "prompt": "Tell me about a tough technical call."},
+    )
+
+    assert response.status_code == 201
+    body = response.get_json()
+    assert body["prompt"] == "Tell me about a tough technical call."
+    assert body["source"] == "custom"
+    assert body["competency"]["id"] == section_id
+
+
+def test_create_question_rejects_blank_prompt(app, client):
+    section_id = _technical_leadership_id(app)
+
+    response = client.post(
+        "/api/v1/leadership/questions", json={"section_id": section_id, "prompt": "   "}
+    )
+
+    assert response.status_code == 400
+    assert "prompt" in response.get_json()["error"]
+
+
+def test_create_question_rejects_non_leadership_section(app, client):
+    with app.app_context():
+        seed_all()
+        non_leadership_section = Section.query.filter_by(slug="browser-rendering").first()
+        section_id = non_leadership_section.id
+
+    response = client.post(
+        "/api/v1/leadership/questions",
+        json={"section_id": section_id, "prompt": "Wrong competency"},
+    )
+
+    assert response.status_code == 400
+    assert "competencies" in response.get_json()["error"]
+
+
+def test_list_questions_filters_by_competency_id(app, client):
+    with app.app_context():
+        seed_all()
+        technical = Section.query.filter_by(slug="76-technical-leadership").first().id
+        mentorship = Section.query.filter_by(slug="77-mentorship-team-development").first().id
+
+    client.post(
+        "/api/v1/leadership/questions",
+        json={"section_id": technical, "prompt": "Technical question"},
+    )
+    client.post(
+        "/api/v1/leadership/questions",
+        json={"section_id": mentorship, "prompt": "Mentorship question"},
+    )
+
+    response = client.get(f"/api/v1/leadership/questions?competency_id={technical}")
+    prompts = [q["prompt"] for q in response.get_json()]
+    assert "Technical question" in prompts
+    assert "Mentorship question" not in prompts
+
+
+def test_get_and_delete_custom_question_roundtrip(app, client):
+    section_id = _technical_leadership_id(app)
+
+    create_response = client.post(
+        "/api/v1/leadership/questions",
+        json={"section_id": section_id, "prompt": "A custom question"},
+    )
+    question_id = create_response.get_json()["id"]
+
+    get_response = client.get(f"/api/v1/leadership/questions/{question_id}")
+    assert get_response.status_code == 200
+    assert get_response.get_json()["prompt"] == "A custom question"
+
+    delete_response = client.delete(f"/api/v1/leadership/questions/{question_id}")
+    assert delete_response.status_code == 204
+
+    missing_response = client.get(f"/api/v1/leadership/questions/{question_id}")
+    assert missing_response.status_code == 404
+
+
+def test_cannot_delete_a_seeded_question(app, client):
+    with app.app_context():
+        seed_all()
+        seeded_question_id = BehavioralQuestion.query.filter_by(source="seed").first().id
+
+    response = client.delete(f"/api/v1/leadership/questions/{seeded_question_id}")
+
+    assert response.status_code == 400
+    assert "seeded" in response.get_json()["error"]
+
+
+def test_get_question_404_for_missing_id(client):
+    response = client.get("/api/v1/leadership/questions/999999")
+    assert response.status_code == 404
+
+
+def test_delete_question_404_for_missing_id(client):
+    response = client.delete("/api/v1/leadership/questions/999999")
     assert response.status_code == 404

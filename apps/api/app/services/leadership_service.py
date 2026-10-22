@@ -1,8 +1,10 @@
-"""STAR-method leadership stories, tagged to a competency.
+"""STAR-method leadership stories and behavioral questions, both tagged
+to a competency.
 
 A competency is a `Section` under the "Leadership & Strategy" topic
 (modules 76-80) rather than a separate table -- see
-docs/decisions/0024-leadership-competency-and-star-stories.md.
+docs/decisions/0024-leadership-competency-and-star-stories.md and
+docs/decisions/0033-behavioral-question-decision-tree.md.
 """
 
 from __future__ import annotations
@@ -10,7 +12,7 @@ from __future__ import annotations
 from sqlalchemy.orm import joinedload
 
 from app.extensions import db
-from app.models import LeadershipStory, Module, Section, Topic
+from app.models import BehavioralQuestion, LeadershipStory, Module, Section, Topic
 
 LEADERSHIP_TOPIC_NAME = "Leadership & Strategy"
 
@@ -105,5 +107,46 @@ def delete_story(story_id: int) -> bool:
         return False
 
     db.session.delete(story)
+    db.session.commit()
+    return True
+
+
+def list_questions(competency_id: int | None = None) -> list[BehavioralQuestion]:
+    query = BehavioralQuestion.query.options(joinedload(BehavioralQuestion.section))
+    if competency_id is not None:
+        query = query.filter(BehavioralQuestion.section_id == competency_id)
+    return query.order_by(BehavioralQuestion.id).all()
+
+
+def get_question(question_id: int) -> BehavioralQuestion | None:
+    return db.session.get(
+        BehavioralQuestion, question_id, options=[joinedload(BehavioralQuestion.section)]
+    )
+
+
+def create_question(*, section_id: int, prompt: str) -> BehavioralQuestion:
+    if not str(prompt or "").strip():
+        raise ValueError("prompt is required")
+    if not _is_valid_competency(section_id):
+        raise ValueError("section_id must be one of the Leadership & Strategy competencies")
+
+    question = BehavioralQuestion(section_id=section_id, prompt=prompt, source="custom")
+    db.session.add(question)
+    db.session.commit()
+    return question
+
+
+def delete_question(question_id: int) -> bool:
+    """Returns False if not found. Raises ValueError if the question is
+    author-seeded rather than learner-added -- seeded questions aren't
+    deletable through the API.
+    """
+    question = db.session.get(BehavioralQuestion, question_id)
+    if question is None:
+        return False
+    if question.source == "seed":
+        raise ValueError("seeded questions cannot be deleted")
+
+    db.session.delete(question)
     db.session.commit()
     return True

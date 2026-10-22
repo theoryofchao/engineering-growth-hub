@@ -15,11 +15,22 @@ import re
 from pathlib import Path
 
 from app.extensions import db
-from app.models import ContentBlock, Exercise, LearningSession, Module, Section, Topic
+from app.models import (
+    BehavioralQuestion,
+    ContentBlock,
+    Exercise,
+    LearningSession,
+    Module,
+    Section,
+    Topic,
+)
 
 CONTENT_DIR = Path(__file__).resolve().parents[3] / "content" / "curriculum"
 CURRICULUM_MAP_FILENAME = "curriculum-map.json"
 SECTION_METADATA_FILENAME = "section.json"
+
+LEADERSHIP_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content" / "leadership"
+BEHAVIORAL_QUESTIONS_FILENAME = "behavioral-questions.json"
 
 
 def _slugify(text: str) -> str:
@@ -281,6 +292,36 @@ def load_section_dir(dir_path: Path) -> None:
     db.session.commit()
 
 
+def load_behavioral_questions(path: Path) -> None:
+    """Seeds the author-curated behavioral-question bank (ADR 0033).
+
+    Idempotent by (competency, prompt text, source="seed") rather than a
+    stable id -- editing a question's wording in this file adds a new
+    row instead of updating the old one in place. That's a deliberately
+    lighter contract than the upsert-by-sequence used for lesson content
+    (ADR 0009): nothing yet links a question to anything by numeric id,
+    so there's no stable identity to upsert against.
+    """
+    questions_data = json.loads(path.read_text())
+
+    for question_data in questions_data:
+        section = Section.query.filter_by(slug=question_data["competency_slug"]).first()
+        if section is None:
+            continue
+
+        existing = BehavioralQuestion.query.filter_by(
+            section_id=section.id, prompt=question_data["prompt"], source="seed"
+        ).first()
+        if existing is None:
+            db.session.add(
+                BehavioralQuestion(
+                    section_id=section.id, prompt=question_data["prompt"], source="seed"
+                )
+            )
+
+    db.session.commit()
+
+
 def seed_all() -> None:
     map_path = CONTENT_DIR / CURRICULUM_MAP_FILENAME
     if map_path.exists():
@@ -289,3 +330,7 @@ def seed_all() -> None:
     for path in sorted(CONTENT_DIR.iterdir()):
         if path.is_dir():
             load_section_dir(path)
+
+    questions_path = LEADERSHIP_CONTENT_DIR / BEHAVIORAL_QUESTIONS_FILENAME
+    if questions_path.exists():
+        load_behavioral_questions(questions_path)

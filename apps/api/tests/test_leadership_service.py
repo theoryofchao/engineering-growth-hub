@@ -1,6 +1,6 @@
 import pytest
 
-from app.models import Section
+from app.models import BehavioralQuestion, Section
 from app.seed import seed_all
 from app.services import leadership_service
 
@@ -56,3 +56,38 @@ def test_delete_story_returns_false_for_missing_id(app):
     with app.app_context():
         seed_all()
         assert leadership_service.delete_story(999999) is False
+
+
+def test_create_question_raises_value_error_for_blank_prompt(app):
+    with app.app_context():
+        seed_all()
+        section_id = Section.query.filter_by(slug="76-technical-leadership").first().id
+
+        with pytest.raises(ValueError, match="prompt"):
+            leadership_service.create_question(section_id=section_id, prompt="   ")
+
+
+def test_create_question_raises_value_error_for_invalid_competency(app):
+    with app.app_context():
+        seed_all()
+        non_leadership_section = Section.query.filter_by(slug="browser-rendering").first()
+
+        with pytest.raises(ValueError, match="competencies"):
+            leadership_service.create_question(
+                section_id=non_leadership_section.id, prompt="A question"
+            )
+
+
+def test_delete_question_returns_false_for_missing_id(app):
+    with app.app_context():
+        seed_all()
+        assert leadership_service.delete_question(999999) is False
+
+
+def test_delete_question_raises_value_error_for_seeded_question(app):
+    with app.app_context():
+        seed_all()
+        seeded = BehavioralQuestion.query.filter_by(source="seed").first()
+
+        with pytest.raises(ValueError, match="seeded"):
+            leadership_service.delete_question(seeded.id)

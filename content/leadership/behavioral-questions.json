@@ -1,0 +1,62 @@
+[
+  {
+    "competency_slug": "76-technical-leadership",
+    "prompt": "Tell me about a time you had to make a difficult technical decision without complete information."
+  },
+  {
+    "competency_slug": "76-technical-leadership",
+    "prompt": "Describe a time you disagreed with a technical approach a peer or senior engineer proposed. How did you handle it?"
+  },
+  {
+    "competency_slug": "76-technical-leadership",
+    "prompt": "Tell me about a time you had to drive alignment across multiple teams on a technical direction."
+  },
+  {
+    "competency_slug": "77-mentorship-team-development",
+    "prompt": "Tell me about a time you helped a struggling engineer improve."
+  },
+  {
+    "competency_slug": "77-mentorship-team-development",
+    "prompt": "Describe a time you gave someone difficult feedback. How did you approach it?"
+  },
+  {
+    "competency_slug": "77-mentorship-team-development",
+    "prompt": "Tell me about a time you onboarded a new team member or helped them ramp up quickly."
+  },
+  {
+    "competency_slug": "78-engineering-management-fundamentals",
+    "prompt": "Tell me about a time you had to manage competing priorities across a team with limited capacity."
+  },
+  {
+    "competency_slug": "78-engineering-management-fundamentals",
+    "prompt": "Describe a time a project was at risk of missing its deadline. What did you do?"
+  },
+  {
+    "competency_slug": "78-engineering-management-fundamentals",
+    "prompt": "Tell me about a time you had to deliver unwelcome news to your team or stakeholders."
+  },
+  {
+    "competency_slug": "79-engineering-economics",
+    "prompt": "Tell me about a time you had to justify a technical investment, like a refactor or new tooling, in terms of business value."
+  },
+  {
+    "competency_slug": "79-engineering-economics",
+    "prompt": "Describe a time you had to choose between a quick fix and a more costly, durable solution."
+  },
+  {
+    "competency_slug": "79-engineering-economics",
+    "prompt": "Tell me about a time you helped reduce costs or improve efficiency on a project."
+  },
+  {
+    "competency_slug": "80-engineering-strategy",
+    "prompt": "Tell me about a time you influenced technical direction beyond your immediate team."
+  },
+  {
+    "competency_slug": "80-engineering-strategy",
+    "prompt": "Describe a time you had to balance short-term delivery pressure against long-term architectural health."
+  },
+  {
+    "competency_slug": "80-engineering-strategy",
+    "prompt": "Tell me about a time your technical strategy didn't play out as expected. What did you learn from it?"
+  }
+]

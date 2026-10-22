@@ -284,3 +284,11 @@ class LeadershipStoryDetail(BaseModel):
     quantified_outcome: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class BehavioralQuestionSummary(BaseModel):
+    id: int
+    prompt: str
+    source: str
+    competency: CompetencySummary
+    created_at: datetime
