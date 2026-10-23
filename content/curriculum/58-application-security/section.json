@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Security & Privacy",
+    "slug": "security-privacy",
+    "description": "Application security, secure delivery, privacy"
+  },
+  "module": {
+    "title": "Security & Privacy"
+  },
+  "section": {
+    "title": "Application Security",
+    "slug": "58-application-security",
+    "description": "Find and remediate common application vulnerabilities.",
+    "proficiency_tier": "D"
+  }
+}

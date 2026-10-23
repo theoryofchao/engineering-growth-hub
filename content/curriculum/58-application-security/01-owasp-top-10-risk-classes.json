@@ -1,0 +1,104 @@
+{
+  "title": "The OWASP Top 10: Risk Classes, Not a Checklist",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Use the OWASP Top 10 as an evidence-driven risk-prioritization framework -- understanding why its rankings shift between editions -- rather than a fixed checklist of specific bugs to tick off once.",
+  "content_blocks": [
+    {
+      "heading": "A Risk Taxonomy, Not a Bug List",
+      "body": "The OWASP Top 10 groups web application vulnerabilities into ten broad risk *classes* -- categories like \"broken access control\" or \"injection\" that each cover a wide family of related, specific vulnerability types, not ten individual bugs to patch once and move on from. The ranking itself is evidence: OWASP builds it from real testing data contributed across a large number of applications, supplemented by a small number of community-survey-driven slots for risks the data doesn't fully capture yet.\n\nThat distinction matters for how to actually use the list: treating it as ten checkboxes to verify once misses the point entirely. Each class represents a *shape* of mistake that recurs across many specific implementations -- the useful habit is recognizing that shape in new code, not just confirming the ten named categories don't literally appear in a report.\n\nThis session walks through that shape-recognition skill using the current 2025 edition, including why its own rankings moved since the prior one."
+    },
+    {
+      "heading": "A01: Broken Access Control -- the Persistent #1",
+      "body": "Broken access control has held the #1 spot since the 2021 edition and remains there in the current 2025 edition -- the single most common way real applications actually fail. The core failure shape: an endpoint checks that a user is *authenticated* (logged in as someone) but not that they're *authorized* for the specific resource being requested -- a classic example being an endpoint like `/orders/42` that returns order 42's details to whoever asks, without checking that the requesting user is the one who actually placed it.\n\nThis class also absorbed server-side request forgery (SSRF) in the 2025 edition, since SSRF is fundamentally the same shape of problem -- a request reaching a resource it was never authorized to reach, just triggered indirectly through the server itself rather than directly by the attacker's own request.\n\nThe recurring fix across every variant of this class is the same: an explicit, server-side check that the specific resource being touched actually belongs to (or is permitted for) the specific requester -- never inferred, never skipped because the client \"shouldn't\" be able to reach it.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An endpoint `GET /orders/:id` checks that a valid session token is present, then returns the order matching `:id` with no further check. A logged-in user requests another user's order ID and receives its details. What risk class does this illustrate?",
+          "definition": {
+            "options": [
+              "Broken access control -- authenticated, but never actually authorized for this specific order's data",
+              "Cryptographic failures -- the session token must have used a weak or otherwise predictable signing algorithm",
+              "Injection -- the order ID parameter wasn't properly sanitized before reaching the underlying database lookup",
+              "No vulnerability here -- any authenticated user is expected to reach any resource on the system by default"
+            ],
+            "correct_index": 0,
+            "explanation": "Authentication (proving who you are) and authorization (checking what you're allowed to do) are different checks, and this endpoint only performed the first one. Returning any order to any logged-in user, regardless of who placed it, is the textbook shape of broken access control -- often called an \"insecure direct object reference\" when the missing check is this specific (an ID that isn't verified against the requester's own ownership)."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why the Rankings Move Between Editions",
+      "body": "Security Misconfiguration jumped from fifth place in the 2021 edition to second in the current 2025 edition, because OWASP's testing data found some form of misconfiguration in nearly every application tested -- default credentials left in place, unnecessary features enabled, verbose error messages leaking internals. Meanwhile, Cryptographic Failures fell from second place in 2021 to fourth in 2025, a drop OWASP partly attributes to HTTPS adoption becoming far more universal than it used to be, closing off a significant share of what used to cause this category's incidents.\n\nThat movement is itself the useful signal: a ranking that reflects real, measured prevalence tells you where the *industry's* actual mistakes are concentrating right now, not an abstract or permanent severity ordering. A category falling doesn't mean it stopped being dangerous -- it means a widely-adopted fix (like near-universal HTTPS) measurably reduced how often it's the cause of a real incident.",
+      "reference_links": [
+        { "label": "OWASP Top 10:2025 -- Introduction", "url": "https://owasp.org/Top10/2025/0x00_2025-Introduction/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Cryptographic Failures dropped from #2 in the 2021 OWASP Top 10 to #4 in the 2025 edition, partly attributed to near-universal HTTPS adoption. What does this movement actually indicate?",
+          "definition": {
+            "options": [
+              "The ranking reflects real, measured prevalence -- a widely-adopted fix reduced how often this class causes harm",
+              "Cryptographic failures are now entirely harmless and need no further engineering attention from anyone at all",
+              "The Top 10's rankings are assigned arbitrarily each edition, with no real connection to actual testing data at all",
+              "HTTPS adoption is unrelated to this category entirely, since TLS only ever affects network-layer concerns alone"
+            ],
+            "correct_index": 0,
+            "explanation": "The ranking is built from real testing data across many applications, so a category's position shifting reflects an actual, measured change in how often it's the cause of real-world findings -- not a committee's abstract opinion about severity. HTTPS becoming near-universal closed off a large share of what used to cause cryptographic-failure incidents, which is exactly the kind of industry-wide fix that moves a data-driven ranking."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "New Categories Signal New Problem Shapes",
+      "body": "The 2025 edition added two entirely new categories, reserved partly from community-survey input rather than testing data alone, since the underlying risks are real but not yet as fully represented in prevalence data. Software Supply Chain Failures (A03) covers compromise introduced through dependencies, build tooling, or CI/CD pipelines -- a vulnerability in code the team never wrote themselves, which standard code review of your own codebase simply can't catch. Mishandling of Exceptional Conditions (A10) covers error-handling paths that fail insecurely -- a stack trace leaked to a client, an exception that silently bypasses an authorization check instead of denying access, a fallback path that's less secure than the main one.\n\nBoth categories describe a problem shape that was always present but wasn't getting its own dedicated attention in the list's structure before now -- a reminder that the list itself evolves as the industry's understanding of where real risk concentrates evolves, not a fixed catalog handed down once.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A function catches an unexpected exception during an authorization check and, rather than denying the request, defaults to allowing it through so the user isn't blocked by an unrelated bug. Which new 2025 risk category does this best match?",
+          "definition": {
+            "options": [
+              "Mishandling of Exceptional Conditions -- the error path fails open (grants access) instead of failing closed",
+              "Software Supply Chain Failures -- this specific bug must have originated from a third-party dependency instead",
+              "Broken Access Control -- identical to the ordinary missing-ownership-check case already covered under category A01",
+              "Not a real risk at all -- an unexpected exception puts any resulting behavior entirely outside the function's scope"
+            ],
+            "correct_index": 0,
+            "explanation": "Defaulting to \"allow\" when an unexpected error occurs during an authorization check is exactly the fail-open pattern this new category targets -- an error-handling path that's less secure than the normal path, rather than erring safely by denying access when something goes wrong. It's a different shape from an ordinary missing-ownership-check (which never involves an exception at all), which is exactly why it earned its own dedicated category."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Classes, Not Instances: Building the Habit, Not the Patch List",
+      "body": "OWASP deliberately groups many distinct, specific vulnerability types into a small number of classes -- Injection, for instance, spans SQL injection, command injection, and (since 2021) cross-site scripting, which used to have its own separate category. Treating the list as ten checkboxes invites patching whichever specific instance a scanner happens to flag, then moving on, without addressing the pattern that let it happen in the first place.\n\nThe more durable response targets the *class*: adopting parameterized queries everywhere closes off SQL injection categorically, not just the one query a scanner happened to catch; checking resource ownership in one shared authorization layer closes off broken-access-control bugs across every endpoint that uses it, not just the one a pentest happened to probe. The list's real value is naming the ten shapes worth building a standing habit or shared safeguard around -- not a one-time audit checklist to clear and forget.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A pentest finds one SQL injection vulnerability in a single endpoint. The team fixes that one query and closes the ticket. What does the \"classes, not instances\" framing suggest is missing from this response?",
+          "definition": {
+            "options": [
+              "Adopting parameterized queries everywhere as standing practice, closing the whole class instead of one query",
+              "Nothing missing -- fixing the one flagged query fully resolves this entire OWASP risk category going forward",
+              "The team should have waited for an official OWASP patch for this specific vulnerability before acting on it",
+              "Nothing further is needed -- finding exactly one instance proves no other similar queries exist anywhere else"
+            ],
+            "correct_index": 0,
+            "explanation": "Fixing the one flagged query addresses that single instance, but says nothing about every other query built the same unsafe way that the pentest simply didn't happen to probe. The class-level response -- parameterized queries as a default practice, enforced everywhere rather than audited query-by-query -- closes off the entire shape of the mistake, which is the actual, durable fix the risk-class framing is pointing toward."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "The OWASP Top 10 is a data-driven risk taxonomy, not a static checklist -- its rankings shift between editions to reflect real, measured changes in where applications actually fail, and new categories get added when the industry recognizes a problem shape that wasn't getting dedicated attention before. Each class represents a recurring pattern worth building a standing safeguard around, not a single bug to patch and forget.\n\nThe habit worth carrying forward from every example in this session: when a specific finding shows up, ask what *class* it belongs to and what standing safeguard would close the whole class, not just whether this one instance is now fixed.\n\nThe next session in this module goes deep on one specific class from today's survey -- injection and output encoding -- with the concrete mechanics of why parameterized queries and proper encoding close off the whole pattern rather than one instance of it."
+    }
+  ]
+}
