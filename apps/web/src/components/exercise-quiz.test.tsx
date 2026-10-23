@@ -59,6 +59,29 @@ describe("ExerciseQuiz", () => {
     );
   });
 
+  it("calls onSubmitted with the result once scored, not on a failed request", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        exercise_id: 5,
+        is_correct: true,
+        score: 1.0,
+        correct_index: 1,
+        explanation: "Paint only, no layout needed.",
+      }),
+    });
+    const onSubmitted = vi.fn();
+
+    render(<ExerciseQuiz exercise={exercise} onSubmitted={onSubmitted} />);
+
+    fireEvent.click(screen.getByLabelText(/Paint/));
+    fireEvent.click(screen.getByText("Submit answer"));
+
+    await waitFor(() =>
+      expect(onSubmitted).toHaveBeenCalledWith(expect.objectContaining({ is_correct: true })),
+    );
+  });
+
   it("shows an incorrect result without claiming success", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,

@@ -1,5 +1,5 @@
 from app.extensions import db
-from app.models import Exercise, Section, UserProgress
+from app.models import Exercise, ExerciseReviewState, Section, UserProgress
 from app.seed import seed_all
 
 
@@ -241,6 +241,76 @@ def test_project_progress_rejects_malformed_body(app, client):
     )
 
     assert response.status_code == 400
+
+
+def test_correct_submission_creates_review_state_in_box_1(app, client):
+    exercise_id = _seed_exercise_id(app)
+
+    client.post(f"/api/v1/exercises/{exercise_id}/submissions", json={"selected_index": 1})
+
+    with app.app_context():
+        state = ExerciseReviewState.query.filter_by(exercise_id=exercise_id).first()
+        assert state is not None
+        assert state.box == 1
+
+
+def test_incorrect_submission_creates_review_state_in_box_0(app, client):
+    exercise_id = _seed_exercise_id(app)
+
+    client.post(f"/api/v1/exercises/{exercise_id}/submissions", json={"selected_index": 0})
+
+    with app.app_context():
+        state = ExerciseReviewState.query.filter_by(exercise_id=exercise_id).first()
+        assert state is not None
+        assert state.box == 0
+
+
+def test_second_correct_submission_promotes_review_box_further(app, client):
+    exercise_id = _seed_exercise_id(app)
+
+    client.post(f"/api/v1/exercises/{exercise_id}/submissions", json={"selected_index": 1})
+    client.post(f"/api/v1/exercises/{exercise_id}/submissions", json={"selected_index": 1})
+
+    with app.app_context():
+        state = ExerciseReviewState.query.filter_by(exercise_id=exercise_id).first()
+        assert state.box == 2
+
+
+def test_wrong_submission_after_promotion_resets_box_to_0(app, client):
+    exercise_id = _seed_exercise_id(app)
+
+    client.post(f"/api/v1/exercises/{exercise_id}/submissions", json={"selected_index": 1})
+    client.post(f"/api/v1/exercises/{exercise_id}/submissions", json={"selected_index": 1})
+    client.post(f"/api/v1/exercises/{exercise_id}/submissions", json={"selected_index": 0})
+
+    with app.app_context():
+        state = ExerciseReviewState.query.filter_by(exercise_id=exercise_id).first()
+        assert state.box == 0
+
+
+def test_code_submission_also_creates_review_state(app, client):
+    exercise_id = _code_exercise_id(app)
+    outputs = _correct_outputs(app, exercise_id)
+
+    client.post(f"/api/v1/exercises/{exercise_id}/submissions", json={"outputs": outputs})
+
+    with app.app_context():
+        state = ExerciseReviewState.query.filter_by(exercise_id=exercise_id).first()
+        assert state is not None
+        assert state.box == 1
+
+
+def test_toggling_a_project_checkpoint_never_creates_a_review_state(app, client):
+    exercise_id = _project_exercise_id(app)
+
+    client.put(
+        f"/api/v1/exercises/{exercise_id}/project-progress",
+        json={"checkpoint_index": 0, "criterion_index": 0, "checked": True},
+    )
+
+    with app.app_context():
+        state = ExerciseReviewState.query.filter_by(exercise_id=exercise_id).first()
+        assert state is None
 
 
 def test_project_exercise_is_serialized_in_learning_session_detail(app, client):

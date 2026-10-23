@@ -42,7 +42,15 @@ function outcomeLabel(outcome: CaseRunResult): string {
   return outcome.error === "timeout" ? "Timed out" : `Error: ${outcome.error}`;
 }
 
-export function ExerciseCode({ exercise }: { exercise: ExerciseCodeData }) {
+export function ExerciseCode({
+  exercise,
+  onSubmitted,
+}: {
+  exercise: ExerciseCodeData;
+  /** Called once a submission is scored, e.g. so a review queue can mark
+   * this item as answered. Not called on a failed/error submission. */
+  onSubmitted?: (result: SubmissionResult) => void;
+}) {
   const [code, setCode] = useState(exercise.starter_code);
   const [state, setState] = useState<State>({ phase: "editing" });
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -94,6 +102,7 @@ export function ExerciseCode({ exercise }: { exercise: ExerciseCodeData }) {
 
       const result = (await response.json()) as SubmissionResult;
       setState({ phase: "submitted", result });
+      onSubmitted?.(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       setState({ phase: "submit-error", message });

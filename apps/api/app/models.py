@@ -339,12 +339,13 @@ class Exercise(db.Model):
     submissions = db.relationship(
         "ExerciseSubmission", back_populates="exercise", order_by="ExerciseSubmission.submitted_at"
     )
-    project_progress = db.relationship(
-        "ProjectProgress", back_populates="exercise", uselist=False
-    )
+    project_progress = db.relationship("ProjectProgress", back_populates="exercise", uselist=False)
+    review_state = db.relationship("ExerciseReviewState", back_populates="exercise", uselist=False)
 
     __table_args__ = (
-        db.CheckConstraint("type in ('multiple_choice', 'code', 'project')", name="ck_exercise_type"),
+        db.CheckConstraint(
+            "type in ('multiple_choice', 'code', 'project')", name="ck_exercise_type"
+        ),
     )
 
 
@@ -384,6 +385,30 @@ class ProjectProgress(db.Model):
     )
 
     exercise = db.relationship("Exercise", back_populates="project_progress")
+
+
+class ExerciseReviewState(db.Model):
+    """Leitner-box spaced-repetition schedule for one `multiple_choice` or
+    `code` exercise (`project` exercises are self-attested and don't
+    participate -- see `ProjectProgress` above).
+
+    Created on an exercise's first-ever submission and updated on every
+    submission after that, whether it's the learner's first attempt or a
+    later scheduled review: a correct answer promotes `box` (a longer
+    interval before it's due again), an incorrect one resets it to box 0
+    (the shortest interval). See `REVIEW_BOX_INTERVALS_DAYS` in
+    app/services/exercises_service.py for the box->interval mapping.
+    """
+
+    __tablename__ = "exercise_review_states"
+
+    id = db.Column(db.Integer, primary_key=True)
+    exercise_id = db.Column(db.Integer, db.ForeignKey("exercises.id"), nullable=False, unique=True)
+    box = db.Column(db.Integer, nullable=False, default=0)
+    due_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    last_reviewed_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
+
+    exercise = db.relationship("Exercise", back_populates="review_state")
 
 
 PROGRESS_STATUS_RANK = {"not_started": 0, "learning": 1, "practiced": 2, "mastered": 3}

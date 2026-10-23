@@ -29,7 +29,15 @@ function shuffledIndices(count: number): number[] {
   return indices;
 }
 
-export function ExerciseQuiz({ exercise }: { exercise: ExerciseQuizData }) {
+export function ExerciseQuiz({
+  exercise,
+  onSubmitted,
+}: {
+  exercise: ExerciseQuizData;
+  /** Called once a submission is scored, e.g. so a review queue can mark
+   * this item as answered. Not called on a failed/error submission. */
+  onSubmitted?: (result: SubmissionResult) => void;
+}) {
   const [state, setState] = useState<State>({ phase: "answering", selectedIndex: null });
   // Display order is randomized per mount (not tied to the correct
   // answer's original position in definition_json) so the correct
@@ -56,6 +64,7 @@ export function ExerciseQuiz({ exercise }: { exercise: ExerciseQuizData }) {
 
       const result = (await response.json()) as SubmissionResult;
       setState({ phase: "result", result });
+      onSubmitted?.(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       setState({ phase: "error", message });

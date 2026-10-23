@@ -30,6 +30,12 @@ export default function Home() {
               Leadership
             </Link>
             <Link
+              href="/review"
+              className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-black hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900"
+            >
+              Review
+            </Link>
+            <Link
               href="/dashboard"
               className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-black hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900"
             >

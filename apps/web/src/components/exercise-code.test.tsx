@@ -78,6 +78,30 @@ describe("ExerciseCode", () => {
     await waitFor(() => expect(screen.getByText("Timed out")).toBeInTheDocument());
   });
 
+  it("calls onSubmitted with the scored result after a successful submit", async () => {
+    runTestCases.mockResolvedValue([
+      { ok: true, value: [3, 2, 1] },
+      { ok: true, value: [5, 4] },
+    ]);
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        exercise_id: 42,
+        is_correct: true,
+        score: 1.0,
+        cases: [],
+      }),
+    });
+    const onSubmitted = vi.fn();
+
+    render(<ExerciseCode exercise={exercise} onSubmitted={onSubmitted} />);
+    fireEvent.click(screen.getByText("Submit"));
+
+    await waitFor(() =>
+      expect(onSubmitted).toHaveBeenCalledWith(expect.objectContaining({ is_correct: true })),
+    );
+  });
+
   it("Submit runs visible+hidden cases and posts outputs to the server", async () => {
     runTestCases.mockResolvedValue([
       { ok: true, value: [3, 2, 1] },

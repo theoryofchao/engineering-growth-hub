@@ -13,12 +13,34 @@ this module never executes learner code.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 from sqlalchemy.orm import joinedload
 
 from app.extensions import db
-from app.models import Exercise, ExerciseSubmission, ProjectProgress, UserProgress
+from app.models import (
+    Exercise,
+    ExerciseReviewState,
+    ExerciseSubmission,
+    LearningSession,
+    Module,
+    ProjectProgress,
+    Section,
+    UserProgress,
+    _utcnow,
+)
+from app.schemas import (
+    ExerciseSummary,
+    ExerciseSummaryCode,
+    ExerciseSummaryProject,
+    ExerciseSummaryQuiz,
+)
+
+# Leitner box -> days until next due, by box index. A correct review
+# promotes to the next box (capped at the last one); an incorrect
+# review resets to box 0.
+REVIEW_BOX_INTERVALS_DAYS = [1, 3, 7, 14, 30]
 
 
 @dataclass
@@ -47,6 +69,48 @@ class CodeExerciseResult:
     cases: list[CodeCaseOutcome]
 
 
+def exercise_summary(exercise: Exercise) -> ExerciseSummary:
+    """Client-safe view of an exercise, dispatched on `exercise.type`.
+    Shared by the learning-session detail route and the review-queue
+    route so both serialize exercises identically.
+    """
+    definition = exercise.definition_json
+    if exercise.type == "code":
+        return ExerciseSummaryCode(
+            id=exercise.id,
+            type="code",
+            prompt=exercise.prompt,
+            language=definition.get("language", "javascript"),
+            function_name=definition["function_name"],
+            starter_code=definition["starter_code"],
+            timeout_ms=definition.get("timeout_ms", 2000),
+            visible_test_cases=definition["visible_test_cases"],
+            # Hidden cases are stripped down to their input only -- the
+            # expected_output answer key must not reach the client
+            # before a submission is scored. Don't "simplify" this to
+            # passing `definition["hidden_test_cases"]` through as-is.
+            hidden_test_cases=[
+                {"input": case["input"]} for case in definition["hidden_test_cases"]
+            ],
+        )
+    if exercise.type == "project":
+        return ExerciseSummaryProject(
+            id=exercise.id,
+            type="project",
+            prompt=exercise.prompt,
+            checkpoints=definition["checkpoints"],
+            checked_criteria=(
+                exercise.project_progress.checked_criteria if exercise.project_progress else {}
+            ),
+        )
+    return ExerciseSummaryQuiz(
+        id=exercise.id,
+        type="multiple_choice",
+        prompt=exercise.prompt,
+        options=definition["options"],
+    )
+
+
 def submit(exercise_id: int, payload: Any) -> ExerciseResult | CodeExerciseResult | None:
     """Returns None if the exercise doesn't exist. Raises ValueError if
     `payload` is malformed for this exercise's type.
@@ -65,6 +129,44 @@ def submit(exercise_id: int, payload: Any) -> ExerciseResult | CodeExerciseResul
 def _advance_progress(exercise: Exercise) -> None:
     section_id = exercise.learning_session.section_id
     UserProgress.get_or_create(section_id).advance_to("practiced")
+
+
+def _record_review_outcome(exercise: Exercise, is_correct: bool) -> None:
+    """Called on every quiz/code submission, not just the first one -- a
+    scheduled review's own submission re-enters here too, which is what
+    advances the box further. Demoting to box 0 on a wrong answer is
+    deliberate: unlike `UserProgress.advance_to`, this schedule is
+    allowed to regress.
+    """
+    now = _utcnow()
+    state = ExerciseReviewState.query.filter_by(exercise_id=exercise.id).first()
+    if state is None:
+        # `box` must be set explicitly here, not left to the column's
+        # `default=0` -- that default isn't applied to this in-memory
+        # object until the next flush/commit (same gotcha as
+        # ProjectProgress.checked_criteria in toggle_checkpoint_criterion).
+        state = ExerciseReviewState(exercise_id=exercise.id, box=0, due_at=now)
+        db.session.add(state)
+
+    state.box = min(state.box + 1, len(REVIEW_BOX_INTERVALS_DAYS) - 1) if is_correct else 0
+    state.due_at = now + timedelta(days=REVIEW_BOX_INTERVALS_DAYS[state.box])
+    state.last_reviewed_at = now
+
+
+def get_due_review_exercises() -> list[ExerciseReviewState]:
+    """Review states whose schedule has come due, oldest-due first."""
+    return (
+        ExerciseReviewState.query.filter(ExerciseReviewState.due_at <= _utcnow())
+        .order_by(ExerciseReviewState.due_at)
+        .options(
+            joinedload(ExerciseReviewState.exercise)
+            .joinedload(Exercise.learning_session)
+            .joinedload(LearningSession.section)
+            .joinedload(Section.module)
+            .joinedload(Module.topic)
+        )
+        .all()
+    )
 
 
 def _submit_quiz(exercise: Exercise, selected_index: Any) -> ExerciseResult:
@@ -86,6 +188,7 @@ def _submit_quiz(exercise: Exercise, selected_index: Any) -> ExerciseResult:
 
     if is_correct:
         _advance_progress(exercise)
+    _record_review_outcome(exercise, is_correct)
 
     db.session.commit()
 
@@ -142,6 +245,7 @@ def _submit_code(exercise: Exercise, outputs: Any) -> CodeExerciseResult:
 
     if is_correct:
         _advance_progress(exercise)
+    _record_review_outcome(exercise, is_correct)
 
     db.session.commit()
 

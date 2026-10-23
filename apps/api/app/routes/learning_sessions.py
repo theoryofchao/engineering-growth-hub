@@ -8,10 +8,6 @@ from app.models import LearningSession
 from app.schemas import (
     ContentBlockDetail,
     ContentExample,
-    ExerciseSummary,
-    ExerciseSummaryCode,
-    ExerciseSummaryProject,
-    ExerciseSummaryQuiz,
     LearningSessionDetail,
     LearningSessionSummary,
     NoteDetail,
@@ -19,46 +15,9 @@ from app.schemas import (
     SectionSummary,
 )
 from app.services import completions_service, learning_sessions_service
+from app.services.exercises_service import exercise_summary as _exercise_summary
 
 learning_sessions_bp = Blueprint("learning_sessions", __name__, url_prefix="/api/v1")
-
-
-def _exercise_summary(exercise) -> ExerciseSummary:
-    definition = exercise.definition_json
-    if exercise.type == "code":
-        return ExerciseSummaryCode(
-            id=exercise.id,
-            type="code",
-            prompt=exercise.prompt,
-            language=definition.get("language", "javascript"),
-            function_name=definition["function_name"],
-            starter_code=definition["starter_code"],
-            timeout_ms=definition.get("timeout_ms", 2000),
-            visible_test_cases=definition["visible_test_cases"],
-            # Hidden cases are stripped down to their input only -- the
-            # expected_output answer key must not reach the client
-            # before a submission is scored. Don't "simplify" this to
-            # passing `definition["hidden_test_cases"]` through as-is.
-            hidden_test_cases=[
-                {"input": case["input"]} for case in definition["hidden_test_cases"]
-            ],
-        )
-    if exercise.type == "project":
-        return ExerciseSummaryProject(
-            id=exercise.id,
-            type="project",
-            prompt=exercise.prompt,
-            checkpoints=definition["checkpoints"],
-            checked_criteria=(
-                exercise.project_progress.checked_criteria if exercise.project_progress else {}
-            ),
-        )
-    return ExerciseSummaryQuiz(
-        id=exercise.id,
-        type="multiple_choice",
-        prompt=exercise.prompt,
-        options=definition["options"],
-    )
 
 
 def _serialize(learning_session: LearningSession) -> dict:

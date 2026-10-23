@@ -93,6 +93,23 @@ ExerciseSummary = Annotated[
 ]
 
 
+class ExerciseReviewQueueItem(BaseModel):
+    """One exercise due for a spaced-repetition review (Leitner boxes --
+    see app/services/exercises_service.py). `box` and `due_at` are the
+    schedule state the *next* submission will update, not what a correct
+    answer will move it to.
+    """
+
+    exercise: ExerciseSummary
+    box: int
+    due_at: datetime
+    topic: TopicRef
+    section_title: str
+    section_slug: str
+    learning_session_id: int
+    learning_session_title: str
+
+
 class NoteDetail(BaseModel):
     body: str
     updated_at: datetime
