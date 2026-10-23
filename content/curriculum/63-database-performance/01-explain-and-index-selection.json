@@ -1,0 +1,104 @@
+{
+  "title": "Reading EXPLAIN and Choosing the Right Index",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Read a query plan to find where a slow query actually spends its cost, and apply real indexing principles -- column order, usability, and the write-cost tradeoff -- instead of adding an index and hoping.",
+  "content_blocks": [
+    {
+      "heading": "The Query-Plan Equivalent of a Flame Graph",
+      "body": "\"Just add an index\" without reading the actual query plan first has the same shape as optimizing code without profiling it: a real risk of touching something that was never the bottleneck. A query plan -- produced by `EXPLAIN` -- is the database's own flame graph: a tree of operations (scans, joins, sorts) each annotated with estimated cost and row counts, showing exactly where a query's time is actually going.\n\nThe habit from the last session's USE-method-then-flame-graph sequence applies directly here: find out what's actually expensive before deciding what to fix, rather than guessing that an index is the answer before confirming where the cost really sits.\n\nThis session covers both halves of that habit for the data layer specifically: reading a plan to find the real cost, and choosing an index that actually addresses it once that cost is actually confirmed."
+    },
+    {
+      "heading": "The Sequential Scan: The Thing to Actually Look For",
+      "body": "A sequential scan reads every row in a table to find the ones matching a query's condition -- correct, but O(n) in table size, and the single most common thing an `EXPLAIN` output reveals as the real cost on a large table. An index turns that into a targeted lookup: instead of reading every row, the database walks a B-tree structure straight to the matching rows, in time that grows with the *result size* and tree depth, not the table's total size.\n\nThe plan's row-count estimates matter as much as the operation type: a sequential scan over a 50-row lookup table is irrelevant, but the same operation over a 50-million-row table is exactly the kind of cost an index exists to eliminate. Reading the plan, not just recognizing the word \"scan,\" is what tells you whether this particular scan is actually a problem worth fixing.\n\nSize alone isn't the only signal either -- a scan that runs once on a nightly batch job matters far less than the same scan running on every single page load.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An `EXPLAIN` output shows a sequential scan reading 50 million rows to satisfy a query's `WHERE` condition, which only matches 12 of them. What does this plan indicate?",
+          "definition": {
+            "options": [
+              "The query is paying an O(n) cost to find a tiny result -- exactly the shape an index on the filtered column would fix",
+              "This is already optimal -- a sequential scan is always the fastest way to search any table, regardless of its size",
+              "The 12 matching rows prove the table itself is corrupted, since a correct table should never produce so few matches",
+              "Nothing can be concluded from this plan alone; row-count estimates in query plans are always too unreliable to act on"
+            ],
+            "correct_index": 0,
+            "explanation": "Reading all 50 million rows to find 12 matches is the textbook case an index exists to solve -- a B-tree lookup on the filtered column could jump nearly straight to those 12 rows instead of reading the other 49,999,988 to rule them out. The gap between rows scanned and rows actually matched is exactly the signal worth looking for in a plan."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "An Index Only Helps a Query That Can Actually Use It",
+      "body": "Markus Winand's \"Use The Index, Luke\" makes this point as its central thesis: adding an index doesn't automatically speed up a query -- the query has to be written in a way the planner can actually match against that index. A condition like `WHERE email LIKE '%@example.com'` can't use a standard B-tree index on `email` at all, because a leading wildcard means the database can't know where in the sorted tree to start looking; `WHERE email LIKE 'alice@%'` can, because the known prefix pins down a starting point in the sorted order.\n\nThe same gap shows up when a column is wrapped in a function the planner doesn't specially account for -- `WHERE LOWER(email) = 'alice@example.com'` generally can't use a plain index on `email`, because the index is sorted by the raw column values, not their lowercased form. An index exists in the schema either way; whether a specific query can actually use it is a separate question the query's own shape determines.",
+      "reference_links": [
+        { "label": "Markus Winand -- Use The Index, Luke", "url": "https://use-the-index-luke.com/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A table has a standard B-tree index on `email`. A query filters with `WHERE email LIKE '%@example.com'`. Can this query use that index, and why?",
+          "definition": {
+            "options": [
+              "No -- a leading wildcard gives no known starting prefix, so the planner can't use the index's sorted order here",
+              "Yes -- any index on a column speeds up any condition filtering on that column at all, regardless of its exact shape",
+              "No, because `LIKE` conditions can never use an index under any circumstances, whether the wildcard leads or trails",
+              "Yes, but only on tables under roughly one thousand rows, below which every query uses its available indexes anyway"
+            ],
+            "correct_index": 0,
+            "explanation": "A B-tree index is sorted, so it's only useful when the query gives the planner a known starting point in that sort order -- a leading wildcard means the matching value could start with anything, so there's nowhere specific to begin the search, and the index can't help. `WHERE email LIKE 'alice@%'` would be usable, since the known prefix does give the planner a starting point."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Composite Index Column Order Is a Real Design Decision",
+      "body": "An index on `(last_name, first_name)` serves queries filtering by `last_name` alone, or by `last_name AND first_name` together, efficiently -- the leading column defines the index's primary sort order, so the database can narrow down using it directly. The same index does *not* efficiently serve a query filtering by `first_name` alone: without `last_name` pinned down first, the index's own sort order gives no useful starting point, and the database falls back to scanning broadly.\n\nColumn order in a composite index isn't a stylistic choice -- it determines exactly which queries the index can actually serve efficiently, and swapping the order serves a completely different set of queries. Designing one means asking which columns actual queries filter on, and in what combination, not listing columns in whatever order happens to feel natural.\n\nA table expecting both query shapes genuinely needs two separate indexes, one per leading column, not one index reordered to try to serve both.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A table has a composite index on `(last_name, first_name)`. A query filters with `WHERE first_name = 'Alice'` only, with no condition on `last_name`. Can this query use that index efficiently?",
+          "definition": {
+            "options": [
+              "No -- without `last_name` pinned down first, the index's sort order gives no useful starting point for this query",
+              "Yes -- a composite index serves any query filtering on any one of its listed columns, in any combination, equally well",
+              "No, because composite indexes can only ever be used by queries that filter on every one of their columns at once",
+              "Yes, but only if `first_name` happens to be listed as the index's very first column instead of its second column"
+            ],
+            "correct_index": 0,
+            "explanation": "The index is sorted primarily by `last_name`; within each `last_name`, it's sorted by `first_name`. A query that only filters on `first_name` has no `last_name` value to narrow the search with, so the index's sort order doesn't help it locate the matching rows -- the database effectively has to look across every `last_name` group, closer to a full scan than a targeted lookup."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Every Index Is a Tradeoff, Not a Free Win",
+      "body": "An index that speeds up matching reads also costs something on every write: inserting, updating, or deleting a row means updating every index on that table too, not just the underlying data -- more indexes means more maintenance work on every write, plus the storage the index itself occupies. A table with ten rarely-used indexes pays that write cost on every single insert, whether or not any of those ten indexes are actually earning their keep.\n\nThis is the same YAGNI-shaped tradeoff from earlier in the curriculum, applied to schema design specifically: an index added for a query that might exist someday is pure cost today, with no query yet benefiting from it. The right default is indexing for the queries a table actually serves, confirmed by reading real query plans, not speculatively indexing every column that looks like it might someday be filtered on.\n\nA table with a heavy write volume and only a handful of real read patterns is exactly where this tradeoff bites hardest, and where auditing existing indexes pays off the most.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A table has five indexes, only two of which are ever actually used by any real query the application runs. What's the ongoing cost of the other three?",
+          "definition": {
+            "options": [
+              "Extra write overhead on every insert/update/delete to that table, plus storage, with no read benefit to offset it",
+              "No real cost at all -- an index that's never used by a query simply sits idle and has no effect on anything else",
+              "A one-time storage cost paid only when each index was first created, with no further cost from that point onward",
+              "The unused indexes actively speed up every write to the table, the same way a used index speeds up a matching read"
+            ],
+            "correct_index": 0,
+            "explanation": "Every index on a table has to be updated whenever a row is inserted, updated, or deleted -- regardless of whether any query ever actually uses that index for a read. Three indexes nobody queries against are pure ongoing write-cost and storage, with no corresponding benefit, which is exactly the case for periodically auditing and dropping indexes that real query plans show are never actually used."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Reading a query's actual `EXPLAIN` plan -- not guessing -- is what tells you whether a sequential scan is a real problem, and on which column an index would actually help. An index only serves a query whose own shape lets the planner use it: a leading wildcard or an unindexed function wrapped around a column defeats it regardless of whether the index technically exists, and a composite index's column order determines which specific queries it can actually serve. Every index also costs something on every write, which makes indexing a tradeoff to confirm with real usage data, not a default to apply everywhere a column might someday be filtered on.\n\nThe common thread with the last session's USE-method-and-flame-graphs pairing holds here too: confirm where the real cost is before reaching for the fix that's supposed to address it.\n\nThe next sessions in this module get concrete about other data-layer costs with a similar read-the-evidence-first shape: N+1 query patterns, connection pooling limits, and lock contention under concurrent load."
+    }
+  ]
+}
