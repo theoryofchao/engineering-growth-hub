@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Testing & Quality",
+    "slug": "testing-quality",
+    "description": "Verification, debugging, testing infrastructure"
+  },
+  "module": {
+    "title": "Testing & Quality"
+  },
+  "section": {
+    "title": "Testing Fundamentals",
+    "slug": "40-testing-fundamentals",
+    "description": "Create fast trustworthy feedback on behavior.",
+    "proficiency_tier": "D"
+  }
+}

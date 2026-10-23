@@ -1,0 +1,105 @@
+{
+  "title": "The Test Pyramid, the Testing Trophy, and Where to Spend Your Effort",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Compare the test pyramid's and the testing trophy's models for allocating effort across unit, integration, and end-to-end tests, and choose a strategy by where your specific codebase's bugs actually tend to hide.",
+  "content_blocks": [
+    {
+      "heading": "\"Write More Tests\" Isn't a Strategy",
+      "body": "Every test costs something -- time to write, time to run, time to maintain when the code underneath it changes -- and buys something in return: confidence that a specific kind of bug won't reach production. The real question a testing strategy answers isn't \"how many tests,\" it's \"which kinds of tests, in what proportion, for the most confidence per unit of cost.\"\n\nTwo competing shapes for answering that question dominate how JavaScript teams actually think about this: the test pyramid, and the testing trophy. They don't just disagree on numbers -- they disagree on which layer deserves the most investment, and why, which makes comparing them a genuinely useful way to sharpen your own answer rather than copying someone else's ratio.\n\nBoth shapes are really just visual shorthand for an underlying tradeoff curve -- this session's goal is to understand that curve well enough to reason about your own codebase, not to memorize either diagram as a rule."
+    },
+    {
+      "heading": "The Test Pyramid: Many Fast Units, Few Slow End-to-End Tests",
+      "body": "The traditional test pyramid stacks three layers by volume: a wide base of unit tests (fast, cheap, testing one function or class in isolation), a narrower middle of integration tests (checking that a few pieces work together), and a thin tip of end-to-end tests (driving the real app through a real browser, slow and comparatively expensive to write and maintain). The rationale is straightforward: push as much verification as possible into the cheapest, fastest layer, and reserve the expensive layer for the handful of critical user flows that genuinely need full-system confidence.\n\nThe risk this shape runs into: a unit test only proves its one function behaves correctly in isolation, with every dependency mocked out. A codebase can have thousands of passing unit tests and still ship a broken feature, because the pieces were each individually correct but never actually verified to fit together the way the real application wires them up.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A codebase has 2,000 passing unit tests, each mocking out every dependency, and zero integration tests. A production bug ships where two correctly-implemented functions pass the wrong shape of data between each other. What does this scenario illustrate?",
+          "definition": {
+            "options": [
+              "Unit tests verify each piece in isolation, but can't catch a bug in how two pieces connect together",
+              "The bug proves these particular unit tests must have been written incorrectly from the very start",
+              "This specific failure mode becomes impossible once a codebase passes roughly 1,000 unit tests total",
+              "Mocking a dependency in any unit test is what directly and reliably causes this exact class of bug"
+            ],
+            "correct_index": 0,
+            "explanation": "Each unit test can be perfectly correct about its own function's behavior and still miss this bug, because the bug lives in the *interface* between two functions -- something no amount of isolated, mocked-out unit testing ever exercises. This is exactly the gap integration tests exist to close, and exactly why a pyramid that's almost entirely unit tests can still ship broken features with every test green."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Testing Trophy: Integration Tests as the Center of Gravity",
+      "body": "Kent C. Dodds -- creator of React Testing Library -- proposed reshaping the pyramid into a trophy: a small base of static checks (types, linting -- catching whole categories of bugs before any test even runs), a *large* integration-test waist, a moderate unit-test layer, and a small end-to-end tip. The argument, laid out in his \"Write tests. Not too many. Mostly integration.\" post, is about return on investment: integration tests exercise several real units together, the way the application actually uses them, which catches the interface-mismatch bugs unit tests miss -- without end-to-end's full cost of driving a real browser through the whole stack.\n\nThe trophy's own guiding principle, from the same line of thinking: tests should resemble how the software is actually used, not probe its internal implementation details -- because implementation-detail tests break on every refactor even when the application's actual behavior hasn't changed, which trains a team to distrust its own test suite's failures.",
+      "reference_links": [
+        { "label": "Kent C. Dodds -- Write tests. Not too many. Mostly integration.", "url": "https://kentcdodds.com/blog/write-tests" },
+        { "label": "Kent C. Dodds -- The Testing Trophy and Testing Classifications", "url": "https://kentcdodds.com/blog/the-testing-trophy-and-testing-classifications" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why does the testing trophy put its largest layer at integration tests rather than unit tests, the way the pyramid does?",
+          "definition": {
+            "options": [
+              "Integration tests catch interface-mismatch bugs unit tests miss, at far less cost than full end-to-end tests",
+              "Integration tests are strictly faster to run than unit tests in every JavaScript testing framework available",
+              "Unit tests were deprecated as a testing technique once the testing trophy model was first proposed",
+              "The trophy shape is purely cosmetic and carries no actual difference in testing strategy from the pyramid"
+            ],
+            "correct_index": 0,
+            "explanation": "The trophy's bet is about where the best confidence-per-cost ratio actually lives: integration tests exercise multiple real units together the way the application genuinely uses them, catching the interface bugs isolated unit tests structurally can't see -- while staying far cheaper than driving a full browser through an end-to-end test. It's not that unit tests are useless, it's that the trophy argues they aren't where the *most* investment should go."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Real Cost of Testing Implementation Details",
+      "body": "A test that reaches into a component's internal state, checks a private variable, or asserts on a specific function call count is testing *how* the code currently works, not *what* it's supposed to do. The practical cost shows up the first time someone refactors that internal implementation without changing its observable behavior at all -- the test breaks anyway, for a change that was never actually a bug, and the team has to stop and figure out whether the failure is real or just noise.\n\nRepeat that enough times and a team starts treating red test runs as routine rather than alarming -- exactly the opposite of what a test suite is for. The fix isn't \"test less,\" it's testing through the same interface a real caller would use: a function's actual inputs and outputs, a component's rendered output and user-facing interactions, not the private machinery that produces them.\n\nThis is the concrete, practical version of the trophy's \"resembles how software is used\" principle -- not an abstract ideal, but a direct predictor of how often a refactor is going to cause a false alarm.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A component's internal state-management library is swapped for a different one, with no change to what the component renders or how a user interacts with it. A large batch of existing tests breaks. What does this most likely indicate?",
+          "definition": {
+            "options": [
+              "Those tests were coupled to implementation details rather than to the component's actual observable behavior",
+              "The replacement state-management library must have introduced a genuine functional regression somewhere",
+              "This is expected and healthy -- a test suite should break on every internal change, by design, as a safeguard",
+              "The tests were end-to-end tests, which are the only test type capable of surviving this kind of refactor"
+            ],
+            "correct_index": 0,
+            "explanation": "If user-facing behavior genuinely didn't change, tests that broke anyway were asserting on something other than that behavior -- almost always a sign they reached into internal state or implementation rather than testing through the interface a real user or caller actually goes through. A refactor with no behavior change should leave behavior-focused tests untouched; widespread breakage here is the diagnostic signal, not an inherent cost of refactoring."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Neither Shape Is Universally Correct",
+      "body": "The trophy's case is strongest for typical application code -- UI components, request handlers, the kind of code whose bugs usually live in how pieces are wired together, which is exactly what a web app built on a framework tends to be mostly made of. A dense, algorithmic library -- a parser, a pricing engine, a scheduling optimizer -- has a different bug profile: its correctness risk lives almost entirely in the logic itself, with few meaningful integration points to speak of, which is exactly the shape a heavier unit-test investment (closer to the traditional pyramid) is built for.\n\nThe actually useful question when choosing isn't \"pyramid or trophy,\" it's \"where do bugs in *this specific codebase* actually tend to hide\" -- at the seams between pieces, or inside one piece's own logic. Both models are proxies for that same underlying question; picking one without asking it first is just inheriting someone else's codebase's bug profile instead of your own.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team maintains a standalone pricing-calculation library with no UI and almost no integration points -- just complex, self-contained logic. Which testing shape best fits its actual bug profile?",
+          "definition": {
+            "options": [
+              "A unit-test-heavy, pyramid-like shape, since the library's correctness risk lives almost entirely in its own logic",
+              "A trophy-shaped suite, since every codebase's bug profile is identical regardless of what the code actually does",
+              "An end-to-end-only suite, since a library with no UI has no behavior that unit or integration tests could ever check",
+              "No automated tests at all, since a standalone library can't meaningfully integrate with anything else to break"
+            ],
+            "correct_index": 0,
+            "explanation": "The trophy's case for integration-heavy testing rests on bugs living at the seams between pieces -- exactly what a self-contained, logic-dense library with few integration points doesn't have much of. Its risk is almost entirely inside its own logic, which is precisely what a heavier unit-test investment is suited to catch cheaply and quickly, closer to the traditional pyramid's shape than the trophy's."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "The pyramid and the trophy are both answers to the same question -- where should testing effort concentrate for the best confidence per cost -- and they disagree because they're implicitly modeling different kinds of codebases: the trophy for integration-heavy application code, the pyramid for logic-dense code with few seams. Testing through a real interface (inputs/outputs, rendered output, user interactions) rather than internal implementation details matters under either shape, since implementation-detail coupling is what turns routine refactors into false test failures.\n\nBefore reaching for either diagram on a new project, ask where this specific codebase's bugs actually tend to live -- at the seams between pieces, or inside one piece's own logic -- and let that answer pick the shape, rather than the other way around.\n\nThe next sessions in this module get concrete about the layers themselves: what actually belongs in a unit test versus an integration test, and the test doubles and fixtures that make either one fast and deterministic to run."
+    }
+  ]
+}
