@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Performance Engineering",
+    "slug": "performance-engineering",
+    "description": "Profiling, optimization, load and capacity"
+  },
+  "module": {
+    "title": "Performance Engineering"
+  },
+  "section": {
+    "title": "Application Performance",
+    "slug": "62-application-performance",
+    "description": "Measure identify and improve expensive code paths.",
+    "proficiency_tier": "W"
+  }
+}
