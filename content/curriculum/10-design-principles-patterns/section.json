@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Programming & Code Quality",
+    "slug": "programming-code-quality",
+    "description": "Idiomatic programming, maintainability, collaborative practice"
+  },
+  "module": {
+    "title": "Programming & Code Quality"
+  },
+  "section": {
+    "title": "Design Principles & Patterns",
+    "slug": "10-design-principles-patterns",
+    "description": "Introduce abstractions that reduce change cost without unnecessary complexity.",
+    "proficiency_tier": "D"
+  }
+}

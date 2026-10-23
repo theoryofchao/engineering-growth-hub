@@ -1,0 +1,104 @@
+{
+  "title": "SOLID, DRY, KISS, and YAGNI: Heuristics, Not Laws",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Apply SOLID's single-responsibility principle, DRY, KISS, and YAGNI as judgment-driven heuristics with real costs and limits -- including when following one of them literally creates the exact problem it exists to prevent.",
+  "content_blocks": [
+    {
+      "heading": "Principles Are Heuristics, Not Laws",
+      "body": "Every principle in this session exists to solve a real, recurring problem: duplicated logic that drifts out of sync, a class that's grown too many unrelated responsibilities to safely change, a solution more elaborate than the problem actually needs. That's the case *for* each one. But applying any of them mechanically, without the judgment behind the rule, tends to recreate the exact failure mode it was meant to prevent -- a forced abstraction extracted too early to avoid \"duplication\" often costs more than the duplication ever would have.\n\nThe skill this session is actually building isn't memorizing four acronyms -- it's recognizing the specific cost each principle is designed to avoid, and noticing when a given situation's actual costs run the other way. Every example below follows the same shape: name the cost the principle targets, then show the mirror-image mistake of applying it past the point that cost actually exists."
+    },
+    {
+      "heading": "Single Responsibility: One Reason to Change, Not One Method",
+      "body": "SOLID's first letter is the one that does the most everyday work: a class or module should have one responsibility, meaning one reason to change. \"Responsibility\" here means a specific axis of change in the business, not \"does one small thing\" -- a class can have many methods and still have a single responsibility, and a class with exactly one method can still violate SRP if that method mixes concerns that change for unrelated reasons.\n\nA classic violation: an `Invoice` class that both calculates totals *and* formats a PDF for printing. Those two responsibilities change for unrelated reasons -- a tax-rate update has nothing to do with a PDF layout tweak -- but bundled together, a change to either one risks breaking the other, and the class can't be tested or reused independently for just one concern. Splitting them into `InvoiceCalculator` and `InvoicePdfFormatter` means each class now has exactly one reason to ever need a change.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A `User` class validates email format, saves the user to the database, and sends a welcome email. What SOLID principle does this most clearly violate, and why?",
+          "definition": {
+            "options": [
+              "Single responsibility -- three unrelated reasons this one class might need to change, all bundled together",
+              "Open/closed -- extending this class with new behavior would require modifying its own existing source directly",
+              "Liskov substitution -- some subclass of `User` presumably can't be substituted wherever the base class is used",
+              "No violation at all -- a class may have as many unrelated methods as its author happens to find convenient"
+            ],
+            "correct_index": 0,
+            "explanation": "Validation rules, database schema changes, and email-template changes are three independent reasons this class might need to change, and none of them has anything to do with the others -- exactly the shape SRP flags. Splitting into a validator, a repository, and a notifier means a change to the email template can't accidentally break validation or persistence, and each piece becomes independently testable."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "DRY and the Cost of the Wrong Abstraction",
+      "body": "DRY (\"don't repeat yourself\") says every piece of knowledge should have one authoritative representation -- the same correctness argument as database normalization, applied to logic instead of data: two copies of the same rule can drift apart, and a change to one is easy to forget in the other. That's a real, well-earned principle.\n\nThe trap is reaching for DRY the moment two pieces of code merely *look* similar, before it's clear they represent the same underlying rule rather than a coincidence. Sandi Metz -- author of *Practical Object-Oriented Design* -- argues this directly in \"The Wrong Abstraction\": once an abstraction exists, every future change has to work *through* it, even once the cases it was built to unify have diverged for unrelated reasons; forcing them back together is often far more expensive than the duplication the abstraction was meant to remove. Her guidance: when an abstraction starts to strain, the fix is usually to inline it back to duplicated code and re-extract later from a clearer picture, not to keep patching the forced shape.",
+      "reference_links": [
+        { "label": "Sandi Metz -- The Wrong Abstraction", "url": "https://sandimetz.com/blog/2016/1/20/the-wrong-abstraction" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Two validation functions currently happen to both check \"is this string non-empty and under 50 characters\" -- one for a username, one for a product SKU. A developer merges them into one shared `validateShortString` helper. Six months later, SKU rules need to allow hyphens that usernames must forbid, and the shared function is now full of `if (type === 'sku')` branches. What does Sandi Metz's argument suggest went wrong?",
+          "definition": {
+            "options": [
+              "They looked similar but weren't the same rule -- merging them was the wrong abstraction, not real duplication",
+              "Nothing went wrong here -- branching inside a shared function is the normal, expected way to handle divergence later",
+              "The real mistake was writing two separate functions at all, before any shared abstraction existed between them",
+              "DRY was applied correctly in this case, and the branching is simply an unavoidable cost of following the principle"
+            ],
+            "correct_index": 0,
+            "explanation": "The two rules looked identical at the moment they were merged, but they represented two unrelated pieces of domain knowledge (username rules and SKU rules) that happened to coincide briefly -- not one piece of knowledge living in two places, which is what DRY actually targets. Once they diverged, the shared function had to be contorted with type-checking branches to keep serving both, which is exactly the cost Metz describes outweighing the duplication it replaced."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "KISS: Simplicity as the Default, Not an Afterthought",
+      "body": "\"Keep it simple\" sounds like it needs no further explanation, but the useful version is a tiebreaker: when two designs solve the actual problem equally well, prefer the one with fewer moving parts, not the one that anticipates more hypothetical future needs. A configurable plugin architecture for a feature with exactly one, stable implementation isn't thorough -- it's indirection with no payoff, since every reader now has to understand the plugin mechanism just to find the one implementation that actually runs.\n\nThe tell to watch for: counting how many files, interfaces, or layers of indirection someone has to open to understand what a piece of code actually does for the one case that exists today. If that number is higher than the problem's genuine complexity justifies, the design has traded real, immediate readability for flexibility nothing has asked for yet -- and \"it might need to be more flexible later\" is exactly the question the next section tackles head-on.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A feature needs to calculate a 10% discount for one specific promotion, with no other discount types planned. A developer builds a `DiscountStrategy` interface, a `DiscountStrategyFactory`, and a `PercentageDiscountStrategy` implementation. What does KISS suggest here?",
+          "definition": {
+            "options": [
+              "A plain function computing the 10% discount directly would serve the one real case with far less indirection",
+              "The strategy pattern is always the correct choice for any calculation involving a percentage of a value",
+              "This is appropriately simple, since a factory and an interface together count as minimal necessary structure",
+              "KISS only applies to algorithms, never to the structural choice of how many classes or files a feature uses"
+            ],
+            "correct_index": 0,
+            "explanation": "With exactly one discount type and none planned, the interface and factory add real reading and maintenance cost for zero present benefit -- a reader has to trace through three constructs to find the one calculation that actually runs. A plain function doing the math directly serves today's actual requirement; the strategy pattern becomes justified only once a second, genuinely different discount type actually shows up."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "YAGNI: Building for the Need You Have, Not the One You Imagine",
+      "body": "\"You aren't gonna need it\" is the forward-looking twin of the KISS tiebreaker: don't build configurability, extension points, or generalized abstractions for a future requirement that's speculative rather than confirmed. The two most common justifications -- \"we might need to swap databases later\" and \"this should be configurable in case requirements change\" -- are usually guesses about a future that may never arrive in the shape anyone predicted, paid for today in real complexity that affects every single change until that day either comes or doesn't.\n\nYAGNI isn't an argument against ever generalizing -- it's an argument about *when*: once a second real, concrete use case actually exists (not a hypothetical one), generalizing from two real examples produces a far better abstraction than guessing at one in advance, which ties directly back to Metz's point about premature abstractions -- YAGNI is effectively the rule for *when* it's safe to even consider the thing DRY asks you to extract.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team builds a generic `NotificationChannel` interface with Email, SMS, and Push implementations, even though the product only ever sends email today and has no confirmed plan to add the others. What's the most direct cost of this decision?",
+          "definition": {
+            "options": [
+              "Every future change to notification logic now has to route through an abstraction built for cases that don't exist yet",
+              "There is no real cost -- an unused interface and its implementations impose zero burden until they're actually called",
+              "The cost is purely aesthetic; well-organized code with more interfaces is always easier for a team to maintain over time",
+              "This is the correct approach, since YAGNI only forbids writing speculative tests, never speculative production code"
+            ],
+            "correct_index": 0,
+            "explanation": "The interface and its two unused implementations still have to be read, understood, and kept consistent with every change to the one channel that's actually used -- real, ongoing cost paid today for a future that might arrive differently than guessed, or not at all. If SMS notifications do get added later, generalizing from one real, confirmed second case produces a better-fitting abstraction than the speculative one built in advance."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "All four principles point at the same underlying question: does this piece of complexity earn its cost against a real, present need, or is it paying for a hypothetical one? SRP and DRY are about organizing complexity that's already justified -- putting each real responsibility and each real piece of knowledge in exactly one place. KISS and YAGNI are about not introducing complexity in the first place until a concrete case actually demands it. Applied as rigid laws rather than this underlying question, any of the four can produce the opposite of its own intent -- a forced abstraction, an over-split set of single-method classes, a pile of unused flexibility.\n\nThe next session in this module moves from these high-level heuristics to the structural vocabulary for actually measuring them: cohesion, coupling, and modularity -- concrete ways to tell whether a specific class or module is well- or poorly-designed, rather than relying on intuition alone."
+    }
+  ]
+}
