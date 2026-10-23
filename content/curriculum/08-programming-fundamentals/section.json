@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Programming & Code Quality",
+    "slug": "programming-code-quality",
+    "description": "Idiomatic programming, maintainability, collaborative practice"
+  },
+  "module": {
+    "title": "Programming & Code Quality"
+  },
+  "section": {
+    "title": "Programming Fundamentals",
+    "slug": "08-programming-fundamentals",
+    "description": "Implement robust programs without relying on framework conventions.",
+    "proficiency_tier": "D"
+  }
+}

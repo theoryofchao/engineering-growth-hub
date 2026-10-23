@@ -1,0 +1,106 @@
+{
+  "title": "Values, References, and the Pitfalls Hiding in \"Basic\" Code",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Build precise mental models for value vs. reference semantics, type coercion, truthy/falsy defaults, and hoisting -- the \"basic\" JavaScript behaviors that cause real production bugs when the model is fuzzy.",
+  "content_blocks": [
+    {
+      "heading": "Why \"Basic\" Syntax Still Trips Up Experienced Engineers",
+      "body": "This module's subtopics read like a beginner's table of contents -- variables, types, control flow, functions -- and that's exactly why it's worth a careful pass even for someone who's been writing code for years. None of this session is new syntax; all of it is behavior that's easy to use correctly by habit and wrong by surprise the moment an edge case shows up: a function that mutates an object it only meant to read, a default value of `0` silently replaced by a fallback, a variable read one line before its declaration.\n\nThe common thread is that JavaScript's rules here are simple to state but have corners that don't match the intuition most people build from everyday use. This session covers four of those corners -- value vs. reference semantics, coercion, truthy/falsy defaults, and hoisting -- each one a real, recurring source of production bugs, not a trivia question.\n\nThese aren't abstract concerns either: all four show up in code review as the quiet, hard-to-spot kind of bug -- the pull request looks correct, the happy-path test passes, and the failure only surfaces later against an input nobody thought to try."
+    },
+    {
+      "heading": "Value Semantics vs. Reference Semantics",
+      "body": "Primitives (numbers, strings, booleans, `null`, `undefined`) are copied by value: assigning `let b = a` makes `b` an independent copy, and changing `b` never touches `a`. Objects and arrays are copied by reference: `let b = a` makes `b` point to the *same* underlying object as `a`, so mutating a property or element through `b` is visible through `a` too -- they're two names for one thing, not two things.\n\nThis is the root cause of a specific, common bug class: passing an array or object into a function that the caller expected to be read-only, having the function mutate it internally (e.g. `.push()`, `.sort()`, setting a property), and watching that mutation leak back out to the caller's original reference -- no return value needed, because nothing was ever copied. The fix isn't to avoid objects; it's to be deliberate about when a function mutates its input versus returns a new value, and to document (or better, design the signature) so the caller isn't surprised either way.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "`const original = { count: 1 }; const copy = original; copy.count = 99;` What is `original.count` after this runs, and why?",
+          "definition": {
+            "options": [
+              "99 -- `copy` and `original` reference the same object, so the mutation is visible both ways",
+              "1 -- `const` prevents `copy` from ever affecting the object `original` points to, even indirectly",
+              "99 -- assigning an object with `=` always deep-copies the whole structure in modern engines",
+              "undefined -- reassigning through `copy` after a `const` declaration throws at runtime instead"
+            ],
+            "correct_index": 0,
+            "explanation": "`const` only prevents reassigning the *variable* `copy` itself to a different value -- it says nothing about mutating the object that variable points to. `copy = original` copies the reference, not the object, so both names point to the same object in memory, and mutating `.count` through either one is visible through both."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Type Coercion: Why `===` Should Be Your Default",
+      "body": "Loose equality (`==`) coerces its operands to a common type before comparing, and the coercion rules are full of results that don't match intuition: `[] == false` is `true` (the empty array coerces to the empty string, which coerces to `0`, which equals `false`'s `0`). `'' == 0` is `true` for the same reason. `null == undefined` is `true`, but `null == 0` is `false` -- `null` and `undefined` only coerce-equal to each other, not to anything else, which is the one genuinely useful exception in the whole mental model.\n\nStrict equality (`===`) skips coercion entirely: both operands must already be the same type and value, so `[] === false` is simply `false`, no surprises. The practical rule senior engineers actually follow is to default to `===` everywhere and reach for `==` only in the rare case where you deliberately want `null`/`undefined` treated as equivalent (and even then, `value == null` is clearer-intentioned than a bare `==`). Treat a stray `==` in review the way you'd treat an unexplained magic number -- it usually wasn't a deliberate choice.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Which comparison below evaluates to `true` in JavaScript?",
+          "definition": {
+            "options": [
+              "`'' == 0`",
+              "`[] === false`",
+              "`null === undefined`",
+              "`NaN === NaN`"
+            ],
+            "correct_index": 0,
+            "explanation": "`'' == 0` coerces the empty string to the number `0` before comparing, so it's `true`. `[] === false` is `false` because strict equality never coerces (an array and a boolean are different types, full stop). `null === undefined` is `false` under strict equality -- only loose `==` treats them as equivalent. `NaN === NaN` is famously `false` even under strict equality, since NaN is defined to never equal itself; that's why `Number.isNaN(x)`, not `x === NaN`, is the correct check."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Truthy, Falsy, and a Real Default-Value Bug",
+      "body": "Exactly six values are falsy in JavaScript: `false`, `0`, `''`, `null`, `undefined`, and `NaN`. Everything else -- including `[]`, `{}`, and the string `'0'` -- is truthy. This matters most where `||` gets used for \"default if missing\": `const limit = options.limit || 10` looks reasonable until a caller legitimately passes `limit: 0` (meaning \"no limit\" or \"zero items,\" a real, intentional value) and silently gets `10` instead, because `0` is falsy and `||` can't tell \"missing\" apart from \"present but falsy.\"\n\nThe nullish coalescing operator `??` fixes exactly this: it only falls through to its right-hand side when the left side is `null` or `undefined`, not for any other falsy value. `options.limit ?? 10` correctly keeps a caller's `0`, `''`, or `false` and only substitutes `10` when `limit` is actually absent. The rule going forward: use `||` when you genuinely want *any* falsy value replaced, and `??` when you mean \"replace only if this was never set\" -- which is what \"default value\" almost always actually means.\n\nWrite `getConfigValue(config, key, fallback)` below: return `config[key]` if that key exists in `config` (even if its value is falsy), otherwise return `fallback`.",
+      "exercises": [
+        {
+          "type": "code",
+          "sequence": 1,
+          "prompt": "Write `getConfigValue(config, key, fallback)` that returns `config[key]` when `key` exists in `config` -- even if its value is `0`, `false`, or `''` -- and returns `fallback` only when the key is missing entirely.",
+          "definition": {
+            "language": "javascript",
+            "function_name": "getConfigValue",
+            "starter_code": "function getConfigValue(config, key, fallback) {\n  // your code here\n}",
+            "timeout_ms": 2000,
+            "visible_test_cases": [
+              { "input": [{ "limit": 0 }, "limit", 10], "expected_output": 0 },
+              { "input": [{}, "limit", 10], "expected_output": 10 }
+            ],
+            "hidden_test_cases": [
+              { "input": [{ "enabled": false }, "enabled", true], "expected_output": false },
+              { "input": [{ "label": "" }, "label", "default"], "expected_output": "" },
+              { "input": [{ "a": 1 }, "b", "missing"], "expected_output": "missing" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Hoisting and the Temporal Dead Zone",
+      "body": "`var` declarations are hoisted to the top of their function and initialized to `undefined` immediately, so reading a `var` before its declaration line gives `undefined` rather than an error -- syntactically legal, but a sign something is almost certainly out of order. `let` and `const` are also hoisted (their name is reserved from the top of the block), but they're *not* initialized until the declaration line actually executes; reading one before that point throws a `ReferenceError`, in what's called the \"temporal dead zone.\"\n\nThis is a deliberate safety improvement, not an arbitrary restriction: a `var` bug (reading `undefined` where you meant a real value) can silently produce wrong output, while a `let`/`const` bug (reading too early) fails loudly and immediately at the exact line that's actually wrong. That's also the practical reason to prefer `let`/`const` over `var` even outside of block-scoping -- the temporal dead zone turns a class of ordering bugs from silent to loud.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "`console.log(x); let x = 5;` -- what happens when this runs?",
+          "definition": {
+            "options": [
+              "`ReferenceError` -- `x` is hoisted but stays in the temporal dead zone until declared",
+              "It logs `undefined`, the same outcome `var` would produce if declared the same way here",
+              "It logs `5`, since JavaScript hoists the declaration together with its initializer value",
+              "It throws a `SyntaxError` at parse time, before any of this code has a chance to run at all"
+            ],
+            "correct_index": 0,
+            "explanation": "`let` reserves the binding `x` from the top of the block (hoisting the name), but doesn't assign it a value until the `let x = 5` line actually executes. Reading `x` before that point lands in the temporal dead zone and throws a `ReferenceError` at runtime, not at parse time. A `var x = 5` in the same position would instead log `undefined`, since `var` initializes to `undefined` immediately on hoist -- the exact silent-vs-loud distinction this block is about."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Four habits worth carrying forward from this session: know whether what you're passing around is a value or a reference before you mutate it, default to `===` and reserve `==` for the one case it's actually suited to, reach for `??` instead of `||` whenever a falsy-but-valid value needs to survive a default, and prefer `let`/`const` so an out-of-order read fails loudly instead of silently becoming `undefined`.\n\nNone of these are advanced techniques -- they're precise versions of things you already use constantly, and the precision is what prevents the subtle bugs that \"it compiled and the happy path worked\" testing doesn't catch. Each one is also a fast, concrete thing to check for in review: an unexplained `==`, a bare `||` default next to a numeric or boolean field, a `var` in new code, a function whose argument gets mutated without that being obvious from its name.\n\nThe next session in this module builds on the reference-semantics idea directly: scope, closures, and modules, where the question becomes not just *what* a variable refers to, but *which* variable a given piece of code can even see."
+    }
+  ]
+}
