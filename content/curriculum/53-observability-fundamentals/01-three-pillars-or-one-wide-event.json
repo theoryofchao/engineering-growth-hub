@@ -1,0 +1,107 @@
+{
+  "title": "Observability: Three Pillars, or One Wide Event?",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Understand metrics, logs, and traces as overlapping tradeoffs rather than three separate checkboxes, and the high-cardinality limitation that motivates the wide-structured-event alternative.",
+  "content_blocks": [
+    {
+      "heading": "Observability vs. Monitoring: Known-Unknowns vs. Unknown-Unknowns",
+      "body": "Monitoring watches for failure modes you already anticipated: a dashboard tracking CPU usage, an alert firing when error rate crosses a threshold you decided mattered in advance. Observability is the broader capability of answering a question about a system's internal state that you *didn't* anticipate asking, without shipping new code to go find out -- debugging an unknown-unknown, not just watching a known-unknown's gauge.\n\nThat distinction sets up the whole rest of this session: the three traditional data types (metrics, logs, traces) are each good at different parts of this spectrum, and the tooling debate happening in the industry right now is really about which one of them -- or which alternative -- actually serves the unknown-unknown case best.\n\nNeither capability replaces the other -- a mature system needs monitoring's fast, known-threshold alerts just as much as observability's ability to chase down something nobody saw coming."
+    },
+    {
+      "heading": "Metrics: Cheap, Aggregated, and Structurally Lossy",
+      "body": "A metric is a number tracked over time -- a counter, a gauge, a histogram bucket -- pre-aggregated at write time, which is exactly what makes it cheap to store and fast to query even at huge scale. The cost of that cheapness: once a value is aggregated, the underlying individual events it was built from are gone. If a request-count metric wasn't broken down by `user_id` when it was recorded, there's no way to later ask \"show me just this one user's requests\" -- that dimension was never kept.\n\nThis is a structural limitation, not a tooling gap that a better metrics product eventually fixes: aggregation is what makes metrics cheap, and throwing away the detail behind the aggregate is what aggregation *is*. Metrics are excellent for the known-unknowns -- \"alert me if error rate crosses 1%\" -- and structurally unable to answer a question that needs a dimension nobody thought to pre-aggregate on.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team wants to investigate why requests from one specific customer are slow, but their request-latency metric was only ever recorded as a single aggregate histogram, with no per-customer breakdown. What's the actual obstacle?",
+          "definition": {
+            "options": [
+              "The per-customer detail was never kept -- aggregation at write time discarded it, so no query can recover it now",
+              "The team just needs to query the existing histogram with a more specific filter expression to recover this detail",
+              "This is a temporary limitation of their specific metrics vendor, one a competing metrics product wouldn't have",
+              "Histograms can't represent latency at all, so an unrelated, different metric type should have been used instead"
+            ],
+            "correct_index": 0,
+            "explanation": "Aggregation at write time is what makes a metric cheap -- but it also means the individual events behind the aggregate are gone the moment they're combined. If `customer_id` was never one of the dimensions recorded, no query against the aggregate can reconstruct it after the fact; the information simply isn't there to retrieve, in any metrics product."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Logs and Traces: Peter Bourgon's Overlapping Tradeoffs, Not a Checklist",
+      "body": "The \"three pillars of observability\" (metrics, logs, traces) traces back to Peter Bourgon's 2017 essay, which deliberately presented them as a Venn diagram of overlapping tradeoffs -- not three non-overlapping categories to each separately check off. A log is a timestamped record of something that happened; a trace ties a set of events together across a single request's full lifecycle, visualized as a waterfall through every service it touched. The two overlap heavily: a trace's individual spans *are* essentially structured log events, just correlated by a shared request ID.\n\nBourgon's framing also included a volume/cost gradient: metrics are cheapest and lowest-volume (one number, continuously updated), logs are the most expensive and highest-volume (a new record for every event), and tracing usually sits in between. The much-repeated \"three pillars\" phrase flattened his original nuance into exactly the checklist he wasn't proposing -- which is itself a useful lesson about how a careful technical argument can get simplified into something its own author didn't intend by the time it's widely repeated.",
+      "reference_links": [
+        { "label": "Peter Bourgon -- Metrics, tracing, and logging", "url": "https://peter.bourgon.org/blog/2017/02/21/metrics-tracing-and-logging" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Peter Bourgon originally presented metrics, logs, and tracing as a Venn diagram of overlapping tradeoffs. What does the widely-repeated \"three pillars\" framing get wrong about his actual argument?",
+          "definition": {
+            "options": [
+              "It turns three overlapping, cost-graded tradeoffs into three separate, non-overlapping checkboxes to each cover",
+              "It correctly and faithfully represents exactly what his original 2017 essay proposed, with no meaningful simplification",
+              "It understates how expensive metrics actually are, compared to the genuinely cheap cost of logs and tracing data",
+              "It was never actually based on his essay at all -- the two framings are historically and conceptually unrelated"
+            ],
+            "correct_index": 0,
+            "explanation": "Bourgon explicitly framed the three as overlapping along a cost/volume gradient, not as a checklist where each pillar is independently sufficient on its own. \"Three pillars\" as commonly repeated drops that nuance entirely, implying three separate boxes to tick rather than three lenses on the same overlapping space of events -- the opposite of his original, more careful point."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The High-Cardinality Problem and the Wide-Event Alternative",
+      "body": "Charity Majors (Honeycomb's co-founder) argues the three-pillars model is itself an artifact of how tooling evolved historically, not a reflection of the actual problem -- and that metrics specifically break down under high-cardinality data (many distinct values, like user IDs or request IDs) because pre-aggregation can't economically keep every possible dimension around. Her alternative, laid out in Honeycomb's own 2017 post on what a real observability tool needs to support: store one arbitrarily-wide, structured event per request -- every field you might ever want to query by, with no pre-decided schema or required index -- and query it after the fact, rather than deciding at write time what to throw away.\n\nThis doesn't make metrics or logs obsolete -- it reframes them as *queries* you can run against the wide event store, rather than separate pre-committed data types you have to choose to collect (or not) in advance. The tradeoff moves from \"decide now what detail to keep\" to \"keep it all, decide later what question to ask it\" -- at a real cost in storage and ingestion compared to metrics' cheap aggregation.",
+      "reference_links": [
+        { "label": "Honeycomb -- So You Want to Build an Observability Tool", "url": "https://www.honeycomb.io/blog/so-you-want-to-build-an-observability-tool" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "What specific limitation of metrics does the \"wide structured event\" approach (associated with Charity Majors/Honeycomb) most directly target?",
+          "definition": {
+            "options": [
+              "That pre-aggregation can't economically keep every high-cardinality dimension around for later, unplanned querying",
+              "That metrics are categorically more expensive to store at scale than keeping one wide structured event per request",
+              "That logs and traces, unlike metrics, are entirely incapable of representing a numeric value like a request count",
+              "That metrics can't be shown on a dashboard at all, unlike wide events, which display natively in graph form"
+            ],
+            "correct_index": 0,
+            "explanation": "The core complaint is specifically about cardinality: a metric pre-aggregates at write time, so a dimension nobody thought to track in advance is simply unavailable later, no matter how the data is queried. Wide, structured events keep every field around unaggregated, trading real storage/ingestion cost for the ability to ask an unanticipated question after the fact -- which is exactly the unknown-unknown case metrics structurally can't serve."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Choosing in Practice: Most Real Systems Use Both",
+      "body": "Known-unknowns -- \"page someone if error rate exceeds 1%,\" a capacity dashboard, an SLO you've already defined -- are exactly what cheap, pre-aggregated metrics are built for, and reaching for a wide-event store here mostly adds cost without adding insight you'd actually use. Unknown-unknowns -- \"why did this specific customer's request fail in a way nobody anticipated\" -- are exactly where metrics structurally can't help, and where rich, queryable event or trace data earns its real cost.\n\nThe practical default many teams land on: cheap aggregated metrics for alerting and capacity (the known-unknowns), with a queryable event or trace store layered on top for the debugging work that follows once an alert actually fires -- not a single model chosen to the exclusion of the other, and not a debate that has one universally correct winner independent of what a specific team actually needs to ask.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team wants both cheap, reliable alerting on a known SLO threshold and the ability to debug an unanticipated, customer-specific failure after the fact. What does the \"choosing in practice\" framing suggest?",
+          "definition": {
+            "options": [
+              "Cheap aggregated metrics for the known SLO alerting, plus a queryable event/trace store for the later debugging",
+              "Pick exactly one model -- metrics or wide events -- and apply it uniformly across every use case the team has",
+              "Abandon metrics-based alerting entirely, since wide events are strictly superior for every possible use case here",
+              "This combination of goals isn't achievable with any combination of today's available observability tooling"
+            ],
+            "correct_index": 0,
+            "explanation": "The two goals have genuinely different shapes: alerting on a known threshold is exactly what cheap, pre-aggregated metrics are suited for, while debugging an unanticipated, high-cardinality failure is exactly where metrics structurally fall short and a queryable event or trace store earns its cost. Most real systems use both together rather than treating this as a single either-or choice."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Metrics are cheap because they aggregate at write time, and that same aggregation is what makes them structurally unable to answer a question about a dimension nobody thought to track in advance. Bourgon's original three-pillars framing was a Venn diagram of overlapping cost/volume tradeoffs, not the non-overlapping checklist it's commonly repeated as. The wide-structured-event critique targets exactly the high-cardinality gap metrics leave open, at a real cost in storage and ingestion -- not a free upgrade, a different tradeoff.\n\nThe pattern worth noticing underneath all of it: every observability choice trades storage/ingestion cost against how specific a question you can ask after the fact, and neither extreme is free.\n\nThe next sessions in this module get concrete about the mechanics behind each of these: structured logging and correlation IDs, the actual shape of counters/gauges/histograms, and how OpenTelemetry's SDK and Collector implement these ideas in practice."
+    }
+  ]
+}

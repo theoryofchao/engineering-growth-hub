@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Observability & Reliability",
+    "slug": "observability-reliability",
+    "description": "Instrumentation, monitoring, SRE, incident response"
+  },
+  "module": {
+    "title": "Observability & Reliability"
+  },
+  "section": {
+    "title": "Observability Fundamentals",
+    "slug": "53-observability-fundamentals",
+    "description": "Instrument services so distributed failures can be diagnosed.",
+    "proficiency_tier": "D"
+  }
+}
