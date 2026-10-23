@@ -44,10 +44,14 @@ def test_seed_all_imports_full_curriculum_map(app):
         assert Topic.query.count() == 17
         assert Section.query.count() == 81
 
-        wip_section = Section.query.filter_by(slug="03-computer-architecture").first()
+        wip_section = Section.query.filter_by(slug="04-operating-systems").first()
         assert wip_section is not None
-        assert wip_section.proficiency_tier == "W"
         assert wip_section.learning_sessions == []  # no lesson authored yet -> WIP
+
+        architecture_section = Section.query.filter_by(slug="03-computer-architecture").first()
+        assert architecture_section is not None
+        assert architecture_section.proficiency_tier == "W"
+        assert len(architecture_section.learning_sessions) == 1
 
         ai_section = Section.query.filter_by(slug="70-ai-assisted-software-development").first()
         assert ai_section is not None

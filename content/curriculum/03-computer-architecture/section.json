@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Computer Science Foundations",
+    "slug": "computer-science-foundations",
+    "description": "Algorithms, memory, operating systems, networking, theory"
+  },
+  "module": {
+    "title": "Computer Science Foundations"
+  },
+  "section": {
+    "title": "Computer Architecture",
+    "slug": "03-computer-architecture",
+    "description": "Connect hardware behavior to software runtime costs.",
+    "proficiency_tier": "W"
+  }
+}

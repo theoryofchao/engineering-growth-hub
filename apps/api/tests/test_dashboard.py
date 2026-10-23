@@ -24,7 +24,8 @@ def test_dashboard_lists_only_sections_with_content(app, client):
     slugs = {s["slug"] for s in body["sections"]}
     assert "browser-rendering" in slugs
     assert "01-data-structures" in slugs  # now has real lesson content
-    assert "03-computer-architecture" not in slugs  # still WIP, no learning sessions
+    assert "03-computer-architecture" in slugs  # now has real lesson content too
+    assert "04-operating-systems" not in slugs  # still WIP, no learning sessions
 
 
 def test_dashboard_reflects_study_time_and_progress(app, client):
