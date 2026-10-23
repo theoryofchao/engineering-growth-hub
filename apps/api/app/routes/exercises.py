@@ -57,3 +57,31 @@ def submit_exercise(exercise_id: int):
             explanation=result.explanation,
         )
     return jsonify(body.model_dump()), 201
+
+
+@exercises_bp.put("/exercises/<int:exercise_id>/project-progress")
+def update_project_progress(exercise_id: int):
+    data = request.get_json(silent=True) or {}
+    checkpoint_index = data.get("checkpoint_index")
+    criterion_index = data.get("criterion_index")
+    checked = data.get("checked")
+
+    if (
+        not isinstance(checkpoint_index, int)
+        or not isinstance(criterion_index, int)
+        or not isinstance(checked, bool)
+    ):
+        abort(400, description="checkpoint_index, criterion_index, and checked are required")
+
+    try:
+        exercise = exercises_service.toggle_checkpoint_criterion(
+            exercise_id, checkpoint_index, criterion_index, checked
+        )
+    except ValueError as error:
+        abort(400, description=str(error))
+
+    if exercise is None:
+        abort(404, description="Exercise not found")
+
+    progress = exercise.project_progress
+    return jsonify({"checked_criteria": progress.checked_criteria if progress else {}})

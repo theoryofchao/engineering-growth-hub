@@ -10,6 +10,7 @@ from app.schemas import (
     ContentExample,
     ExerciseSummary,
     ExerciseSummaryCode,
+    ExerciseSummaryProject,
     ExerciseSummaryQuiz,
     LearningSessionDetail,
     LearningSessionSummary,
@@ -41,6 +42,16 @@ def _exercise_summary(exercise) -> ExerciseSummary:
             hidden_test_cases=[
                 {"input": case["input"]} for case in definition["hidden_test_cases"]
             ],
+        )
+    if exercise.type == "project":
+        return ExerciseSummaryProject(
+            id=exercise.id,
+            type="project",
+            prompt=exercise.prompt,
+            checkpoints=definition["checkpoints"],
+            checked_criteria=(
+                exercise.project_progress.checked_criteria if exercise.project_progress else {}
+            ),
         )
     return ExerciseSummaryQuiz(
         id=exercise.id,

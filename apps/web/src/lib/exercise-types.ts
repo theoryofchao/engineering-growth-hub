@@ -33,4 +33,18 @@ export type ExerciseCodeData = {
   hidden_test_cases: CodeHiddenTestCaseInput[];
 };
 
-export type Exercise = ExerciseQuizData | ExerciseCodeData;
+export type ProjectCheckpoint = {
+  title: string;
+  acceptance_criteria: string[];
+};
+
+export type ExerciseProjectData = {
+  id: number;
+  type: "project";
+  prompt: string;
+  checkpoints: ProjectCheckpoint[];
+  /** Keyed "<checkpoint_index>:<criterion_index>"; absence means unchecked. */
+  checked_criteria: Record<string, boolean>;
+};
+
+export type Exercise = ExerciseQuizData | ExerciseCodeData | ExerciseProjectData;

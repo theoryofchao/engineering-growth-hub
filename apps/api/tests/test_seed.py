@@ -2,7 +2,7 @@ import pytest
 
 from app.extensions import db
 from app.models import BehavioralQuestion, ContentBlock, Exercise, LearningSession, Section, Topic
-from app.seed import _validate_no_prerequisite_cycles, seed_all
+from app.seed import _validate_exercise_definition, _validate_no_prerequisite_cycles, seed_all
 
 
 def test_seed_all_creates_frontend_engineering_content(app):
@@ -223,6 +223,38 @@ def test_seed_all_imports_block_examples(app):
         # not a missing key -- the API contract is "always a list".
         other_block = session.content_blocks[0]
         assert other_block.examples == []
+
+
+def test_seed_all_imports_project_exercise_with_checkpoints(app):
+    with app.app_context():
+        seed_all()
+
+        section = Section.query.filter_by(slug="23-backend-architecture").first()
+        session = next(s for s in section.learning_sessions if s.sequence == 3)
+        project_exercises = [e for e in session.exercises if e.type == "project"]
+
+        assert len(project_exercises) == 1
+        checkpoints = project_exercises[0].definition_json["checkpoints"]
+        assert len(checkpoints) == 3
+        assert all(c["title"] and c["acceptance_criteria"] for c in checkpoints)
+
+
+def test_validate_exercise_definition_rejects_project_without_checkpoints():
+    with pytest.raises(ValueError, match="at least one checkpoint"):
+        _validate_exercise_definition(
+            {"type": "project", "prompt": "A broken project", "definition": {"checkpoints": []}}
+        )
+
+
+def test_validate_exercise_definition_rejects_checkpoint_without_criteria():
+    with pytest.raises(ValueError, match="title and at least one acceptance criterion"):
+        _validate_exercise_definition(
+            {
+                "type": "project",
+                "prompt": "A broken project",
+                "definition": {"checkpoints": [{"title": "Step 1", "acceptance_criteria": []}]},
+            }
+        )
 
 
 def test_seed_all_imports_behavioral_question_bank(app):

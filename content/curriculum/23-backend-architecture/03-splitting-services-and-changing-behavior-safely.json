@@ -97,5 +97,37 @@
       "heading": "The Bottom Line",
       "body": "Service decomposition and configuration sit at opposite ends of the same question this whole module has been asking: how much does a given change actually cost, and is there a cheaper way to get the same outcome? Splitting into a new service is one of the most expensive ways to solve an isolation or scaling problem -- worth it when the justification is concrete (independent scaling, failure isolation, a genuinely incompatible release cadence), a bad trade when the real problem was organizational and a module boundary with clear ownership would have done just as well.\n\nConfig and feature flags are usually the cheaper tool: they let behavior change without a deploy, a rollback, or a renegotiated API contract between services. The senior-level judgment this module is really testing isn't whether you know these patterns exist -- it's whether you reach for the cheapest one that actually solves the problem in front of you, instead of the most architecturally interesting one, and whether you can tell the difference under time pressure, not just in hindsight."
     }
+  ],
+  "exercises": [
+    {
+      "type": "project",
+      "sequence": 1,
+      "prompt": "Apply this module's ideas to your own code: add one feature flag or config boundary to a real project you're working on, in three Pomodoro-sized checkpoints. This is self-graded -- check off each criterion once you've actually done it.",
+      "definition": {
+        "checkpoints": [
+          {
+            "title": "Checkpoint 1: Define the boundary",
+            "acceptance_criteria": [
+              "You've written down, in plain language, which existing module or behavior your flag/config boundary will wrap",
+              "You can name a concrete reason a separate network service is NOT needed here, using this module's own criteria (independent scaling, failure isolation, incompatible release cadence)"
+            ]
+          },
+          {
+            "title": "Checkpoint 2: Implement the toggle",
+            "acceptance_criteria": [
+              "A single flag or config value controls at least one real behavioral branch in actual code, not just a comment describing what it would do",
+              "The default value and its meaning are documented somewhere a teammate could find without asking you"
+            ]
+          },
+          {
+            "title": "Checkpoint 3: Prove it's reversible",
+            "acceptance_criteria": [
+              "You can flip the flag/config value and observe the behavior actually change, without redeploying",
+              "You've written a one-line note on when this flag should be removed, so it doesn't become flag debt"
+            ]
+          }
+        ]
+      }
+    }
   ]
 }

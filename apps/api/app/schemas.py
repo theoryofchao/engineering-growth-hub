@@ -68,7 +68,29 @@ class ExerciseSummaryCode(BaseModel):
     hidden_test_cases: list[CodeHiddenTestCaseInput]
 
 
-ExerciseSummary = Annotated[ExerciseSummaryQuiz | ExerciseSummaryCode, Field(discriminator="type")]
+class ProjectCheckpoint(BaseModel):
+    title: str
+    acceptance_criteria: list[str]
+
+
+class ExerciseSummaryProject(BaseModel):
+    """Client-safe exercise view for a project. `checked_criteria` is
+    this learner's current self-attested progress, keyed
+    "<checkpoint_index>:<criterion_index>" -- absence means unchecked.
+    There's no answer key to withhold here; a project is self-graded.
+    """
+
+    id: int
+    type: Literal["project"]
+    prompt: str
+    checkpoints: list[ProjectCheckpoint]
+    checked_criteria: dict[str, bool]
+
+
+ExerciseSummary = Annotated[
+    ExerciseSummaryQuiz | ExerciseSummaryCode | ExerciseSummaryProject,
+    Field(discriminator="type"),
+]
 
 
 class NoteDetail(BaseModel):

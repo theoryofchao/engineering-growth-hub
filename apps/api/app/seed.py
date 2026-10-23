@@ -146,18 +146,30 @@ _CODE_EXERCISE_REQUIRED_KEYS = (
 
 def _validate_exercise_definition(exercise_data: dict) -> None:
     """Fail loudly at seed time rather than at first page load: a
-    malformed `code` exercise would otherwise surface as a KeyError deep
-    in `_exercise_summary` (app/routes/learning_sessions.py) the next
-    time a learner opens that lesson.
+    malformed `code`/`project` exercise would otherwise surface as a
+    KeyError deep in `_exercise_summary` (app/routes/learning_sessions.py)
+    the next time a learner opens that lesson.
     """
-    if exercise_data["type"] != "code":
-        return
     definition = exercise_data["definition"]
-    missing = [key for key in _CODE_EXERCISE_REQUIRED_KEYS if key not in definition]
-    if missing:
-        raise ValueError(
-            f"code exercise {exercise_data['prompt'][:60]!r} is missing definition keys: {missing}"
-        )
+
+    if exercise_data["type"] == "code":
+        missing = [key for key in _CODE_EXERCISE_REQUIRED_KEYS if key not in definition]
+        if missing:
+            raise ValueError(
+                f"code exercise {exercise_data['prompt'][:60]!r} is missing definition keys: {missing}"
+            )
+    elif exercise_data["type"] == "project":
+        checkpoints = definition.get("checkpoints")
+        if not checkpoints:
+            raise ValueError(
+                f"project exercise {exercise_data['prompt'][:60]!r} must have at least one checkpoint"
+            )
+        for index, checkpoint in enumerate(checkpoints):
+            if not checkpoint.get("title") or not checkpoint.get("acceptance_criteria"):
+                raise ValueError(
+                    f"project exercise {exercise_data['prompt'][:60]!r} checkpoint {index} "
+                    "must have a title and at least one acceptance criterion"
+                )
 
 
 def _load_session(section: Section, session_data: dict) -> None:

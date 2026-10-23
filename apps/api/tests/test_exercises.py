@@ -11,6 +11,15 @@ def _seed_exercise_id(app) -> int:
         return exercise.id
 
 
+def _project_exercise_id(app) -> int:
+    with app.app_context():
+        seed_all()
+        section = Section.query.filter_by(slug="23-backend-architecture").first()
+        session = next(s for s in section.learning_sessions if s.sequence == 3)
+        exercise = next(e for e in session.exercises if e.type == "project")
+        return exercise.id
+
+
 def _code_exercise_id(app) -> int:
     with app.app_context():
         seed_all()
@@ -147,3 +156,105 @@ def test_submit_code_rejects_wrong_length_outputs(app, client):
     response = client.post(f"/api/v1/exercises/{exercise_id}/submissions", json={"outputs": []})
 
     assert response.status_code == 400
+
+
+def test_toggle_project_checkpoint_criterion(app, client):
+    exercise_id = _project_exercise_id(app)
+
+    response = client.put(
+        f"/api/v1/exercises/{exercise_id}/project-progress",
+        json={"checkpoint_index": 0, "criterion_index": 1, "checked": True},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["checked_criteria"] == {"0:1": True}
+
+    uncheck_response = client.put(
+        f"/api/v1/exercises/{exercise_id}/project-progress",
+        json={"checkpoint_index": 0, "criterion_index": 1, "checked": False},
+    )
+    assert uncheck_response.get_json()["checked_criteria"] == {}
+
+
+def test_checking_every_criterion_advances_progress_to_practiced(app, client):
+    exercise_id = _project_exercise_id(app)
+    with app.app_context():
+        exercise = db.session.get(Exercise, exercise_id)
+        checkpoints = exercise.definition_json["checkpoints"]
+        section_id = exercise.learning_session.section_id
+
+    for checkpoint_index, checkpoint in enumerate(checkpoints):
+        for criterion_index in range(len(checkpoint["acceptance_criteria"])):
+            client.put(
+                f"/api/v1/exercises/{exercise_id}/project-progress",
+                json={
+                    "checkpoint_index": checkpoint_index,
+                    "criterion_index": criterion_index,
+                    "checked": True,
+                },
+            )
+
+    with app.app_context():
+        progress = UserProgress.query.filter_by(section_id=section_id).first()
+        assert progress is not None
+        assert progress.status == "practiced"
+
+
+def test_project_progress_rejects_out_of_range_checkpoint(app, client):
+    exercise_id = _project_exercise_id(app)
+
+    response = client.put(
+        f"/api/v1/exercises/{exercise_id}/project-progress",
+        json={"checkpoint_index": 99, "criterion_index": 0, "checked": True},
+    )
+
+    assert response.status_code == 400
+
+
+def test_project_progress_rejects_non_project_exercise(app, client):
+    exercise_id = _seed_exercise_id(app)
+
+    response = client.put(
+        f"/api/v1/exercises/{exercise_id}/project-progress",
+        json={"checkpoint_index": 0, "criterion_index": 0, "checked": True},
+    )
+
+    assert response.status_code == 400
+    assert "not a project" in response.get_json()["error"]
+
+
+def test_project_progress_404_for_missing_exercise(client):
+    response = client.put(
+        "/api/v1/exercises/999999/project-progress",
+        json={"checkpoint_index": 0, "criterion_index": 0, "checked": True},
+    )
+
+    assert response.status_code == 404
+
+
+def test_project_progress_rejects_malformed_body(app, client):
+    exercise_id = _project_exercise_id(app)
+
+    response = client.put(
+        f"/api/v1/exercises/{exercise_id}/project-progress",
+        json={"checkpoint_index": "not-an-int", "criterion_index": 0, "checked": True},
+    )
+
+    assert response.status_code == 400
+
+
+def test_project_exercise_is_serialized_in_learning_session_detail(app, client):
+    exercise_id = _project_exercise_id(app)
+    with app.app_context():
+        exercise = db.session.get(Exercise, exercise_id)
+        session_id = exercise.learning_session_id
+
+    client.put(
+        f"/api/v1/exercises/{exercise_id}/project-progress",
+        json={"checkpoint_index": 0, "criterion_index": 0, "checked": True},
+    )
+
+    response = client.get(f"/api/v1/learning-sessions/{session_id}")
+    project_exercise = next(e for e in response.get_json()["exercises"] if e["type"] == "project")
+    assert project_exercise["checked_criteria"] == {"0:0": True}
+    assert len(project_exercise["checkpoints"]) == 3

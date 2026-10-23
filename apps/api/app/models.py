@@ -339,9 +339,12 @@ class Exercise(db.Model):
     submissions = db.relationship(
         "ExerciseSubmission", back_populates="exercise", order_by="ExerciseSubmission.submitted_at"
     )
+    project_progress = db.relationship(
+        "ProjectProgress", back_populates="exercise", uselist=False
+    )
 
     __table_args__ = (
-        db.CheckConstraint("type in ('multiple_choice', 'code')", name="ck_exercise_type"),
+        db.CheckConstraint("type in ('multiple_choice', 'code', 'project')", name="ck_exercise_type"),
     )
 
 
@@ -355,6 +358,32 @@ class ExerciseSubmission(db.Model):
     submitted_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_utcnow)
 
     exercise = db.relationship("Exercise", back_populates="submissions")
+
+
+class ProjectProgress(db.Model):
+    """Self-attested checkpoint/acceptance-criteria progress for a
+    "project"-type `Exercise` (PRODUCT.md: "short multi-session project...
+    divided into Pomodoro-sized checkpoints with acceptance criteria").
+
+    One row per exercise, edited in place as criteria are checked or
+    unchecked -- this is ongoing self-tracked state, not a graded
+    one-shot attempt, so it deliberately doesn't go through
+    `ExerciseSubmission`/the scoring flow the way quiz/code answers do.
+    """
+
+    __tablename__ = "project_progress"
+
+    id = db.Column(db.Integer, primary_key=True)
+    exercise_id = db.Column(db.Integer, db.ForeignKey("exercises.id"), nullable=False, unique=True)
+    # {"<checkpoint_index>:<criterion_index>": true, ...}. A criterion's
+    # absence means unchecked, not false -- so this never needs
+    # backfilling if a project's checkpoints/criteria are edited later.
+    checked_criteria = db.Column(db.JSON, nullable=False, default=dict)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow
+    )
+
+    exercise = db.relationship("Exercise", back_populates="project_progress")
 
 
 PROGRESS_STATUS_RANK = {"not_started": 0, "learning": 1, "practiced": 2, "mastered": 3}

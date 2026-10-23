@@ -18,7 +18,7 @@ from typing import Any
 from sqlalchemy.orm import joinedload
 
 from app.extensions import db
-from app.models import Exercise, ExerciseSubmission, UserProgress
+from app.models import Exercise, ExerciseSubmission, ProjectProgress, UserProgress
 
 
 @dataclass
@@ -151,3 +151,55 @@ def _submit_code(exercise: Exercise, outputs: Any) -> CodeExerciseResult:
         score=score,
         cases=case_results,
     )
+
+
+def _total_criteria_count(checkpoints: list[dict]) -> int:
+    return sum(len(checkpoint["acceptance_criteria"]) for checkpoint in checkpoints)
+
+
+def toggle_checkpoint_criterion(
+    exercise_id: int, checkpoint_index: int, criterion_index: int, checked: bool
+) -> Exercise | None:
+    """Self-attested project progress -- not a graded submission, so this
+    doesn't create an `ExerciseSubmission` row the way quiz/code answers
+    do. Returns None if the exercise doesn't exist. Raises ValueError if
+    it isn't a project exercise, or the indices are out of range for its
+    own `checkpoints` definition.
+    """
+    exercise = db.session.get(
+        Exercise, exercise_id, options=[joinedload(Exercise.learning_session)]
+    )
+    if exercise is None:
+        return None
+    if exercise.type != "project":
+        raise ValueError("exercise is not a project")
+
+    checkpoints = exercise.definition_json["checkpoints"]
+    if not (0 <= checkpoint_index < len(checkpoints)):
+        raise ValueError("checkpoint_index out of range")
+    criteria = checkpoints[checkpoint_index]["acceptance_criteria"]
+    if not (0 <= criterion_index < len(criteria)):
+        raise ValueError("criterion_index out of range")
+
+    progress = ProjectProgress.query.filter_by(exercise_id=exercise_id).first()
+    if progress is None:
+        # `checked_criteria` must be set explicitly here, not left to the
+        # column's `default=dict` -- that default isn't applied to this
+        # in-memory object until the next flush/commit, so reading it
+        # back immediately (as the next line does) would see None.
+        progress = ProjectProgress(exercise_id=exercise_id, checked_criteria={})
+        db.session.add(progress)
+
+    key = f"{checkpoint_index}:{criterion_index}"
+    checked_criteria = dict(progress.checked_criteria)
+    if checked:
+        checked_criteria[key] = True
+    else:
+        checked_criteria.pop(key, None)
+    progress.checked_criteria = checked_criteria
+
+    if len(checked_criteria) == _total_criteria_count(checkpoints):
+        _advance_progress(exercise)
+
+    db.session.commit()
+    return exercise
