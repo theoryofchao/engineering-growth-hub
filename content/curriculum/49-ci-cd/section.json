@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "DevOps & Delivery",
+    "slug": "devops-delivery",
+    "description": "CI/CD, releases, platforms, delivery metrics"
+  },
+  "module": {
+    "title": "DevOps & Delivery"
+  },
+  "section": {
+    "title": "CI/CD",
+    "slug": "49-ci-cd",
+    "description": "Ship verified changes through automated delivery.",
+    "proficiency_tier": "W"
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "title": "The Deployment Pipeline: Build Quality In, Don't Inspect It In",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Design a deployment pipeline around one artifact promoted through increasingly realistic stages, ordered fastest-first, applying the build-quality-in principle instead of inspecting for defects after the fact.",
+  "content_blocks": [
+    {
+      "heading": "Inspecting for Quality vs. Building It In",
+      "body": "\"It works on my machine, and it passed QA, so ship it\" treats quality as something checked for at the end, after the work is already done -- the manufacturing equivalent of inspecting finished products for defects rather than preventing them during production. Jez Humble and Dave Farley's *Continuous Delivery* names this directly as one of its core principles, drawing on W. Edwards Deming's older manufacturing insight: stop relying on inspection, and build quality into the process itself from the start.\n\nThe deployment pipeline -- this session's actual subject -- is the concrete mechanism for doing that in software: a sequence of automated stages that catches a defect as close as possible to the commit that introduced it, rather than days later in a separate, disconnected QA pass.\n\nThe rest of this session works through what that pipeline actually looks like in practice, and the specific disciplines that make \"build quality in\" more than a slogan.",
+      "reference_links": [
+        { "label": "Continuous Delivery -- Principles", "url": "https://continuousdelivery.com/principles/" }
+      ]
+    },
+    {
+      "heading": "One Artifact, Built Once, Promoted Through Every Stage",
+      "body": "A deployment pipeline's core discipline: build the deployable artifact exactly once, then promote that *same* artifact through a sequence of increasingly realistic stages -- unit tests, integration tests, staging, production -- never rebuilding from source again at any later stage. Rebuilding at each stage risks a different build silently slipping in: a dependency resolving to a different version, a slightly different environment producing different compiled output, so the thing that passed staging's tests isn't provably the exact bytes running in production.\n\nPromoting one immutable artifact closes that gap entirely -- whatever passed every earlier stage is, by construction, the literal thing running in the next one, with no rebuild step in between to introduce drift.\n\nThis is also what makes a production incident genuinely traceable back to a specific, known build, rather than to \"whatever got rebuilt most recently.\"",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A pipeline rebuilds the application from source at each stage (unit tests, staging, production) rather than promoting one artifact through all three. What risk does this rebuild-at-each-stage approach introduce?",
+          "definition": {
+            "options": [
+              "A dependency or environment difference means staging's build isn't provably the exact one that reaches production",
+              "No real risk at all -- rebuilding from the same source code always produces byte-for-byte identical output, every time",
+              "This approach is actually safer than promoting one artifact, since each stage gets its own independently fresh build",
+              "Rebuilding only matters for compiled languages; interpreted source run directly at runtime carries none of this risk"
+            ],
+            "correct_index": 0,
+            "explanation": "Even identical source code can produce a different build if a dependency resolves to a different version, or the build environment differs subtly between runs -- rebuilding at each stage means staging's tests validated one build, while a separately-rebuilt artifact, not provably identical, is what actually reaches production. Promoting a single artifact through every stage removes that gap entirely by construction."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Order Stages Fastest and Cheapest First",
+      "body": "A pipeline that runs a slow, expensive full integration suite before a fast unit-test suite wastes real time and compute on a build that a one-second unit test would have already rejected. The standard ordering runs cheapest and fastest first -- linting, then unit tests, then integration tests, then slower, more expensive stages -- so a broken build fails at the earliest, cheapest point possible, not after burning minutes or hours of infrastructure on a build that was never going to pass anyway.\n\nThis ordering also shapes feedback speed directly: a developer who breaks a unit test finds out in seconds, while finding the same break only after a 40-minute integration suite finishes means a much longer wait for feedback that didn't need to take that long to surface.\n\nThe same logic scales to any number of stages -- each one should be ordered by how cheaply and quickly it can reject a build, not by how thorough or impressive it sounds.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A pipeline runs a 40-minute integration test suite before a 10-second unit test suite. A change fails a basic unit test. What's the cost of this specific ordering?",
+          "definition": {
+            "options": [
+              "40 minutes of integration-suite compute spent on a build that the 10-second unit test would have already rejected",
+              "No real cost -- running tests in either order produces exactly the same total pipeline duration and resource usage",
+              "This ordering is actually preferable, since it guarantees the integration suite always runs regardless of outcome",
+              "The cost only matters if the integration suite itself happens to also be failing for a completely unrelated reason"
+            ],
+            "correct_index": 0,
+            "explanation": "Running the slow, expensive suite before the fast, cheap one means a build doomed by a trivial unit-test failure still burns the full 40 minutes of integration-suite compute before anyone finds out. Fastest-first ordering would have caught the same failure in 10 seconds, at a small fraction of the cost, by never reaching the expensive stage at all for a build that was always going to fail."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Build Quality In, Concretely",
+      "body": "\"Build quality in\" isn't an abstract value statement -- it means catching a defect via an automated check at commit time, close to whoever introduced it and while the context is still fresh, rather than relying on a separate QA pass that only runs occasionally, well after other commits have already piled on top. The first path gives feedback in minutes, to the person who can fix it fastest because they just wrote it; the second gives feedback days later, against a codebase that's already moved on, to whoever happens to be doing QA that week.\n\nThe root-causing cost compounds with the delay: a bug caught at commit time has one obvious suspect -- the commit that just landed. A bug caught a week later in QA might have a dozen candidate commits to sift through before finding the one that actually introduced it.\n\nThis is the deployment pipeline's actual payoff -- not just automation for its own sake, but feedback that arrives while the fix is still cheap.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A defect is introduced in a commit on Monday but isn't caught until a manual QA pass the following Friday, by which point 30 more commits have landed. What's the specific cost \"building quality in\" earlier would have avoided?",
+          "definition": {
+            "options": [
+              "Root-causing now has 30 candidate commits to sift through, instead of one obvious suspect caught right at commit time",
+              "No real cost exists here -- the defect would have taken exactly as long to find and fix regardless of when it surfaced",
+              "The cost is purely about calendar time, and has nothing to do with how many commits accumulated in the meantime",
+              "This scenario could only happen with manual QA specifically; automated end-to-end tests are immune to this exact delay"
+            ],
+            "correct_index": 0,
+            "explanation": "The defect's actual cause hasn't changed, but by Friday it's buried under 30 unrelated commits, each a candidate to rule out before finding the real one. Catching it Monday at commit time would have pointed straight at the one commit that just landed -- the same underlying bug, but a dramatically smaller search space to find it in."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Computers Do the Repetitive Work, Humans Do the Judgment Calls",
+      "body": "Continuous Delivery's principles also draw a specific line: computers should handle repetitive, mechanical checks -- regression tests, linting, security scans -- precisely because a human doing the same check for the thousandth time is exactly where attention lapses and real mistakes slip through unnoticed. Humans are better spent on the checks that genuinely require judgment: does this new flow actually feel right to use, does this error message make sense to someone encountering it for the first time, is this edge case worth handling at all.\n\nThe practical dividing line for a pipeline stage: if the check has a clear pass/fail criterion that doesn't change, it's a repetitive check and belongs automated. If it requires a human's actual judgment about user experience or business tradeoffs, no amount of automation substitutes for a person actually looking at it.\n\nMisplacing a check on the wrong side of that line wastes effort either way -- automating a genuine judgment call produces a brittle, misleading pass/fail signal, while leaving a mechanical check to manual review just invites the attention lapse the automation was meant to prevent.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team is deciding whether to automate (a) checking that a checkout flow's total matches the sum of line items, and (b) judging whether a redesigned checkout flow feels intuitive to a first-time user. How should these be split?",
+          "definition": {
+            "options": [
+              "(a) automated, a repetitive check with a clear pass/fail rule; (b) left to a human, since it requires real judgment",
+              "Both automated -- any check describable in words can also be fully automated away given enough test coverage overall",
+              "Both left to a human -- automation is only appropriate for purely cosmetic checks with no real business impact at all",
+              "(a) left to a human, (b) automated -- arithmetic verification benefits more from human attention than UX judgment does"
+            ],
+            "correct_index": 0,
+            "explanation": "Checking that a total matches a sum is exactly the repetitive, clear-criterion check a computer should run every single time without fatigue or lapses in attention. Judging whether a flow \"feels intuitive\" has no fixed pass/fail rule a test can encode -- it's a genuine judgment call about human experience, which is precisely the kind of check this principle reserves for a person, not a script."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A deployment pipeline builds one artifact once and promotes that same artifact through every stage, so nothing can silently differ between what was tested and what ships. Ordering stages fastest-and-cheapest first means a broken build fails as early and as cheaply as possible, not after burning expensive resources on something already doomed. \"Build quality in\" means catching defects at commit time, close to their cause, rather than inspecting for them later when the trail has gone cold -- and the same principle draws a clean line between what a computer should check mechanically and what still genuinely needs a human's judgment.\n\nEvery one of these four ideas points at the same underlying goal: feedback that's fast, cheap, and arrives while fixing the problem is still easy, rather than after it's had time to compound.\n\nThe next sessions in this module get concrete about the pipeline's own supporting mechanics: dependency and artifact caching to keep fast stages actually fast, and the registry/provenance layer that tracks exactly which artifact is the one that got promoted."
+    }
+  ]
+}
