@@ -1,0 +1,105 @@
+{
+  "title": "API Paradigms: REST, GraphQL, and Typed RPC",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Compare REST, GraphQL, and schema-less typed RPC by what contract problem each one actually solves, and choose based on client diversity and type-sharing constraints rather than trend.",
+  "content_blocks": [
+    {
+      "heading": "Every API Choice Is Really About the Contract",
+      "body": "A client and a server are two separately-deployed programs that have to agree on a shape: what requests look like, what responses contain, and what happens when either side changes. REST, GraphQL, and RPC-style APIs are three different answers to where that agreement lives and how strictly it's enforced -- not arbitrary style preferences, and not a strict hierarchy from worse to better.\n\nThe question worth asking before picking one isn't \"which is more modern,\" it's \"who are the clients, how many different kinds are there, and what happens today when the contract silently breaks.\" Each paradigm answers that question differently, with real tradeoffs attached, not just different syntax for the same thing.\n\nThis session compares all three on exactly that basis -- what each one assumes about its clients, and what actually happens the moment the contract between client and server changes underneath them."
+    },
+    {
+      "heading": "REST: A Loose Contract, Broadly Compatible",
+      "body": "REST models an API as resources (`/orders/42`) manipulated through HTTP verbs and status codes, with the actual contract -- what fields a response contains, what's required in a request body -- living in documentation and convention rather than anything the client's tooling checks for it automatically. That looseness is also REST's biggest strength: any HTTP client, in any language, on any platform, can consume a REST API with no special tooling, which is exactly why it remains the default choice for public APIs serving unknown, diverse clients.\n\nThe cost of that same looseness: nothing stops the server from changing a response's shape in a way that silently breaks a client, and nothing on the client side catches the mismatch until it fails at runtime, often in production against a request shape nobody tested for. OpenAPI specifications exist specifically to patch this gap by describing the contract machine-readably, but that's an added layer on top of REST, not something REST provides on its own.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A REST API changes a field's type from a number to a string in a response, with no change to its OpenAPI spec and no version bump. What's the most likely consequence for existing clients?",
+          "definition": {
+            "options": [
+              "Clients parsing that field as a number can start failing at runtime, with no warning that the shape changed",
+              "Nothing happens -- REST APIs automatically detect and reject any response-shape change before a client receives it",
+              "Every single client is guaranteed to crash immediately, since HTTP itself enforces strict response-body type checks",
+              "This can't happen -- REST's own specification forbids a server from ever changing an existing field's declared type"
+            ],
+            "correct_index": 0,
+            "explanation": "REST itself has no built-in mechanism that catches a breaking shape change -- the contract lives in documentation and convention, not in anything the protocol or the client's tooling verifies automatically. A client parsing the field as a number has no way to know it should expect a string now, and the failure only shows up when that parsing actually runs, often well after the change shipped."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "GraphQL: The Client Specifies the Shape It Actually Wants",
+      "body": "GraphQL inverts REST's usual problem of overfetching (a response containing fields the client doesn't need) and underfetching (needing several REST calls to assemble one screen's data): the client sends a query naming exactly the fields it wants, and the server -- backed by a typed schema -- returns exactly that shape, nothing more. A mobile client and a desktop client needing different subsets of the same underlying data can each query for only what they use, from the same single endpoint.\n\nThe real cost shows up on the server side: each field in the schema is backed by a \"resolver\" function, and a naive implementation that resolves nested fields one at a time can issue a database query per field per result row -- the N+1 query problem -- turning one GraphQL request into hundreds of database round-trips if nobody's watching for it. GraphQL's flexibility on the client side has to be paid for with deliberate resolver-level optimization on the server side, not assumed to come for free.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A GraphQL query asks for 50 orders, each with its customer's name. The server resolves each order's customer with a separate database query inside the resolver. What problem does this illustrate?",
+          "definition": {
+            "options": [
+              "The N+1 query problem -- one query for the orders, plus one more per order, instead of batching the lookups",
+              "This is expected, fully optimal GraphQL behavior, since each resolver is specifically designed to run one query",
+              "A schema violation -- resolving nested fields this way is actually forbidden by the GraphQL specification itself",
+              "An overfetching problem, the same kind of issue REST has when a response carries more fields than a client needs"
+            ],
+            "correct_index": 0,
+            "explanation": "One query to fetch the 50 orders, then 50 more (one per order) to resolve each one's customer separately, is the textbook N+1 pattern -- a cost that scales with result size and is easy to introduce without noticing, since each individual resolver function looks perfectly reasonable in isolation. The fix is batching those customer lookups into a single query (a \"data loader\" pattern), not avoiding nested fields altogether."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Typed RPC: When the Contract Is Just the Code",
+      "body": "A third approach skips a separate schema language entirely: when client and server are both written in the same typed language, a library like tRPC lets the server's function signatures *be* the contract, inferred directly by the type system rather than described in a schema someone has to keep in sync by hand. Change a backend function's return type, and the frontend's build fails immediately at the exact call site that's now wrong -- no codegen step, no runtime schema-validation layer needed just to catch a shape mismatch, because the compiler is already doing that job for free.\n\nThe real constraint, not a weakness so much as a scope limit: this only works when every client shares the same type system as the server. The T3 Stack -- a full-stack TypeScript project structure popularized by Theo Browne -- bets on exactly this for an internal, single-codebase web app, bundling a typed RPC layer specifically because every client it serves is a TypeScript frontend it also controls. A public API serving unknown clients in unknown languages gets none of this benefit -- there's no shared type system on the other end to check against, which is exactly REST's and GraphQL's actual strength instead.",
+      "reference_links": [
+        { "label": "tRPC -- End-to-end typesafe APIs made easy", "url": "https://trpc.io/" },
+        { "label": "create.t3.gg -- The T3 Stack", "url": "https://create.t3.gg/en/introduction" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A typed-RPC setup like tRPC catches a backend contract change as a frontend compile error with no schema file involved. Under what condition does this specific benefit actually hold?",
+          "definition": {
+            "options": [
+              "Only when client and server share the same type system -- it depends on the compiler checking both sides together",
+              "Always, for any client written in any language, since typed RPC replaces the need for a shared type system entirely",
+              "Only for public APIs with a large, diverse population of clients consuming the same backend across many platforms",
+              "Never -- this benefit is specific to GraphQL's resolver typing and doesn't actually apply to RPC-style APIs at all"
+            ],
+            "correct_index": 0,
+            "explanation": "The compile-time check only works because the frontend and backend are both written in the same typed language and the build process can see both sides at once -- there's no shared type system for the compiler to check against once a client is written in a different language, or is maintained by someone who doesn't control the backend's code. That's exactly why this approach fits an internal, single-team, single-language codebase and not a public API with diverse, unknown clients."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Choosing by Constraint, Not Trend",
+      "body": "The actual decision rests on two concrete questions: how diverse and how known are the clients, and do client and server share a type system you control end to end? A public API with clients in unknown languages needs REST's broad compatibility, or GraphQL's flexible querying if overfetching is a real, measured problem -- typed RPC isn't available to clients outside your own type system at all. An internal full-stack TypeScript app with one team controlling both ends can skip a whole class of contract-drift bugs essentially for free by adopting typed RPC, since there's no separate schema to let drift from the code in the first place.\n\nNone of the three is a strictly better successor to the others -- each is the right default for a different answer to \"who's actually calling this, and what do we control,\" and the same system can legitimately use more than one of them for different audiences (a public REST API alongside an internal typed-RPC layer, for instance).",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team is building a public API that will be consumed by third-party developers in languages they don't control or know in advance. Which paradigm's core strength is most directly relevant here?",
+          "definition": {
+            "options": [
+              "REST's broad, language-agnostic compatibility -- any HTTP client in any language can consume it with no special tooling",
+              "Typed RPC's compile-time contract checking, since it works identically regardless of what language a client is written in",
+              "GraphQL's N+1-prone resolver model, which is specifically optimized for unknown, diverse third-party client populations",
+              "None of the three paradigms were designed to support third-party clients in languages outside the server's own stack"
+            ],
+            "correct_index": 0,
+            "explanation": "When clients are unknown, diverse, and outside your control, REST's lack of any assumption about the client's language or tooling is exactly the strength that matters -- any HTTP client can consume it. Typed RPC's whole benefit depends on sharing a type system with the client, which is unavailable here by definition; GraphQL could work too, but its main advantage (flexible field selection) isn't really what this scenario's core constraint (client diversity) calls for."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "REST's contract lives in documentation and convention, broadly compatible but only as enforced as the team's discipline around it -- OpenAPI exists to patch exactly that gap. GraphQL lets the client specify its own shape, solving over/underfetching at the cost of server-side resolver complexity that has to be deliberately managed. Typed RPC collapses the contract into the code itself when client and server share a type system, eliminating a whole class of drift bugs for exactly the clients it can reach, and none of the ones it can't.\n\nThe common thread across all three: a contract that's enforced automatically (by a compiler, or a schema a tool validates against) fails fast and close to the mistake, while one that's only enforced by documentation and discipline fails late, in production, far from whoever actually broke it.\n\nThe next sessions in this module get concrete about the pieces every paradigm eventually needs regardless of which one you pick: pagination and rate limiting, versioning strategy, and the OpenAPI/contract-testing layer that gives REST back some of what typed RPC gets natively."
+    }
+  ]
+}

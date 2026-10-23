@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Backend & APIs",
+    "slug": "backend-apis",
+    "description": "Service architecture, API contracts, identity, job processing"
+  },
+  "module": {
+    "title": "Backend & APIs"
+  },
+  "section": {
+    "title": "API Design",
+    "slug": "21-api-design",
+    "description": "Define APIs that are easy to consume and safe to evolve.",
+    "proficiency_tier": "D"
+  }
+}
