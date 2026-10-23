@@ -1,0 +1,101 @@
+{
+  "title": "Staging a Feature as a Workflow, Not One Giant Request",
+  "duration_minutes": 25,
+  "sequence": 9,
+  "access_tier": "free",
+  "objective": "Structure a non-trivial feature through an explicit plan-approval gate and independently verifiable increments, rather than one undifferentiated request that produces one undifferentiated diff.",
+  "content_blocks": [
+    {
+      "heading": "One Request, One Giant Diff, One Unreviewable Change",
+      "body": "\"Build the whole feature\" as a single prompt tends to produce exactly that: one large, undifferentiated diff touching many files at once. Reviewing a 2,000-line change in one sitting isn't meaningfully different from not reviewing it -- nobody actually holds that much context at once, and problems hide in exactly the parts a tired reviewer skims past.\n\nThe earlier sessions in this module covered *why* separating planning from implementation matters as a habit, and what Plan Mode and CI/CD verification each do as individual mechanisms. This session is about the missing piece between them: how to actually structure a feature's full lifecycle -- plan, approval, staged implementation, verification -- as a sequence of small, reviewable gates instead of one big request answered by one big diff.\n\nFour stages make up that structure, each with its own specific job: an approval gate before any code exists, independently verifiable increments, a verification check at every gate, and a unit of change small enough to actually review and revert."
+    },
+    {
+      "heading": "Stage One: A Plan With a Structural Approval Gate",
+      "body": "Plan Mode isn't just \"ask the agent to describe its approach first\" as an informal courtesy -- it's a structural restriction: while in plan mode, file-editing tools are unavailable entirely, so the agent cannot touch the codebase no matter what it decides mid-exploration. The agent researches, reads relevant files, and proposes an approach, then calls a specific tool to request exiting plan mode -- which is the one moment a human reviews the actual plan and either approves it or sends it back with feedback, before any code gets written at all.\n\nThis matters because it moves the \"are we doing the right thing\" conversation to before any implementation exists to review, when a bad plan costs nothing to redirect -- rather than after a diff already exists, when redirecting means discarding work. Rejecting a plan isn't a failure state; the agent revises based on specific feedback and proposes again, which is far cheaper than discarding a wrong implementation.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why does Plan Mode's approval gate matter structurally, beyond just being a polite step to ask first?",
+          "definition": {
+            "options": [
+              "File-editing tools are unavailable in plan mode, so a bad plan is caught before any code exists to discard",
+              "It's purely a courtesy -- the agent could edit files during plan mode but simply chooses not to out of politeness",
+              "Plan Mode exists mainly to slow the agent's response down, giving the human time to read something unrelated",
+              "Rejecting a plan discards exactly as much real work as rejecting a finished implementation would have discarded"
+            ],
+            "correct_index": 0,
+            "explanation": "The restriction is enforced at the tool level, not just a request to behave -- editing tools genuinely aren't available while in plan mode. That's what makes the approval gate meaningful: a misdirected plan costs nothing but a revision and re-proposal, while a misdirected implementation means discarding actual code, which is a categorically more expensive redo."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Stage Two: Increments That Each Leave the App Working",
+      "body": "Once a plan is approved, the temptation is still to implement the whole thing and verify once at the end. A better default: decompose the approved plan into increments where *each one* leaves the codebase in a state that builds, passes its existing tests, and (where relevant) can be manually checked -- not a sequence of intermediate states that only make sense once every piece has landed.\n\nThis isn't about making smaller commits for their own sake -- it's about never accumulating more unverified work than you're willing to discard if the next step reveals the approach was wrong. A feature decomposed into four verified increments means a mistake discovered at increment three costs one increment's worth of rework, not the whole feature's.\n\nThe decomposition itself is part of what the plan should propose -- not an afterthought figured out mid-implementation, but one of the things the approval gate in stage one is actually reviewing.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A four-step feature plan is implemented as one continuous pass, with the first real test run happening only after all four steps are written. Step three turns out to be built on a wrong assumption. What's the actual cost of this decomposition choice?",
+          "definition": {
+            "options": [
+              "Rework potentially spanning all four steps, since nothing was verified independently before building on top of the wrong one",
+              "No added cost at all -- the mistake would have been exactly as expensive to fix under any decomposition into stages",
+              "This only matters for very large features; a four-step plan is too small for staged verification to provide any real benefit",
+              "The cost is purely cosmetic, since tests would have caught this just as early regardless of when they were first run"
+            ],
+            "correct_index": 0,
+            "explanation": "Because nothing was verified until after all four steps were written, step four was built on top of step three's wrong assumption, and possibly steps one-through-two inherited assumptions from the same flawed mental model. Verifying after each increment would have caught the wrong assumption right at step three, limiting rework to that one step instead of risking the steps built on top of it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Stage Three: Verification Is a Gate, Not a Final Check",
+      "body": "\"Verification\" at the end of a staged workflow means something different from \"run the tests once when everything's done\" -- it means each increment has its own check (automated tests, a build, a live smoke-check where relevant) that has to pass *before* the next increment starts building on top of it. An increment that doesn't pass its own check doesn't get built upon; it gets fixed or reconsidered first.\n\nThis is the same principle behind requiring a green CI run before merging a pull request, just applied one level more granularly, inside a single feature's own construction rather than only at its boundary. The gate's job is catching a wrong assumption while it's still cheap to fix, not confirming after the fact that everything turned out fine.\n\nIn practice this often means re-running the project's existing test suite after each increment, not just once at the very end -- a cheap, repeatable check that costs seconds and catches a regression immediately, right where it was introduced.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Within a staged workflow, what's the actual purpose of verifying each increment before moving to the next one, rather than just verifying once at the very end?",
+          "definition": {
+            "options": [
+              "Catching a wrong assumption while only one increment's worth of work depends on it, not the whole remaining feature",
+              "There's no real purpose -- running tests once at the very end always catches exactly the same set of problems either way",
+              "It exists purely to produce a longer, more impressive-looking commit history for the pull request's eventual reviewer",
+              "Per-increment verification is only meaningful for frontend UI work, never for backend logic or data-layer changes"
+            ],
+            "correct_index": 0,
+            "explanation": "Verifying at each gate limits how much unverified work can pile up on top of a wrong turn -- if increment two is broken, nothing in increments three and four has been built on top of that mistake yet. Verifying only once at the end means every increment after the first mistake was built on an unverified foundation, inheriting whatever was wrong with it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Stage Four: One Stage, One Reviewable, Revertible Unit",
+      "body": "The natural unit a staged increment maps to is a single commit, or a single pull request for a larger feature -- something a reviewer can actually hold in their head at once, and something that can be reverted on its own if it turns out to be wrong, without unwinding everything that came after it. A feature shipped as one 2,000-line commit can't be partially reverted; a feature shipped as four 300-line commits can have exactly the problematic one rolled back.\n\nThis closes the loop back to the opening problem: the fix for an unreviewable diff was never a better prompt asking for a smaller diff -- it's structuring the work itself so no single unit of change is ever large enough to become unreviewable in the first place.\n\nA reviewer benefits from this the same way the agent's own verification does: a smaller, self-contained unit is something a human can actually reason about fully, not something they're forced to skim and trust.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A feature is shipped as a single 2,000-line commit. After merging, one part of it causes a production issue. What does the single-giant-commit structure cost the team at this point?",
+          "definition": {
+            "options": [
+              "The inability to revert just the problematic part -- reverting means undoing the entire 2,000-line change, working or not",
+              "Nothing extra -- a single large commit reverts exactly as cleanly and selectively as several smaller staged commits would",
+              "The only cost is a larger diff to read during review, which has no bearing on anything that happens after merge",
+              "This scenario is impossible to begin with, since any change causing a production issue would have failed CI beforehand"
+            ],
+            "correct_index": 0,
+            "explanation": "A revert operates on the commit as a whole -- there's no way to selectively undo just the problematic third of a single giant commit without manually picking apart the diff under time pressure. Several smaller, independently-staged commits let the team revert exactly the one that's actually causing the issue, leaving everything else that's still working untouched."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A staged workflow isn't a bureaucratic add-on to \"just asking the agent to build the feature\" -- it's the structure that makes a feature of any real size reviewable, catchable-while-cheap, and revertible in pieces rather than only as a whole. The plan-approval gate is enforced at the tool level, not just a courtesy; each increment earns its own verification before anything builds on top of it; and the natural unit a stage maps to is exactly the commit or PR a reviewer can actually hold in their head.\n\nNone of this requires more trust in the agent -- if anything, it requires less, since no single unverified step is ever large enough to hide a serious problem until the very end.\n\nThe next sessions in this module shift from the feature's own internal structure to the agent's reach beyond it: connecting real external tools through MCP, and configuring dedicated subagents for work that's genuinely independent."
+    }
+  ]
+}

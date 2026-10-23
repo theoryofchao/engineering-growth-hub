@@ -1,0 +1,107 @@
+{
+  "title": "Building on the Agent SDK: From Interactive Tool to Custom Application",
+  "duration_minutes": 25,
+  "sequence": 12,
+  "access_tier": "free",
+  "objective": "Understand the Claude Agent SDK as the same underlying engine that powers Claude Code, now embeddable in a custom application, and choose between its query() and ClaudeSDKClient entry points with programmatic permission control.",
+  "content_blocks": [
+    {
+      "heading": "Claude Code Is One Application Built on This Engine -- Not the Only One",
+      "body": "Every prior session in this module has been about using Claude Code: an already-built, interactive CLI application, with a human in the loop approving plans and reviewing diffs as they happen. The Claude Agent SDK exposes the same underlying agent engine -- the loop that reads context, decides which tools to call, and acts -- as something you can embed inside your *own* application instead: a Slack bot that triages incoming issues, an automated code-review service, an internal tool with no terminal and no human watching turn-by-turn.\n\nThis is a genuine shift in what's being built, not a deeper feature of Claude Code itself. Notably, the SDK was originally shipped and named as the \"Claude Code SDK\" before being renamed to the \"Claude Agent SDK\" -- the rename reflects exactly this: the thing being exposed is a general-purpose agent engine, and Claude Code is one particular application built on top of it, not the whole of what the SDK is for.",
+      "reference_links": [
+        { "label": "Claude Agent SDK -- Overview", "url": "https://code.claude.com/docs/en/agent-sdk/overview" }
+      ]
+    },
+    {
+      "heading": "Two Entry Points: query() for a Task, ClaudeSDKClient for a Session",
+      "body": "`query()` is the simpler of the two: an async function that runs one task and streams back results, starting a fresh session by default with no memory of any earlier call unless you explicitly ask it to continue or resume one. It fits a scripted, one-shot job well -- \"summarize this file,\" \"generate a report from this data\" -- where there's no ongoing back-and-forth to maintain.\n\n`ClaudeSDKClient` is the stateful alternative: a persistent client that supports custom tools and hooks (covered next) and keeps a session's context across multiple exchanges, suited to an application that needs an ongoing, multi-turn interaction rather than a single fire-and-forget task. The choice mirrors a familiar one from general API design: a stateless call per request versus a persistent connection -- pick based on whether the actual interaction has state worth keeping between calls, not by default habit.",
+      "reference_links": [
+        { "label": "Claude Agent SDK -- Python reference", "url": "https://code.claude.com/docs/en/agent-sdk/python" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An application needs to run one isolated task per incoming webhook -- summarize a new support ticket and return the summary -- with no need to remember anything between separate tickets. Which entry point fits, and why?",
+          "definition": {
+            "options": [
+              "`query()` -- each ticket is an independent, one-shot task with no state worth carrying over to the next one",
+              "`ClaudeSDKClient` -- its persistent session is required for any task that involves calling the SDK more than once",
+              "Neither fits this use case -- the SDK requires a long-lived, continuously open session for any kind of real task",
+              "Both are functionally identical here, since `query()` and `ClaudeSDKClient` differ only in which language they support"
+            ],
+            "correct_index": 0,
+            "explanation": "`query()` starts a fresh, stateless session by default -- exactly right for a task with no ongoing context to maintain, like one isolated ticket summary per webhook. `ClaudeSDKClient`'s persistent session is the right choice when the application genuinely needs multi-turn, stateful interaction -- unnecessary overhead here, where each ticket is independent of every other one."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Custom Tools Run In-Process -- No Separate Server to Manage",
+      "body": "The previous session's MCP servers are separate processes (local) or separate services (remote) that Claude Code connects to over a defined protocol. The Agent SDK offers a different option for your own application: a custom tool defined directly in your code with a `@tool` decorator (name, description, input schema), grouped into an SDK MCP server via `create_sdk_mcp_server` -- which runs *inside* your application's own process, not as a separate one.\n\nThe tradeoff is narrower reach for lower overhead: an external MCP server can be shared across different tools and teams because it's a standalone process with its own protocol boundary; an in-process SDK tool is faster to call (no separate process, no protocol overhead) but only exists within the one application that defined it. Choosing between the two is the same build-vs-integrate question as anywhere else -- a tool specific to your one application belongs in-process; a tool meant to be reused across several different clients belongs as its own server.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A company builds an internal code-review bot using the Agent SDK, with one custom tool (checking a specific internal style rule) that only this bot will ever need. Should this tool be an in-process SDK tool or a separate external MCP server?",
+          "definition": {
+            "options": [
+              "An in-process SDK tool, since it's specific to this one application with no sharing benefit to justify a separate process",
+              "A separate external MCP server -- every custom tool should always run as its own standalone process, no matter how it's used",
+              "Neither approach fits here -- a custom, company-specific tool can only ever be represented by an officially published server",
+              "This choice is purely cosmetic, with no real effect on performance, process overhead, or which other tools could reuse it"
+            ],
+            "correct_index": 0,
+            "explanation": "An external MCP server earns its separate-process overhead when multiple different tools or teams need to share it. A tool that only this one bot will ever call gains nothing from that overhead -- an in-process SDK tool is faster to invoke and simpler to maintain, with no protocol boundary to cross, since there's no second consumer to justify the extra structure."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Programmatic Permission Control: Code Decides, Not a Human in a Terminal",
+      "body": "Claude Code's interactive permission prompts work because a human is sitting at the terminal to approve or deny each one. An unattended application -- the Slack bot, the automated review service -- has no one there to click approve. The SDK's `can_use_tool` callback fills that role: a function your application defines that receives each tool-call request and decides, in code, whether to allow it, deny it, or allow it with modifications -- the same decision a human normally makes interactively, now made by logic you write and can reason about in advance.\n\nThis is the actual mechanism that makes unattended use responsible rather than reckless: a review bot's `can_use_tool` might allow read-only tools unconditionally while denying every write tool outright, so there's no scenario where it can edit anything no matter what any single request asks for -- the same tool-scoping principle from defining a custom subagent, now expressed as a runtime decision function instead of a static file.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An unattended support-ticket-triage service built on the Agent SDK needs to guarantee it can never modify a customer's account, no matter what a ticket's content asks for. What's the actual mechanism for enforcing that guarantee?",
+          "definition": {
+            "options": [
+              "A `can_use_tool` callback denying any account-modifying tool call outright, no matter what a given request's content asks",
+              "A carefully worded system prompt telling the agent never to modify a customer's account under any circumstances at all",
+              "A shorter `max_turns` limit on the session, which inherently prevents any tool capable of modifying an account from running",
+              "No real mechanism exists here -- an unattended SDK-based application can't meaningfully restrict its own tool use at all"
+            ],
+            "correct_index": 0,
+            "explanation": "A system prompt is an instruction the model is asked to follow, not an enforced restriction -- it can't provide an actual guarantee. `can_use_tool` is a function your own code controls, evaluated on every tool-call request; denying account-modifying tools there is an enforced boundary, not a hope that the model honors a written instruction, which is exactly the kind of guarantee unattended, no-human-in-the-loop use requires."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "What This Actually Unlocks",
+      "body": "Put together, these pieces describe application shapes none of this module's earlier sessions covered, because all of them assumed an interactive terminal session. A CI bot that reviews every pull request automatically, scoped by `can_use_tool` to read-only tools plus one in-process tool for posting a comment -- never able to push a commit itself, no matter what a PR's diff contains. A support-triage service that reads incoming tickets with `query()`, one isolated call per ticket, with no write access to any customer-facing system at all.\n\nNeither example is exotic -- they're ordinary automation, the same kind a team might otherwise build with hand-rolled API calls and brittle string matching, now built on an agent engine capable of understanding context and nuance a rules-based system would miss, while still bounded by code-enforced limits a rules-based system never needed in the first place because it never had any room to improvise beyond what it was explicitly coded to do.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team is deciding between a hand-rolled, rules-based script and an Agent-SDK-based service for triaging support tickets. What does building on the Agent SDK add, assuming `can_use_tool` is scoped tightly either way?",
+          "definition": {
+            "options": [
+              "The ability to understand ticket context and nuance a fixed rules-based script would miss, while staying within the same enforced limits",
+              "Nothing meaningful -- a tightly scoped `can_use_tool` callback makes an Agent-SDK-based service behave identically to a rules-based script",
+              "Strictly less safety than a rules-based script, since any agent-based approach is inherently less predictable no matter how it's scoped",
+              "The removal of any need for `can_use_tool` entirely, since the Agent SDK's own defaults are already safe enough for unattended use"
+            ],
+            "correct_index": 0,
+            "explanation": "A rules-based script can only react to patterns someone explicitly coded for in advance; an agent can read a ticket's actual content and context the way a person would, catching nuance rigid rules miss. `can_use_tool` scoping doesn't erase that advantage -- it just makes sure the extra flexibility stays bounded to understanding and deciding within fixed limits, not an expanded ability to act outside them."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "The Agent SDK is the same engine Claude Code runs on, exposed for building a different kind of application entirely -- one without an interactive human approving each step. `query()` fits a one-shot, stateless task; `ClaudeSDKClient` fits an ongoing, stateful session. Custom tools can run in-process for speed when nothing else needs to share them, or as external MCP servers when they do. And `can_use_tool` replaces the human-in-the-terminal approval step with code-defined logic -- the mechanism that makes unattended, production use accountable rather than a blind leap of trust.\n\nThis closes out the module's own throughline from its very first session: using agents effectively while retaining accountability for correctness applies just as much to an agent embedded in your own application as it does to one you're driving interactively from a terminal -- the tools for enforcing that accountability just move from habits and review into code you write once and can actually verify."
+    }
+  ]
+}

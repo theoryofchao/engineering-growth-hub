@@ -37,7 +37,7 @@ def test_section_sessions_lists_every_lesson_in_the_section_for_navigation(app, 
     response = client.get(f"/api/v1/learning-sessions/{first_session_id}")
     body = response.get_json()
 
-    assert len(body["section_sessions"]) == 8
+    assert len(body["section_sessions"]) == 12
     sequences = [s["sequence"] for s in body["section_sessions"]]
     assert sequences == sorted(sequences)  # ordered, so nav renders in lesson order
     assert body["section_sessions"][0]["id"] == first_session_id

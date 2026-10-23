@@ -1,0 +1,101 @@
+{
+  "title": "Custom Subagents: Configuration, Isolation, and Why a Summary Isn't Proof",
+  "duration_minutes": 25,
+  "sequence": 11,
+  "access_tier": "free",
+  "objective": "Configure a custom subagent definition with scoped tool access, understand what context it starts with (and without), and verify its work by checking the actual result rather than trusting its own summary.",
+  "content_blocks": [
+    {
+      "heading": "Delegation's Mechanics, Not Its Motivation",
+      "body": "Earlier sessions in this module covered *when* delegating to a subagent makes sense -- independent, parallelizable work; escalating depth for a genuinely hard problem; splitting across git worktrees. This session covers what actually happens underneath an approved delegation decision: how a specific subagent type gets defined, what context it has access to the moment it starts, and what you can and can't take on faith from the summary it hands back.\n\nThat last point matters more than it sounds: a subagent's full internal transcript -- everything it read, every tool call it made, every piece of reasoning along the way -- never gets returned to whoever dispatched it. Only its final text output does. Everything in this session follows from that one structural fact.\n\nThree consequences fall directly out of it: how much control a definition file actually gives you, what a subagent genuinely knows when it starts, and what its result actually proves once it finishes."
+    },
+    {
+      "heading": "Defining a Subagent Type: A File, Not Just a Prompt",
+      "body": "A custom subagent type is defined as a file (typically Markdown with YAML frontmatter) specifying a name, a description of when to use it, which specific tools it's allowed to call, and optionally a different underlying model than the one dispatching it. A code-review-focused subagent might be restricted to read-only tools (no write access at all), while a general-purpose research subagent might get broad read access but no ability to edit anything either -- the tool restriction is the actual mechanism, not a prompt asking it to behave a certain way.\n\nThis is a meaningfully different kind of control than prompting: a subagent whose definition excludes a file-write tool cannot write files, full stop, regardless of what it's asked to do or how it's asked. Scoping a subagent's tools to exactly what its job requires is the same least-privilege instinct that governs production service permissions, applied to what an agent is even capable of attempting.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A custom subagent definition for code review lists only read-only tools (no file-write tool included). What actually happens if its own instructions are somehow made to ask it to edit a file?",
+          "definition": {
+            "options": [
+              "It still can't -- the tool simply isn't available to it, regardless of what its instructions or a prompt ask it to do",
+              "It edits the file anyway, since a sufficiently convincing instruction can override a subagent's own tool restrictions",
+              "It asks the dispatching session for one-time permission to use a tool outside its own defined allowlist, then proceeds",
+              "Tool restrictions in a subagent definition are advisory only, and are never actually enforced by the runtime itself"
+            ],
+            "correct_index": 0,
+            "explanation": "A subagent's tool list is an actual capability restriction, not a behavioral suggestion -- a tool that isn't in its definition simply isn't callable by that subagent, independent of anything its prompt or instructions say. This is exactly why tool scoping is a meaningfully stronger control than prompting alone: there's no instruction that can grant access to a tool that was never made available in the first place."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Context Isolation: A Subagent Starts From (Nearly) Nothing",
+      "body": "A freshly dispatched subagent does not inherit the dispatching session's conversation history -- it starts cold, with only whatever's explicitly included in the prompt it's given, plus its own definition's instructions. This is a deliberate design, not a limitation to work around: it's what keeps a subagent's context window focused purely on its one assigned task, instead of carrying the full weight of an unrelated, possibly much longer parent conversation.\n\nThe practical consequence: a dispatch prompt that assumes shared context (\"continue what we were just discussing,\" \"use the file I mentioned earlier\") gives a cold-started subagent nothing to work from. A self-contained prompt -- naming the specific files, the specific goal, the specific constraints -- is what a subagent actually needs, every single time, precisely because nothing from before this dispatch carries over automatically.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A dispatch prompt to a subagent says \"continue refactoring the function we just discussed.\" What does the subagent actually have to work with when it starts?",
+          "definition": {
+            "options": [
+              "Nothing from \"we just discussed\" -- it starts without the parent's history, so this reference points at nothing at all",
+              "The full prior conversation history, automatically carried over in its entirety the instant the subagent is dispatched",
+              "An automatically generated, compressed summary of the parent conversation, handed to every newly dispatched subagent",
+              "Just the single most recent message sent in the parent conversation, with nothing further back than that included"
+            ],
+            "correct_index": 0,
+            "explanation": "Subagent dispatch is a cold start -- no conversation history from the dispatching session carries over automatically, by design, so the subagent's context stays focused purely on what the dispatch prompt itself actually says. \"The function we just discussed\" refers to nothing the subagent has access to; a workable dispatch has to name the specific function, file, and goal directly in the prompt itself."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "What Comes Back: A Claim, Not a Transcript",
+      "body": "When a subagent finishes, only its own final summary returns to whoever dispatched it -- not the reasoning, the files it actually touched, or the commands it actually ran along the way. That summary describes what the subagent *intended* to do and *believes* it did, which is not automatically identical to what actually happened. A subagent can genuinely believe it fixed something and describe that belief accurately, while the underlying fix is incomplete, or touches the wrong file, or doesn't compile.\n\nThis is why \"trust but verify\" isn't a vague caution here -- it's a specific, mechanical consequence of what information actually crosses the boundary back from a subagent. The summary is a starting point for review, not a substitute for checking the actual diff, actual test output, or actual command result the subagent's work produced.\n\nThe dispatching session retains exactly the tools it would use to verify anything else -- reading the changed files, running the tests again -- and using them here is not redundant, it's the actual verification step the summary alone can't provide.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A subagent reports: \"Fixed the failing test and confirmed the suite passes.\" What's the most reliable next step, given what actually crosses the boundary back from a subagent?",
+          "definition": {
+            "options": [
+              "Check the actual diff and re-run the test suite yourself -- only the summary, not the transcript, came back from this subagent",
+              "Accept the report as given -- a subagent's final summary is only produced once its own internal verification already succeeded",
+              "Ask the same subagent to summarize its work once more, which carries meaningfully stronger evidence than the first summary did",
+              "Assume the opposite of whatever was reported, since a subagent's summary is, as a general rule, wrong more often than it's right"
+            ],
+            "correct_index": 0,
+            "explanation": "Only the subagent's final text summary returns -- not the transcript of what it actually did -- so the summary is a claim about the work, not proof of it. Independently checking the real diff and re-running the real test suite confirms what actually happened, rather than accepting a description of what the subagent believes happened, however confidently or accurately that description might be worded."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Isolation Cuts Both Ways: Protection and Blind Spot",
+      "body": "The same context isolation that keeps a subagent focused and prevents one task's mistakes from polluting another's context window also means a subagent has no visibility into decisions made elsewhere in the parent conversation, unless those decisions are explicitly passed into its dispatch prompt. A subagent asked to \"add tests for the new endpoint\" without being told which specific edge cases the parent conversation already identified as important will not know to prioritize them -- it isn't being careless, it genuinely never received that information.\n\nThis reframes what a good dispatch prompt actually is: not a shorter version of the full context, but a deliberately chosen subset of it -- everything the subagent's specific task actually requires, explicitly included, and nothing assumed to carry over silently.\n\nThe discipline this demands is the same one good delegation to a human colleague already requires: a vague handoff produces a predictably incomplete result, not because the person receiving it is careless, but because nobody actually told them the part that mattered.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A parent conversation identified three specific edge cases that matter for a new endpoint, then dispatched a subagent to \"add tests for the new endpoint\" without mentioning them. The subagent's tests miss all three. What does this illustrate?",
+          "definition": {
+            "options": [
+              "Context isolation means the subagent never received that information -- it's a dispatch-prompt gap, not a subagent oversight",
+              "The subagent was careless and should have independently inferred which edge cases the parent conversation had already found important",
+              "This is a sign the subagent's underlying model is less capable than the one running the parent conversation it was dispatched from",
+              "Context isolation only affects conversation history, never task-specific details like edge cases identified earlier in a discussion"
+            ],
+            "correct_index": 0,
+            "explanation": "Those three edge cases existed only in the parent conversation's history, which the subagent never had access to -- its dispatch prompt was the only information it actually received, and it didn't mention them. This isn't a capability gap or carelessness; it's the direct, structural consequence of context isolation, and the fix is including the specific edge cases in the dispatch prompt itself next time, not expecting the subagent to infer missing context."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A custom subagent's tool list is an actual capability boundary, not a suggestion; its context starts cold, carrying nothing from the parent conversation unless the dispatch prompt explicitly includes it; and what comes back is a claim about the work, not a transcript proving it. All three facts point toward the same two practical habits: write dispatch prompts as self-contained packages of exactly what the task needs, and verify a subagent's result against the real artifact it produced, not against how confidently its summary describes success.\n\nNeither habit is about distrusting subagents specifically -- they're exactly the habits good delegation to anyone, human or otherwise, already requires: a complete handoff, and an independent check of the result.\n\nThe next and final session in this module moves one level further out: the Agent SDK, for building an entirely custom application on the same underlying engine that powers Claude Code itself."
+    }
+  ]
+}

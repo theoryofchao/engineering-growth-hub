@@ -1,0 +1,107 @@
+{
+  "title": "MCP in Practice: Local Servers, Remote Servers, and the Trust Each One Requires",
+  "duration_minutes": 25,
+  "sequence": 10,
+  "access_tier": "free",
+  "objective": "Configure real MCP server integrations across local (stdio) and remote (HTTP/OAuth) transports, and recognize the security surface each new connected server actually opens.",
+  "content_blocks": [
+    {
+      "heading": "From \"Should I\" to \"How, Exactly\"",
+      "body": "An earlier session in this module covered the decision of whether to reach for an MCP server at all -- weighing the new capability against its token cost. This session picks up from an approved \"yes\": what actually happens, mechanically, when a server gets connected, and what new risk surface comes along with it regardless of which specific server it is.\n\nTwo shapes cover almost every real integration: a local server, a process running on your own machine that Claude Code talks to directly, and a remote server, a service running somewhere else that requires its own authentication handshake. The two differ enough in setup and trust model that treating them identically is itself a common mistake worth avoiding.\n\nA third, cross-cutting question -- who else a given connection actually reaches once it's added -- cuts across both transports and gets its own treatment later in this same session."
+    },
+    {
+      "heading": "Local Servers: A Process You Already Trust, Talking Over stdin/stdout",
+      "body": "A local MCP server is just a command Claude Code launches as a subprocess and communicates with over standard input/output -- `claude mcp add <name> -- <command>`, where the `--` separator keeps the server's own command-line flags from being parsed as Claude Code's own. GitHub's own official MCP server (`github/github-mcp-server`) is a concrete, real example: once connected, Claude Code can open and review pull requests, read issues, and browse repository contents -- real GitHub API access, mediated through a server GitHub itself maintains.\n\nThe trust model here mirrors any other local tool you'd install: the server runs with whatever permissions the process already has, so adding one is closer to installing a new CLI dependency than toggling a setting -- worth the same scrutiny you'd give any other new, locally-executing code with access to your accounts.\n\nThis is also the default transport -- stdio is what `claude mcp add` uses when no other transport is specified, which is why most quick, locally-run integrations end up looking exactly like this.",
+      "reference_links": [
+        { "label": "GitHub -- the official GitHub MCP server", "url": "https://github.com/github/github-mcp-server" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "After running `claude mcp add github -- github-mcp-server`, what does this actually set up, and what access does it grant?",
+          "definition": {
+            "options": [
+              "A local subprocess reached over stdin/stdout, carrying whatever GitHub access that process's own credentials already have",
+              "A sandboxed, read-only simulation of GitHub, with no access to any real account, repository, or credential at all",
+              "A cloud-hosted connection managed entirely by Anthropic, needing no local process or credentials on this machine whatsoever",
+              "Nothing is actually granted yet -- a separate, additional manual approval step is always required first, before any tool runs"
+            ],
+            "correct_index": 0,
+            "explanation": "`claude mcp add <name> -- <command>` launches the named command as a local subprocess that Claude Code communicates with over stdin/stdout -- the default (stdio) transport. Whatever GitHub access that server process's own configured credentials have is exactly the access Claude Code now has through it, which is why adding it deserves the same scrutiny as installing any other locally-running tool with account access."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Remote Servers: An OAuth Handshake, Not Just a URL",
+      "body": "A remote MCP server lives somewhere else entirely -- a cloud service, not a process on your machine -- and connecting to one means an actual authentication handshake, not just pointing at a URL: `claude mcp add --transport http <name> <url>`, often followed by an OAuth client ID (and optionally a secret) so the service can verify who's asking before granting any access. SSE is an older remote transport, now deprecated in favor of streamable HTTP, which is the current recommendation for anything remote.\n\nThe practical difference from a local server: you're extending trust to a service you don't run and can't directly inspect, over a network connection rather than a local pipe -- which is exactly why the handshake step exists. Skipping past what that OAuth consent screen is actually asking to access is the remote equivalent of not reading what permissions a locally-installed tool requests.",
+      "reference_links": [
+        { "label": "Claude Code docs -- Connect Claude Code to tools via MCP", "url": "https://code.claude.com/docs/en/mcp" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "What does connecting to a remote MCP server over HTTP typically require, that a local stdio server does not?",
+          "definition": {
+            "options": [
+              "An OAuth handshake (a client ID, and often a secret) so the remote service can verify who's requesting access before granting it",
+              "Nothing additional at all -- remote and local servers are configured and trusted in exactly the same way, with no real difference",
+              "A locally-running subprocess identical to a stdio server's, just with its stdin and stdout redirected over the network instead",
+              "Root-level system access, since any server reachable over a network connection inherently requires elevated local privileges"
+            ],
+            "correct_index": 0,
+            "explanation": "A local server is already running as your own process with your own existing permissions -- there's nothing further to authenticate. A remote server is a separate service you don't control, so it needs its own way to verify the request is actually authorized, which is exactly what the OAuth client ID/secret handshake accomplishes before any tool call is allowed through."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Scopes: Who Else Inherits This Connection",
+      "body": "An added MCP server has a scope deciding who else sees it: local scope (the default) applies only to the current project on this machine; user scope applies across every project you work in; project scope writes the configuration into a shared `.mcp.json` file that's committed to the repository, so every teammate who pulls it gets the same server automatically. Each scope trades convenience for a wider blast radius if the configuration itself needs to change or turns out to be wrong.\n\nProject scope deserves particular attention: a `.mcp.json` checked into version control is now a file every contributor's Claude Code reads and acts on, which means its contents need the same review scrutiny as any other committed configuration -- a malicious or just mistaken entry there affects everyone who pulls it, not only the person who added it.\n\nChoosing local scope by default, and only widening to user or project scope once a server has actually earned that broader reach, keeps the blast radius of a bad configuration proportional to how much it's actually been vetted.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team commits a `.mcp.json` configuring a project-scoped MCP server. What does this scope choice actually mean for the rest of the team?",
+          "definition": {
+            "options": [
+              "Every teammate who pulls the repo gets the same server automatically -- its contents affect everyone, not just its author",
+              "Nothing changes for anyone else -- this scope only ever affects the one machine the `claude mcp add` command originally ran on",
+              "Each teammate must still run the identical `claude mcp add` command by hand; committing the file alone does nothing on its own",
+              "This scope choice is purely cosmetic bookkeeping, with no real behavioral difference at all compared to local or user scope"
+            ],
+            "correct_index": 0,
+            "explanation": "Project scope deliberately writes the server configuration into a shared `.mcp.json` committed to the repo, specifically so every teammate who pulls that commit gets the same server without a manual setup step. That's exactly what makes the file's contents worth the same review scrutiny as any other committed config -- a bad entry reaches everyone who pulls it, automatically."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Every New Server Is New Code With Tool-Call Access",
+      "body": "The common thread under both transports and every scope: adding an MCP server is adding new code that the agent can call, often with access to something real -- a GitHub account, a production API, a company's internal service. That's a materially different decision from turning on a built-in feature, and deserves the same review a new production dependency would get, not the lighter scrutiny a UI toggle invites.\n\nThe earlier token-cost framing and this session's trust framing are two sides of one decision: cost asks whether the capability is worth what it adds to every conversation; trust asks whether the access it grants is something you're actually willing to extend, to code you may not have written, pointed at something you can't easily undo if it goes wrong.\n\nBoth questions are worth asking explicitly before adding a server, not discovered after the fact once something has already gone wrong with the access it was quietly given.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team is about to add a new MCP server with write access to a production database. Which review standard does this session suggest is actually appropriate?",
+          "definition": {
+            "options": [
+              "The same scrutiny given to adding a new production dependency -- new code with real access, not a lightweight feature toggle",
+              "No particular scrutiny is warranted -- MCP servers are sandboxed by design and cannot meaningfully affect production systems",
+              "Scrutiny is only warranted for remote HTTP servers; a locally-running stdio server never needs this level of review at all",
+              "This decision is purely about token cost, and has no bearing on security or production access whatsoever once connected"
+            ],
+            "correct_index": 0,
+            "explanation": "An MCP server with write access to a production database is new code the agent can invoke, with real, consequential access -- exactly the profile of a new production dependency, not a UI setting. Token cost is a separate, legitimate concern from an earlier session, but it doesn't substitute for asking whether this specific access is something the team actually intends to grant."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A local server is a subprocess you already trust by virtue of running it yourself, reached over stdin/stdout; a remote server requires its own OAuth handshake precisely because it's a service you don't control. Scope decides how far a connection's reach extends -- local to one project, user to every project, or project scope shared with an entire team through a committed file. Underneath all three choices sits the same real question: is this specific access, to this specific new code, actually something worth granting.\n\nNone of this is a reason to avoid MCP servers -- the capability they add is exactly what makes them worth the setup. It's a reason to make the trust decision deliberately, the same way you would for any other new dependency with real access.\n\nThe next session in this module moves from external tools to internal delegation: how a custom subagent is actually configured, what context it starts with, and why its summary of what it did is a claim to verify, not a report to simply accept."
+    }
+  ]
+}

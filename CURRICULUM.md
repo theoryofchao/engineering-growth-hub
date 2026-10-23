@@ -1394,6 +1394,10 @@ Each item below is deliberately a module-level specification. Add individual les
   - **70.10** Claude Code's native tooling (MCP servers, Skills, Hooks, LSP) and single-purpose-chat context hygiene
   - **70.11** Claude Code fundamentals (installation, the Master Loop mental model, memory/settings precedence, permission modes and Plan Mode)
   - **70.12** Advanced Claude Code: composition patterns (Trinity, multi-agent delegation, iterative critique), sandbox/security defaults, and CI/CD hardening
+  - **70.13** Staging a feature as a workflow: Plan Mode's approval gate, decomposing into independently verifiable increments, verification between stages
+  - **70.14** MCP in practice: local (stdio) vs. remote (HTTP/OAuth) servers, scopes, and the security surface each new server opens
+  - **70.15** Custom subagent configuration, context isolation, and why a subagent's summary requires independent verification
+  - **70.16** The Claude Agent SDK: building a custom application on the same engine, `query()` vs. `ClaudeSDKClient`, in-process custom tools, programmatic permission control
 
 ### Product & Collaboration
 
