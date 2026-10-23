@@ -1,0 +1,107 @@
+{
+  "title": "What a Container Actually Is: Namespaces and cgroups",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Understand a container as an ordinary Linux process made to perceive itself as isolated through namespaces (what it can see) and cgroups (what it can use), not a lightweight virtual machine.",
+  "content_blocks": [
+    {
+      "heading": "A Container Is Not a Lightweight VM",
+      "body": "A virtual machine virtualizes hardware and runs its own full kernel on top of it; a container runs as an ordinary process on the *host's* kernel, made to perceive itself as isolated through two separate kernel mechanisms working together. Julia Evans's \"What Even Is a Container\" names them directly: namespaces control what a process can *see* -- its own process list, its own network interfaces -- and cgroups control what it can *use* -- how much memory, CPU, and other resources it's allowed to consume.\n\nThat's the entire mechanism. There's no special container runtime magic beneath Docker, containerd, or any other tool -- they're all orchestrating the same two kernel features this session covers directly.\n\nThis also follows directly from the last session's syscall-boundary habit: a container's isolation is just the kernel applying rules through interfaces already covered there, not a separate, unrelated technology.",
+      "reference_links": [
+        { "label": "Julia Evans -- What Even Is a Container: Namespaces and cgroups", "url": "https://jvns.ca/blog/2016/10/10/what-even-is-a-container/" }
+      ]
+    },
+    {
+      "heading": "Namespaces: Controlling What a Process Can See",
+      "body": "A PID namespace gives a process its own private view of the process list -- inside the container, the main process sees itself as PID 1, the first process on the system, even though the host's own process table has it running as some unrelated, much higher real PID. A network namespace gives a process its own private set of network interfaces and ports, which is exactly why a container can bind to port 80 without conflicting with a completely different service already using port 80 directly on the host -- from inside its own network namespace, that port was never actually taken.\n\nEach namespace type isolates one specific kind of view -- process IDs, network interfaces, mount points, hostnames -- and a container is typically built from several of these layered together, not one single \"container namespace\" that does everything at once.\n\nThe host can still see everything -- a process inspecting the system from outside any namespace sees every real PID and every real interface, with nothing actually hidden from it.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A containerized process reports its own PID as 1, while the host machine's own process list shows that same process running under a completely different, much higher PID. What explains this?",
+          "definition": {
+            "options": [
+              "A PID namespace gives the container its own private view of the process list, independent of the host's real process table",
+              "This indicates a bug -- a process can only ever have exactly one PID, so these two different numbers can't both be correct",
+              "The container is actually running inside a separate virtual machine with its own independent kernel, not on the host's kernel",
+              "PID 1 is a hardcoded placeholder value containers always display, which carries no real information about the process's identity"
+            ],
+            "correct_index": 0,
+            "explanation": "A PID namespace is precisely this kind of isolation: the same underlying process is assigned a real PID in the host's process table, but inside its own PID namespace it's numbered independently, typically starting at 1. Both numbers are correct -- they're just two different, intentionally isolated views of the exact same process."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "cgroups: Controlling What a Process Can Use",
+      "body": "A control group (cgroup) caps how much of a resource -- memory, CPU time, I/O bandwidth, even the number of processes a container is allowed to spawn -- a process or group of processes can actually consume, enforced directly by the kernel rather than by any convention the process has to cooperate with. A memory cgroup limit means a runaway container that tries to allocate far more memory than it was assigned gets stopped by the kernel, rather than being free to exhaust the entire host's memory and start starving every other container and service running alongside it.\n\nNamespaces and cgroups solve two different problems that are easy to conflate: a namespace controls visibility (what the process can perceive exists), while a cgroup controls consumption (how much of what it can perceive it's actually allowed to use) -- a container needs both, not just one or the other, to be both isolated and well-behaved as a neighbor on a shared host.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A container has a memory cgroup limit of 512MB. It attempts to allocate 2GB. What actually happens, and which mechanism is responsible?",
+          "definition": {
+            "options": [
+              "The kernel enforces the cgroup limit directly and stops the allocation, independent of whether the process cooperates",
+              "The allocation succeeds regardless, since cgroups only apply to CPU time and have no actual effect on memory usage at all",
+              "A network namespace intervenes to block the allocation, since namespaces are responsible for enforcing resource consumption limits",
+              "The host kernel silently grants the extra memory anyway, as long as the host machine happens to have enough physical RAM free"
+            ],
+            "correct_index": 0,
+            "explanation": "cgroups are a kernel-enforced consumption limit, not a convention the process has to voluntarily respect -- exceeding the configured memory cgroup limit gets stopped by the kernel itself. Namespaces are a different mechanism entirely, controlling what a process can *see*, not how much of a resource it's allowed to *use*; they play no role in enforcing this specific limit."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Proving There's No Magic: Containers From Scratch",
+      "body": "Liz Rice's \"Containers From Scratch\" demonstrates this directly by live-coding a working container in roughly 60 lines of Go, using nothing but namespaces, `chroot` (changing a process's apparent root filesystem directory), and cgroups -- no Docker, no container runtime, just the same three kernel-level primitives this session has already covered. The demo's entire point is that a container runtime like Docker isn't hiding some deeper, more exotic isolation technology -- it's packaging and automating exactly this same small set of kernel features into something far more convenient to use.\n\nThis is also why containers start in milliseconds while a VM typically takes seconds or longer: a container is just configuring namespaces and cgroups around an already-running kernel's existing process-creation machinery, not booting an entire separate kernel and operating system from scratch.\n\nSeeing the whole mechanism assembled from three understandable pieces is often what finally makes \"container\" stop feeling like a black box.",
+      "reference_links": [
+        { "label": "Liz Rice -- containers-from-scratch (GitHub)", "url": "https://github.com/lizrice/containers-from-scratch" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Liz Rice builds a working container using only namespaces, chroot, and cgroups, with no container runtime involved at all. What does this demonstration actually prove?",
+          "definition": {
+            "options": [
+              "Docker-style runtimes just package these same primitives",
+              "Docker and other container runtimes add no real value at all over writing this exact code by hand every single time",
+              "Namespaces and cgroups are specific to Go and only ever work when accessed through Go's own particular standard library",
+              "This demo only worked because the kernel she happened to use included a special, undocumented, experimental feature"
+            ],
+            "correct_index": 0,
+            "explanation": "The demo deliberately avoids using any container runtime to make exactly this point: the isolation a container provides comes from ordinary, already-existing kernel features, not something uniquely built into Docker. A runtime's real value is making those primitives far more convenient to use -- image management, networking setup, orchestration -- not providing some separate isolation mechanism the primitives alone lack."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Shared-Kernel Tradeoff",
+      "body": "Because every container on a host shares that host's one kernel, a kernel-level vulnerability discovered inside one container is a fundamentally different kind of risk than the same vulnerability would be inside a true VM -- a VM's hardware-level virtualization means a compromised guest still has to break out through a much narrower, more hardened boundary to reach the host or other VMs, while a container escape exploiting the shared kernel directly can potentially reach the host or neighboring containers without that extra boundary at all.\n\nThis isn't a reason to avoid containers -- it's the specific tradeoff \"VMs vs. containers\" is actually about: containers trade some of that isolation boundary for dramatically faster startup and much lower resource overhead, which is the right tradeoff for most workloads, but not an argument that containers provide identical isolation guarantees to a VM.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why does a kernel-level vulnerability pose a different kind of risk to a containerized workload than to a workload running in a true virtual machine?",
+          "definition": {
+            "options": [
+              "Containers share one kernel; a VM gets its own",
+              "Containers are always configured with weaker security settings than any VM by default, regardless of the kernel itself",
+              "Not actually true at all -- containers and VMs provide fully identical isolation guarantees against any kernel vulnerability",
+              "VMs are simply unaffected by kernel vulnerabilities entirely, since a VM never interacts with any kernel code whatsoever"
+            ],
+            "correct_index": 0,
+            "explanation": "Every container on a host runs on that same host's single shared kernel, so a kernel exploit reachable from inside one container is reachable from a position much closer to the host itself. A VM's guest runs its own separate kernel on virtualized hardware, adding a harder boundary a kernel-level exploit inside the guest still has to cross before it can reach the host or other VMs."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A container is an ordinary Linux process, not a lightweight VM -- namespaces control what it can see, cgroups control what it can use, and together they're the entire mechanism, with no deeper magic underneath any specific container runtime. That shared-kernel model is also exactly why containers start fast and use fewer resources than VMs, and exactly why a kernel vulnerability is a more direct risk to a container than to a true VM's separate guest kernel.\n\nKnowing the real mechanism underneath also makes later debugging far less mysterious -- a container behaving strangely is still just an ordinary process, reachable with the same tools covered in the last session.\n\nThe next sessions in this module build directly on top of these two primitives: packaging an application into an image with Dockerfiles and layer caching, and the networking and volume mechanisms that let isolated containers still talk to each other and persist data deliberately."
+    }
+  ]
+}
