@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Backend & APIs",
+    "slug": "backend-apis",
+    "description": "Service architecture, API contracts, identity, job processing"
+  },
+  "module": {
+    "title": "Backend & APIs"
+  },
+  "section": {
+    "title": "Backend Fundamentals",
+    "slug": "20-backend-fundamentals",
+    "description": "Build robust maintainable request processing services.",
+    "proficiency_tier": "D"
+  }
+}

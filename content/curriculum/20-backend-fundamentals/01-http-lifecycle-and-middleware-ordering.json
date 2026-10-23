@@ -1,0 +1,105 @@
+{
+  "title": "HTTP Server Lifecycle and the Middleware Chain",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Model a request's full lifecycle through a server process as an ordered middleware chain, and place cross-cutting concerns (logging, auth, error handling) deliberately instead of by trial and error.",
+  "content_blocks": [
+    {
+      "heading": "Why Model the Request Lifecycle at All",
+      "body": "A request handler that reads the request, does its one job, and returns a response is easy to write and easy to understand in isolation. The trouble starts once you need the same cross-cutting behavior -- authentication, request logging, error formatting, rate limiting -- applied consistently across dozens of handlers. Copy-pasting that logic into every handler works until the day someone adds a new handler and forgets one of the copies, or changes the logging format in nine places and misses the tenth.\n\nMiddleware exists to put that logic in exactly one place: a chain of functions that every request passes through before reaching the actual handler, and that every response passes back through on the way out. Almost every backend framework -- Express, Koa, Flask, Django, ASP.NET -- is built around some version of this same chain, which means the mental model transfers even when the exact syntax doesn't."
+    },
+    {
+      "heading": "The Onion Model: Middleware Wraps, It Doesn't Just Run in Sequence",
+      "body": "The easy mistake is picturing middleware as a flat list that runs top to bottom once. It's actually a nesting structure -- an onion -- where each middleware wraps everything that comes after it: it runs some logic, calls `next()` to hand control to the next layer in, waits for that inner call to fully finish (including the handler and every layer between), and only then runs its own \"after\" logic before returning.\n\nThat's why a logging middleware registered first can log both the request's arrival *and* the final response status and duration in one place: its \"before\" code runs first (outermost), and its \"after\" code runs last, because every other layer's work happens nested inside that single call to `next()`. Picture it as parentheses, not a list: `logging( auth( handler() ) )` -- the outermost middleware's closing work is always the very last thing that happens.\n\nThis matters because it's the opposite of how most code reads top-to-bottom: the order you register middleware in controls both ends of the chain at once, in opposite directions.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A chain registers `logging` first, then `auth`, then the handler. In what order does each piece's \"before next()\" code actually run?",
+          "definition": {
+            "options": [
+              "logging's before-code, then auth's before-code, then the handler -- registration order",
+              "The handler first, then auth's before-code, then logging's before-code -- reverse order",
+              "auth's before-code first, since it must approve the request before anything else runs",
+              "All three run simultaneously; ordering only matters for the after-code, not the before-code"
+            ],
+            "correct_index": 0,
+            "explanation": "Each middleware's \"before\" code runs in registration order on the way in, exactly like opening a set of nested parentheses from the outside: logging's before-code first, then auth's (now one layer deeper), then finally the handler itself at the center. The \"after\" code is what unwinds in reverse -- that asymmetry (before: forward order, after: reverse order) is the entire point of the onion model."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Where Error-Handling Middleware Has to Sit",
+      "body": "An error-handling middleware's job is to catch whatever exception the layers inside it throw and turn it into a well-formed response instead of a crash or a raw stack trace reaching the client. For that to work, it has to be registered *before* (meaning: outermost relative to) every layer whose errors it's expected to catch -- a middleware can only see exceptions thrown by the layers nested inside its own `next()` call, never by layers registered before it.\n\nThe common mistake is registering an auth or validation middleware ahead of the error handler and then being surprised when an exception thrown inside auth crashes the process instead of getting formatted -- the error handler was registered too late (too far inward) to wrap it. The fix is almost always the same: register error-handling middleware first, so every other layer in the chain sits inside its protective wrap, not before it.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A validation middleware is registered *before* the error-handling middleware. What happens if the validation middleware itself throws an exception?",
+          "definition": {
+            "options": [
+              "It crashes unhandled -- the error handler sits inside the validation middleware's layer, not around it",
+              "The error handler still catches it, because error handlers catch exceptions from anywhere in the process",
+              "The exception is silently swallowed and the request completes as if nothing happened",
+              "The framework automatically reorders middleware at runtime so error handling always wraps everything"
+            ],
+            "correct_index": 0,
+            "explanation": "A middleware can only catch exceptions thrown by layers nested inside its own `next()` call -- never by a layer that was registered and ran before it. If validation runs first and the error handler runs second (meaning: nested inside validation, not wrapping it), an exception from validation propagates straight past the error handler and crashes unhandled. This is exactly why error-handling middleware is conventionally registered first in every major framework's docs."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Tracing the Chain Yourself",
+      "body": "The onion model is easiest to internalize by building a tiny version of it. Below, each middleware in a list logs an entry right before handing off to the next one, and another entry right after that handoff returns -- exactly the before/after split from the last two blocks, just reduced to its simplest possible form, with a final \"handler\" entry marking the center where the chain bottoms out.\n\nWrite `middlewareExecutionOrder(names)`: given a list of middleware names in registration order, return the full trace of what gets logged, in the exact order it would actually happen. An empty list means the chain is just the handler itself, with nothing wrapping it.\n\nThis is the same shape a real framework's middleware runner implements internally -- a recursive handoff where each layer's \"after\" step is just whatever runs once its own call to the next layer has returned, nothing more exotic than that.",
+      "exercises": [
+        {
+          "type": "code",
+          "sequence": 1,
+          "prompt": "Write `middlewareExecutionOrder(names)` that returns the full execution trace for a middleware chain. For each name in order, log `\"<name>:before\"` before recursing into the next one; once the list is exhausted, log `\"handler\"`; then as each call returns, log `\"<name>:after\"` in reverse order. Return the trace as an array of strings.",
+          "definition": {
+            "language": "javascript",
+            "function_name": "middlewareExecutionOrder",
+            "starter_code": "function middlewareExecutionOrder(names) {\n  // your code here\n}",
+            "timeout_ms": 2000,
+            "visible_test_cases": [
+              { "input": [["logging", "auth"]], "expected_output": ["logging:before", "auth:before", "handler", "auth:after", "logging:after"] },
+              { "input": [[]], "expected_output": ["handler"] }
+            ],
+            "hidden_test_cases": [
+              { "input": [["a"]], "expected_output": ["a:before", "handler", "a:after"] },
+              { "input": [["a", "b", "c"]], "expected_output": ["a:before", "b:before", "c:before", "handler", "c:after", "b:after", "a:after"] }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Hanging-Request Bug: Forgetting to Call `next()`",
+      "body": "Every middleware that isn't meant to end the chain outright must call `next()` exactly once. Forget to call it, and the request simply hangs -- no error, no response, nothing -- because every layer registered after that point is still waiting for a `next()` call that's never coming. This is a specific, recognizable failure mode: a request that times out with no server-side exception logged anywhere is a strong signal to go look for a middleware that returned early without calling `next()`, not a networking problem.\n\nThe opposite mistake -- calling `next()` more than once, or calling it and then also sending a response directly -- tends to be louder: most frameworks throw \"headers already sent\" or an equivalent error the moment a second response-producing action happens on the same request. Neither failure mode is subtle once you know the specific shape to look for, which is exactly why it's worth naming both explicitly rather than treating \"middleware is hanging\" as a generic mystery to debug from scratch each time.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A request to an endpoint never completes -- no response, no error logged, and it eventually times out. Which bug does this symptom most strongly suggest?",
+          "definition": {
+            "options": [
+              "A middleware returned without calling `next()`, leaving every later layer stuck waiting forever",
+              "The error-handling middleware is registered in the wrong position relative to the other layers",
+              "A middleware called `next()` twice in a row, triggering a loud \"headers already sent\" error",
+              "The handler threw an exception that the error-handling middleware went on to successfully catch"
+            ],
+            "correct_index": 0,
+            "explanation": "A hang with zero logged errors is the specific signature of a missing `next()` call -- the chain is simply stuck waiting on a handoff that was never made, so nothing downstream ever runs and nothing throws. Calling `next()` twice or sending a duplicate response is the opposite failure mode: loud and immediate, not silent. A caught exception would produce a formatted error response, not an indefinite hang."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A middleware chain is an onion, not a flat list: each layer's \"before\" code runs in registration order on the way in, and its \"after\" code runs in reverse order on the way out, which is exactly what lets a single logging middleware see both the request's start and the response's final outcome. Error-handling middleware has to be registered outermost -- first -- or it simply can't see exceptions thrown by anything registered ahead of it. And a request that hangs with no logged error is almost always a missing `next()` call, not a mystery to debug from scratch.\n\nThis same before/after wrapping shape reappears constantly once you start looking for it -- transaction boundaries, resource acquisition and cleanup, even React's effect cleanup functions are all the same onion pattern applied to a different kind of \"chain.\" The next session in this module moves to the layer this one wraps: input validation and response contracts, where the question shifts from *when* code runs to *what shape* the data crossing the boundary is required to have."
+    }
+  ]
+}
