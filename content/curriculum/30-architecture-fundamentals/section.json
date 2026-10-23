@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Software Architecture",
+    "slug": "software-architecture",
+    "description": "System design, quality attributes, evolutionary architecture"
+  },
+  "module": {
+    "title": "Software Architecture"
+  },
+  "section": {
+    "title": "Architecture Fundamentals",
+    "slug": "30-architecture-fundamentals",
+    "description": "Translate constraints into defensible design decisions.",
+    "proficiency_tier": "D"
+  }
+}

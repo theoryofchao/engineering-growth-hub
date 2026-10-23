@@ -1,0 +1,101 @@
+{
+  "title": "Quality Attributes and Constraints: What Architecture Actually Optimizes For",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Distinguish quality attributes (negotiable, competing with each other) from constraints (fixed, non-negotiable), and state attributes specifically enough to actually design against.",
+  "content_blocks": [
+    {
+      "heading": "What a System Does vs. How Well It Has to Do It",
+      "body": "A functional requirement states what a system does -- \"process a payment,\" \"return search results.\" Almost any reasonable design can satisfy that alone. A quality attribute states how well it has to do it under real conditions: how fast, how available during a regional outage, how cheaply it runs at expected scale, how resistant to a specific category of attack. Architecture work is almost entirely about quality attributes, not functional requirements -- the functional part is usually the easy part everyone already agrees on.\n\nThis session covers the two ideas that make quality attributes usable in an actual design decision: they compete with each other rather than all being maximizable at once, and they're a fundamentally different kind of thing from a constraint, which doesn't get traded off at all.\n\nBoth distinctions matter because the alternative -- treating every requirement as equally negotiable and equally important -- makes it impossible to actually choose a design."
+    },
+    {
+      "heading": "Quality Attributes Compete -- There's No Design That Maximizes All of Them",
+      "body": "Pushing hard on one quality attribute typically costs another: maximizing availability through heavy geographic replication costs money and often costs strict consistency; minimizing latency by caching aggressively costs freshness of data; maximizing security through strict validation and extra checks costs raw throughput. There's no design that simultaneously maximizes every attribute at once -- the real work is deciding which ones actually matter most for this specific system, and consciously accepting the cost on the others.\n\nA design review that never names which attributes are the priority ends up litigating implementation details as a proxy for a disagreement that was never actually about the implementation -- two people arguing about caching strategy might really be disagreeing about how much staleness is acceptable, a disagreement neither of them has actually stated out loud.\n\nNaming the real priority doesn't make the tradeoff disappear -- it just moves the disagreement to where it actually belongs.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team designs a system that replicates data across five geographic regions to maximize availability during an outage. What does this choice most likely cost, given that quality attributes compete rather than all being maximizable together?",
+          "definition": {
+            "options": [
+              "Likely strict consistency and real infrastructure cost, since keeping five replicas perfectly in sync isn't free",
+              "Nothing at all -- maximizing availability through replication carries no meaningful cost against any other attribute",
+              "Only development time during the initial build, with no ongoing operational cost of any kind after that point",
+              "This exact tradeoff can't be predicted in advance at all and only ever becomes clear once the system is already live"
+            ],
+            "correct_index": 0,
+            "explanation": "Heavy geographic replication is a real, well-understood tradeoff: keeping five regions perfectly consistent costs either latency (waiting for cross-region confirmation) or consistency itself (accepting replicas can briefly disagree), plus the genuine infrastructure cost of running five regions' worth of capacity. Maximizing one attribute (availability) here visibly costs others (consistency, cost) -- exactly the competing-attributes shape this block describes."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Constraint Isn't Something You Trade Off -- It's a Given",
+      "body": "A constraint is a fixed limit the design has to work within, not a dial to negotiate: a hard budget ceiling, a legal requirement like data residing only in a specific country, an existing system the new design has to integrate with as-is. Unlike a quality attribute, a constraint doesn't compete against anything else for priority -- you don't \"trade off\" a legal requirement, you design within it and treat everything else as negotiable around it.\n\nConfusing the two categories causes a specific, recognizable kind of wasted argument: debating whether to \"prioritize\" a legal data-residency requirement against latency, as if it were just another attribute to weigh, when it was never actually negotiable at all. Naming a given as a constraint up front removes it from that debate entirely, the same way acknowledging the fixed budget early on stops a team from re-litigating it at every design meeting that follows.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A design discussion spends significant time debating whether to \"prioritize\" a legal requirement that customer data must stay within a specific country, weighing it against the system's latency goals. What's the actual mistake here?",
+          "definition": {
+            "options": [
+              "Treating a fixed constraint as if it were a negotiable attribute that could be traded against latency like anything else",
+              "Nothing is wrong here -- every requirement, legal or otherwise, should always be weighed against every other design goal",
+              "Discussing latency at all in the same meeting as a legal requirement, since the two are completely unrelated topics",
+              "Legal requirements should always automatically win this kind of debate without discussion, making the debate itself the error"
+            ],
+            "correct_index": 0,
+            "explanation": "A legal data-residency requirement is a constraint -- a given the design has to work within, not a dial that trades off against latency or anything else. Debating whether to \"prioritize\" it treats a fixed boundary as if it were negotiable, which wastes real discussion time on something that was never actually up for a decision in the first place."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "\"Highly Available\" Isn't Specific Enough to Design Against",
+      "body": "A requirement like \"the system must be highly available\" sounds complete but isn't actually specific enough to make a real design decision from -- available to what percentage, measured over what window, and what's the actual cost when that target is missed? \"99.9% availability, measured monthly, with each hour of downtime costing an estimated $10,000 in lost transactions\" is a statement a design can actually be measured against and chosen to satisfy or not.\n\nThis is the same discipline the Product & Collaboration module already covered for a hypothesis: a statement vague enough to never be clearly wrong can't actually guide a decision, because any outcome can be read as satisfying it after the fact. A quality attribute needs the same specificity a falsifiable hypothesis needs, for exactly the same reason.\n\nThe number itself matters less than the fact that there is one -- it's what lets a later design actually be checked against the stated target.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A requirements document states \"the system must be highly available\" with no further detail. What's the actual problem with using this statement to guide a design decision?",
+          "definition": {
+            "options": [
+              "It's too vague to design against -- without a percentage, a measurement window, and a cost of missing it, nothing can be verified",
+              "There is no problem -- \"highly available\" is already specific enough for any engineering team to design a system against directly",
+              "The problem is that availability itself is an unimportant quality attribute that shouldn't be stated in a requirements document at all",
+              "This statement is only a problem for distributed systems specifically; a single-server system never needs more detail than this"
+            ],
+            "correct_index": 0,
+            "explanation": "\"Highly available\" with no number, measurement window, or stated cost of missing it can't actually be designed against or later checked -- any outcome could be retroactively called \"highly available\" or not, depending on who's arguing. A specific target (a percentage, a window, a cost) is what turns a vague aspiration into something an actual design choice can be measured against, the same specificity a falsifiable hypothesis needs."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Stating Priorities Explicitly Resolves the Argument You're Actually Having",
+      "body": "Two engineers disagreeing about whether to add a caching layer are often really disagreeing about something underneath the specific proposal -- how much staleness is acceptable, or how much latency actually matters for this feature -- without either one having said so directly. The caching debate can go in circles indefinitely, because it's a proxy for a disagreement about priorities that was never actually named.\n\nStating the quality attribute priorities explicitly first -- \"for this feature, latency matters more than perfect freshness, up to a 30-second staleness window\" -- turns an open-ended argument about implementation into a much narrower, more answerable one: does this specific caching approach satisfy that already-agreed staleness bound, yes or no. Most implementation arguments that feel intractable are actually unstated priority disagreements wearing an implementation costume.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Two engineers have been debating a caching strategy for an hour with no resolution. What does this module's framing suggest is the most likely underlying cause?",
+          "definition": {
+            "options": [
+              "An unstated disagreement about priorities (how much staleness is acceptable) that the caching debate is standing in for",
+              "One of the two simply lacks the technical knowledge to understand caching strategies at a sufficient depth to resolve this",
+              "Caching debates are inherently unresolvable in principle, no matter how clearly the underlying goals get stated out loud",
+              "The disagreement has nothing to do with priorities and is purely a difference in personal coding-style preference here"
+            ],
+            "correct_index": 0,
+            "explanation": "An implementation debate that drags on without resolution is often a stand-in for an unstated disagreement about which quality attribute actually matters more -- here, likely how much data staleness is tolerable. Naming that priority explicitly turns the open-ended implementation argument into a narrow, checkable question: does this specific approach satisfy the agreed staleness bound, which is usually a much easier question to actually answer."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Quality attributes compete with each other -- no design maximizes all of them, and architecture work is choosing which ones matter most for this system and accepting the cost on the rest. Constraints are a different category entirely: fixed givens to design within, not attributes to weigh against anything. An attribute vague enough to never be clearly satisfied or missed can't actually guide a design decision, the same specificity problem a falsifiable hypothesis has to solve. And an implementation argument that won't resolve is often an unstated priority disagreement in disguise -- naming the priority directly is usually what actually unblocks it.\n\nEvery one of these ideas is really the same habit applied at a different scale: be explicit about what's actually being optimized for, and what's simply fixed, before arguing about how to achieve it.\n\nThe next sessions in this module build on this foundation directly: coupling, cohesion, and boundaries as the structural tools for satisfying chosen attributes, and ADRs as the mechanism for recording which tradeoffs were actually made and why."
+    }
+  ]
+}
