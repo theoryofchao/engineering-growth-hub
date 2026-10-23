@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Product & Collaboration",
+    "slug": "product-collaboration",
+    "description": "Product thinking, execution, communication"
+  },
+  "module": {
+    "title": "Product & Collaboration"
+  },
+  "section": {
+    "title": "Requirements & Product Thinking",
+    "slug": "71-requirements-product-thinking",
+    "description": "Translate ambiguous customer problems into actionable outcomes.",
+    "proficiency_tier": "G"
+  }
+}

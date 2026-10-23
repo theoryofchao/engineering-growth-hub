@@ -1,0 +1,104 @@
+{
+  "title": "Debugging a Process You Can't Read the Source Of: strace and the Syscall Boundary",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Use strace to observe what a running process is actually doing at the syscall boundary, independent of its source language, and recognize what that view can and can't reveal.",
+  "content_blocks": [
+    {
+      "heading": "Every Process Talks to the Kernel Through the Same Narrow Door",
+      "body": "A misbehaving service doesn't always come with readable source handy, time to dig through it, or even a known language -- but every process on Linux, regardless of what it's written in, interacts with the outside world through the same mechanism: system calls, the narrow interface a program crosses every time it opens a file, reads a socket, or spawns another process. Julia Evans's strace zine builds an entire debugging approach around exactly this: treat any program as a black box and watch its syscalls, the same way you'd sniff network traffic to debug a protocol you didn't write and have no source for.\n\nThis session covers that approach specifically: what `strace` actually shows, a worked example of using it to skip straight past a vague error message to the real cause, and -- just as importantly -- what it structurally can't tell you.\n\nThe mindset underneath all of it: a program's behavior is observable from the outside, through this one shared interface, even when nothing else about it is.",
+      "reference_links": [
+        { "label": "Julia Evans -- strace zine", "url": "https://jvns.ca/blog/2015/04/14/strace-zine/" }
+      ]
+    },
+    {
+      "heading": "A Syscall Is the One Boundary Every Program Has to Cross",
+      "body": "Opening a file, reading or writing data, making a network connection, forking a child process -- every one of these requires asking the kernel to do it, through a system call, because a regular program has no direct access to hardware or other processes on its own. `strace` attaches to a running process and prints every syscall it makes, with its arguments and return value, as it happens -- a complete, language-agnostic log of everything that process actually asked the kernel to do.\n\nThat language-agnosticism is the whole point: `strace` doesn't care whether the traced process is written in Python, Go, C, or something with no available source at all -- it's reading the one interface every one of them has to use identically, which is exactly what makes it useful on a process you can't otherwise inspect.\n\nNo instrumentation, logging statement, or debug build has to be added to the target process for any of this to work -- the trace happens entirely from the outside.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team needs to debug a process, but doesn't have its source code and doesn't know what language it's written in. Why does `strace` still work here, when a source-level debugger couldn't?",
+          "definition": {
+            "options": [
+              "strace observes syscalls, the one interface every process uses identically regardless of its source language or availability",
+              "strace actually decompiles the running process's machine code back into readable source, in whatever language it was written",
+              "strace only works on processes written in C, so this scenario would actually require installing a source-level debugger instead",
+              "strace requires the process's original source code to be present on disk somewhere, even if nobody currently has a copy of it"
+            ],
+            "correct_index": 0,
+            "explanation": "strace doesn't need source code or even to know the implementation language -- it watches the syscall boundary, which every process has to cross for things like file access, network I/O, or spawning other processes, no matter what produced the binary. That's exactly why it works as a debugging tool when there's no source available at all."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Worked Example: \"My Backup Script Keeps Failing\"",
+      "body": "A backup script failing with a generic \"permission denied\" error leaves open exactly which file it was trying to access when it failed -- reading the whole script line by line to guess is slow, and the real answer might be a path that's only wrong in one specific environment. Running the script under `strace` and watching for the `open()` call that returns an error shows the exact path and exact error, immediately, without reading a line of the script's own logic.\n\nThis is the direct payoff of watching the syscall boundary instead of the program's own internal logic: the failure is visible exactly where it happens, as a specific syscall with a specific return value, rather than inferred from whatever the program's own error message happened to report (or failed to report with enough detail).\n\nThe same technique generalizes well beyond backups -- any \"it just fails, I don't know why\" report is a candidate for exactly this approach.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A backup script fails with a generic \"permission denied\" message, with no indication of which file caused it. Running it under `strace` shows an `open(\"/mnt/backup/db.sql\", ...)` call returning `EACCES`. What did strace actually provide here?",
+          "definition": {
+            "options": [
+              "The exact file path and syscall where the failure occurred, found without reading or guessing from the script's own source",
+              "A fix for the permission issue itself -- strace automatically repairs the problem it detects once it identifies the failing call",
+              "Proof that the script's own logic contains a bug, which is the only possible explanation for any syscall returning an error",
+              "Nothing beyond what the original error message already said; strace's output here is redundant with the script's own message"
+            ],
+            "correct_index": 0,
+            "explanation": "The script's own \"permission denied\" message gave no file path; strace's syscall-level log showed exactly which `open()` call failed and on which path, immediately. strace only observes and reports -- it doesn't fix anything -- but that observation alone replaced what would otherwise be a guess-and-check read through the script's own logic."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "What strace Can't See: The Gaps Between Syscalls",
+      "body": "strace shows every syscall a process makes, but says nothing about what happens *between* two syscalls -- a long stretch of pure in-memory computation, with no file access or network activity at all, shows up in strace's output as simply nothing happening for a while. A program that's slow because of an inefficient in-memory loop, not because it's waiting on I/O, will look syscall-quiet in exactly the stretch where the real cost is.\n\nThat gap is itself a useful signal, not a dead end: a long pause with no syscalls narrows the search toward CPU-bound, in-process work -- exactly where a CPU profiler and flame graph (from the earlier Performance Engineering sessions) pick up where strace's syscall-level view runs out, the same \"narrow down which category, then look inside it\" shape as the USE method.\n\nMisreading a quiet trace as \"nothing is happening\" instead of \"the cost is in-process\" is the specific mistake worth avoiding here.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "strace shows a process making no syscalls at all for several seconds, right where it's known to be slow. What does this absence of syscalls most likely indicate?",
+          "definition": {
+            "options": [
+              "The slowness is probably CPU-bound, in-process work -- exactly the gap a CPU profiler would need to look inside next",
+              "strace itself must be broken or misconfigured, since a genuinely slow process should always be making syscalls somewhere",
+              "The process silently crashed during that gap, even though it later resumes and keeps running completely normally afterward",
+              "This proves the slowness has nothing at all to do with performance, and must instead be a logic or correctness bug"
+            ],
+            "correct_index": 0,
+            "explanation": "strace only has visibility into syscalls -- a gap with none happening means the process is doing something entirely in-process, like a computational loop, that never crosses the kernel boundary at all. That's not a strace failure; it's exactly the signal that points toward a CPU profiler as the next tool, the same way USE points from one resource to the specific tool suited to looking inside it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "strace Has a Real Cost -- It's a Diagnostic Tool, Not a Default",
+      "body": "Tracing a process means the kernel pauses it at every single syscall to hand control to the tracer and back -- real overhead that scales with how syscall-heavy the traced program actually is. A process making thousands of small reads per second can slow down noticeably while being traced, which matters directly for whether it's safe to attach `strace` to something live in production versus a copy running in a safer, isolated environment first.\n\nThe practical rule: reach for `strace` as a targeted diagnostic for a specific question, on a process you've decided is safe to momentarily slow down -- not as something left attached by default, the same way a profiler or verbose logging isn't something you'd leave permanently enabled at full detail in a healthy system.\n\nFiltering to specific syscall types, or tracing only briefly, are the usual ways to keep that overhead proportional to the question actually being asked.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team wants to attach `strace` to a live, latency-sensitive production process making thousands of syscalls per second, just to \"see what's going on\" with no specific question in mind. What's the concern with this plan?",
+          "definition": {
+            "options": [
+              "The per-syscall tracing overhead could noticeably slow this specific, syscall-heavy process while it's attached and running",
+              "There is no concern at all -- strace has zero measurable performance impact on any process, regardless of syscall volume",
+              "strace cannot attach to any process that is already running; it can only trace a process from the very moment it starts",
+              "This plan is fine specifically because the process is latency-sensitive -- strace's overhead only affects CPU-bound workloads"
+            ],
+            "correct_index": 0,
+            "explanation": "Every syscall a traced process makes means pausing it and handing control to strace and back -- real overhead that compounds with how often the process actually makes syscalls. For a high-syscall-volume, latency-sensitive production process, attaching strace with no specific question to answer risks a real, user-visible slowdown for a fishing expedition rather than a targeted investigation."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Every process crosses the same syscall boundary to interact with the outside world, which is exactly what lets `strace` observe any process -- regardless of source availability or language -- by watching that one interface. A syscall-level trace can replace guessing at a vague error message with the exact failing call and its exact arguments, but it's blind to anything happening purely in-process between syscalls, which is itself a useful signal pointing toward a different tool (a CPU profiler) rather than a dead end. Tracing isn't free, either -- real per-syscall overhead makes it a targeted diagnostic, not something to leave running by default.\n\nThe common thread with this module's later sessions: a host-level problem is usually diagnosable by observing the right boundary directly, rather than guessing from symptoms alone.\n\nThe next sessions in this module move from this single-process view to the broader host: permissions and ownership, storage and mounts, and the networking and firewall layer a process's syscalls ultimately reach out through."
+    }
+  ]
+}

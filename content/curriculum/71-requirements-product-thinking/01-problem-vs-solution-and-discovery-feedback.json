@@ -1,0 +1,104 @@
+{
+  "title": "Falling in Love With the Problem, Not the Solution",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Separate a stated problem from an assumed solution before committing engineering effort, and actively seek disconfirming feedback during discovery rather than validation that only confirms what's already believed.",
+  "content_blocks": [
+    {
+      "heading": "\"Build a New Checkout Flow\" Is Already a Solution",
+      "body": "A request phrased as \"build a new checkout flow\" has already made a decision -- that a new checkout flow is the right fix -- before anyone has confirmed what's actually wrong or whether this specific fix addresses it. \"Our checkout abandonment rate is too high\" is the actual problem underneath that request, and stating it that way instead leaves room to discover the real cause might be something else entirely: a confusing error message, an unexpected shipping cost revealed too late, a form field nobody actually needs.\n\nMarty Cagan's product-discovery writing names this directly: fall in love with the problem, not a particular solution, and stay willing to discard a specific fix while keeping the underlying problem you're actually trying to solve.\n\nThis session works through what that discipline actually looks like in practice -- a habit to apply on every incoming request, not just a slogan to repeat once in a planning meeting."
+    },
+    {
+      "heading": "A Solution-Shaped Request Hides Its Own Assumptions",
+      "body": "Framing a request as a specific solution quietly assumes two things at once, neither one stated out loud: that this fix actually addresses the real cause, and that it's the best available option among everything that might address it. Framing the same request as a problem instead -- \"checkout abandonment is too high\" -- keeps both of those open as genuine questions, which is exactly what lets a team explore several candidate solutions and test them cheaply before committing real engineering time to building any single one.\n\nThis isn't a semantic preference -- a team hearing \"build a new checkout flow\" has no natural way to discover that the real fix was removing a surprise shipping fee, because the request itself already decided the answer before anyone looked for it.\n\nThe fix is simple to state even if it takes discipline to apply consistently: whenever a request arrives already shaped like a solution, ask what problem it's actually meant to solve before agreeing to build it.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A stakeholder asks a team to \"add a progress bar to the signup form.\" What does this specific framing leave unexamined?",
+          "definition": {
+            "options": [
+              "Whether a progress bar actually addresses whatever is really causing people to abandon the signup form in the first place",
+              "Nothing at all -- a specific, concrete request like this is always preferable to a vaguer, more open-ended problem statement",
+              "The engineering cost of building the progress bar, which this framing already fully specifies on its own without question",
+              "Whether the team has the technical skill to implement a progress bar, which is the only real question this framing raises"
+            ],
+            "correct_index": 0,
+            "explanation": "\"Add a progress bar\" already assumes a progress bar is the right fix, without ever stating or testing what's actually causing signup abandonment. The underlying problem might be a confusing field, a slow server response, or a trust concern a progress bar does nothing for -- framing it as a problem (\"signup abandonment is too high\") would have kept that question open instead of deciding it in advance."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Discovery Tests Assumptions Cheaply, Before Building Anything",
+      "body": "Discovery's actual purpose is testing whether an assumed solution would actually work, cheaply and quickly, before spending real engineering time building it -- not a formality to get through on the way to the idea a team already planned to build. Skipping straight to building the first plausible idea risks the same cost this curriculum has already named in a different context: committing real effort to something unconfirmed, the same shape as adding an abstraction or an index before a real need for it was ever confirmed.\n\nA cheap discovery test -- a prototype, a landing page measuring real signup intent, a handful of structured user conversations -- can invalidate a plausible-sounding idea in days, at a fraction of the cost of discovering the same thing only after weeks of engineering work have already gone into building it.\n\nThe point isn't to avoid ever being wrong -- it's to be wrong somewhere cheap, before being wrong somewhere expensive, in a way that's still easy to walk back from.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team skips discovery entirely and spends six weeks building a feature based on the first plausible idea, only to find after launch that customers don't actually want it. What did skipping discovery cost here?",
+          "definition": {
+            "options": [
+              "Six weeks of real engineering effort spent on an unvalidated assumption that a cheap, early test could have checked first",
+              "Nothing avoidable -- this outcome would have been exactly as likely and exactly as costly even with thorough discovery first",
+              "This outcome proves discovery itself doesn't actually work, since even careful validation can't predict customer behavior",
+              "The six weeks were well spent regardless, since any shipped feature generates useful learning about the product either way"
+            ],
+            "correct_index": 0,
+            "explanation": "Discovery exists specifically to catch this kind of mismatch before the expensive build phase, using a cheap test -- a prototype, a landing page, structured conversations -- that can invalidate a bad assumption in days rather than six weeks. Skipping it doesn't make the underlying uncertainty disappear; it just delays finding out until after the far more expensive commitment has already been made."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Seeking Out the Feedback Most Likely to Disprove You",
+      "body": "Cagan's \"Discovery -- Feedback\" essay names a specific, common failure inside discovery itself: testing an idea only with people likely to respond positively -- enthusiastic early adopters, friendly colleagues -- while avoiding the harder conversations that might actually disconfirm it. A result that only ever confirms what the team already believed hasn't taught anything new; it's validated a bias, not tested an assumption.\n\nThe corrective habit is actively seeking out the feedback most likely to prove the idea wrong -- skeptical users, people who already churned, the harshest plausible critic available -- precisely because a solution that survives that scrutiny is far more likely to actually work than one that only ever faced a friendly audience.\n\nSeeking out exactly the feedback most likely to hurt is uncomfortable by design -- that discomfort is the signal the test is actually worth running.",
+      "reference_links": [
+        { "label": "Marty Cagan -- Discovery: Feedback", "url": "https://www.svpg.com/discovery-feedback/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team testing a new onboarding flow shows it only to enthusiastic beta users who already love the product, and gets uniformly positive feedback. What's the actual problem with this result?",
+          "definition": {
+            "options": [
+              "The sample was pre-selected to be favorable, so this result doesn't test whether skeptical or struggling users would agree",
+              "No problem at all -- positive feedback from real users is always sufficient evidence that an onboarding flow actually works",
+              "The sample size is too small; this same favorable group becomes reliable evidence simply by testing more people from it",
+              "Beta users are inherently less qualified to judge an onboarding flow than any other kind of user the team could pick"
+            ],
+            "correct_index": 0,
+            "explanation": "Enthusiastic beta users are exactly the audience least likely to surface a real problem -- their existing goodwill means positive feedback here confirms what the team already hoped, rather than testing it against anyone who might actually disagree. Seeking out skeptical or struggling users instead gives the idea a real chance to fail, which is what makes a positive result from that harder audience actually meaningful."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "State the Assumption as a Falsifiable Hypothesis",
+      "body": "\"I think a progress bar will help\" can't actually be tested -- there's no stated threshold for \"help,\" and no way to look back afterward and say definitively whether it worked. \"If we add a progress bar, signup completion increases by at least 5% over two weeks\" can: it names the expected effect, the size that would count as success, and the window to measure it in, which means the test can actually fail and be seen to fail, not just be declared a win regardless of what the numbers show.\n\nThis is what turns discovery from a vague gut-check into something with a real answer: a hypothesis specific enough to be wrong is the only kind that can genuinely teach a team anything, whichever way the result lands.\n\nWriting the hypothesis down this explicitly also makes it easy to revisit later and honestly check whether it actually held up, rather than retroactively deciding after the fact that it must have.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team states its assumption as \"I think a progress bar will help with signups,\" with no specific expected effect or measurement window. What's the problem with testing this specific statement?",
+          "definition": {
+            "options": [
+              "It isn't falsifiable as written -- with no threshold or timeframe, any result can be read as confirming it after the fact",
+              "There's no problem at all -- a general statement like this is just as testable as one naming a specific effect and window",
+              "The statement is too specific already; a good hypothesis should always avoid naming any concrete numbers or timeframes",
+              "This issue only matters for statistically rigorous A/B tests, not for a team's own internal discovery process generally"
+            ],
+            "correct_index": 0,
+            "explanation": "Without a stated threshold (how much improvement counts as \"helped\") or a measurement window, almost any outcome can be retroactively read as supporting the original statement -- it can't actually fail. \"Signup completion increases by at least 5% over two weeks\" can genuinely fail to happen, which is exactly what makes it a real test instead of a foregone conclusion dressed up as one."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A request framed as a solution quietly decides the answer before the real problem has even been named, foreclosing exploration of a fix that might work better. Discovery's actual job is testing an assumed solution cheaply before committing real engineering time to it -- the same \"confirm before you build\" instinct this curriculum has already applied to abstractions and indexes, now applied to product decisions. Stating the assumption as a falsifiable hypothesis, and feedback that genuinely risks disconfirming it rather than one that only ever validates it, are what turn that confirmation into something real.\n\nThe next sessions in this module build on naming the problem correctly: mapping the user's actual journey and the job they're trying to get done, and turning a validated problem into concrete user stories and acceptance criteria a team can actually build against with confidence."
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Infrastructure & Cloud",
+    "slug": "infrastructure-cloud",
+    "description": "Linux, containers, orchestration, cloud, IaC"
+  },
+  "module": {
+    "title": "Infrastructure & Cloud"
+  },
+  "section": {
+    "title": "Linux & Infrastructure",
+    "slug": "44-linux-infrastructure",
+    "description": "Operate Linux services and diagnose host level failures.",
+    "proficiency_tier": "W"
+  }
+}
