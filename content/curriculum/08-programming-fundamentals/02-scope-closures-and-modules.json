@@ -1,0 +1,108 @@
+{
+  "title": "Scope, Closures, and Modules",
+  "duration_minutes": 25,
+  "sequence": 2,
+  "access_tier": "free",
+  "objective": "Reason precisely about lexical scope and what a closure actually captures -- the variable binding, not a snapshot of its value -- and the private-state patterns closures make possible.",
+  "content_blocks": [
+    {
+      "heading": "What a Closure Actually Remembers",
+      "body": "Scope determines what a piece of code can see: which variables a given line can reference without a `ReferenceError`. A closure is what happens when a function keeps access to variables from the scope it was *defined* in, even after that outer scope has already finished running and would otherwise have nothing left pointing to those variables. That sounds like the function is reaching back in time, which is why it feels like magic the first time you see it work.\n\nIt isn't magic -- it's a direct consequence of how scope actually works, and precisely what gets kept alive is the key detail this session spends most of its time on: a closure holds onto the *variable itself*, not a copy of whatever value happened to be in it at the moment the function was created. That distinction is where almost every real closure bug and every real closure-based pattern both come from.\n\nBy the end of this session, both the famous loop-variable bug and the deliberate private-state pattern used to avoid it will look like two sides of that exact same mechanism, not two unrelated topics."
+    },
+    {
+      "heading": "Lexical Scope: Determined by Where Code Is Written",
+      "body": "A function's scope is fixed by where it's *written* in the source, not by where or how it later gets *called*. A function defined inside another function can see that outer function's variables no matter who eventually calls it or from where -- but the reverse never holds: an outer function can never see variables declared inside a nested one, because that inner scope simply doesn't exist from the outer function's point of view.\n\nThis is why passing a function elsewhere -- as a callback, an event handler, an array method's argument -- doesn't disconnect it from the variables visible at its definition site. Wherever it eventually runs, it still sees exactly the same enclosing variables it could see the moment it was written, because that's what lexical scope means: the scope chain is locked in by the code's own nesting, permanently, regardless of the call site.\n\n\"Lexical\" is the key word -- it comes from the same root as \"lexicon,\" the fixed vocabulary of the text itself, as opposed to anything determined dynamically at runtime.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A function `inner` is defined inside `outer`, and `outer` passes `inner` to a different module, which calls it much later from a completely different part of the codebase. Can `inner` still see `outer`'s local variables at that point?",
+          "definition": {
+            "options": [
+              "Yes -- lexical scope is fixed by where `inner` was written, not by where or when it's eventually called from",
+              "No -- once `outer` returns, every variable inside it is immediately and permanently inaccessible to anything",
+              "Only if the different module happens to also define a variable with exactly the same name as the one being accessed",
+              "It depends entirely on whether `inner` was called synchronously versus asynchronously relative to `outer`'s return"
+            ],
+            "correct_index": 0,
+            "explanation": "Lexical scope is locked in at the point a function is *defined*, by its nesting in the source code -- not by where it's later invoked from. `inner` was written inside `outer`, so it keeps access to `outer`'s variables through a closure no matter which module ends up holding onto and eventually calling it, and no matter how much later that happens."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Classic Bug: Capturing the Binding, Not a Snapshot",
+      "body": "A loop like `for (var i = 0; i < 3; i++) { setTimeout(() => console.log(i), 0); }` famously logs `3` three times, not `0`, `1`, `2` as most people expect. The reason is exactly the distinction from the opening block: `var` creates *one* binding for `i` shared across every iteration, so all three closures capture that same single binding -- by the time any of the timeouts actually fire, the loop has already finished and `i` has already reached `3`. The closures never captured a snapshot of `i`'s value at each iteration; they captured the one variable itself, as it exists right now.\n\n`let` fixes this by creating a brand-new binding for `i` on *every* iteration, so each closure captures its own distinct variable rather than sharing one -- which is also exactly why `let` became the loop-variable default once it existed, not merely a style preference. John Lindquist's \"Composing Closures and Callbacks in JavaScript\" works through this same capture-the-binding mental model in depth, building up from exactly this kind of example toward more deliberate closure-based composition.",
+      "reference_links": [
+        { "label": "John Lindquist -- Composing Closures and Callbacks in JavaScript (egghead.io)", "url": "https://egghead.io/courses/composing-closures-and-callbacks-in-javascript-1223" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "`for (var i = 0; i < 3; i++) { callbacks.push(() => i); }` -- what does calling every function in `callbacks` return, and why?",
+          "definition": {
+            "options": [
+              "`3, 3, 3` -- all three closures share the single `var` binding, which has reached 3 by the time any of them run",
+              "`0, 1, 2` -- each closure captures a snapshot of `i`'s value at the exact moment it was created inside the loop",
+              "`0, 0, 0` -- closures always capture the value a variable held the very first time the enclosing scope ran",
+              "`undefined, undefined, undefined`, since `var` bindings are never actually accessible from inside a closure"
+            ],
+            "correct_index": 0,
+            "explanation": "`var` creates exactly one binding for `i` for the entire loop, not a fresh one per iteration -- so all three closures are referencing that same single variable, which has already reached 3 by the time the loop finishes and any of the three functions actually get called. Switching the loop to `let i` instead creates a new binding each iteration, which is the actual fix, not a stylistic nicety."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Closures as Private State",
+      "body": "The same capture-the-binding behavior that causes the loop bug is also what makes closures useful on purpose: a function can hold a variable that nothing *outside* it can reach directly, only through whatever functions it deliberately exposes. A \"counter factory\" is the classic minimal example -- a function that declares a local `count` variable and returns an object of functions (`increment`, `get`) that each close over that same `count`. Nothing outside those two functions can read or write `count` directly; the only way in or out is through the interface the factory chose to expose.\n\nThis is private state without a class, built entirely from scope rules rather than any access-modifier keyword -- and it predates JavaScript having classes with real private fields at all. Below, build the same idea in miniature: a sequence of operations driving one shared counter, where each `\"get\"` records the counter's current value.",
+      "exercises": [
+        {
+          "type": "code",
+          "sequence": 1,
+          "prompt": "Write `runCounterOperations(ops)`. Maintain one counter starting at 0. For each string in `ops`, in order: `\"increment\"` adds 1, `\"decrement\"` subtracts 1, and `\"get\"` records the counter's current value. Return the array of recorded values, in the order they were recorded.",
+          "definition": {
+            "language": "javascript",
+            "function_name": "runCounterOperations",
+            "starter_code": "function runCounterOperations(ops) {\n  // your code here\n}",
+            "timeout_ms": 2000,
+            "visible_test_cases": [
+              { "input": [["increment", "increment", "get", "decrement", "get"]], "expected_output": [2, 1] },
+              { "input": [["get"]], "expected_output": [0] }
+            ],
+            "hidden_test_cases": [
+              { "input": [[]], "expected_output": [] },
+              { "input": [["increment", "decrement", "increment", "get"]], "expected_output": [1] }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "heading": "ES Modules Didn't Replace Closures -- They Solved a Different Problem",
+      "body": "Before `import`/`export` existed, the only way to hide implementation details between *files* was the same closure trick scaled up: wrap a whole file's contents in an immediately-invoked function, and return an object exposing only the pieces meant to be public -- the \"revealing module pattern.\" ES modules solved the file-level version of this problem natively: anything not explicitly `export`ed is simply invisible outside the file, no manual wrapping function required.\n\nWhat ES modules didn't replace is closures' other job -- private state *within* a single scope, like the counter factory's `count` variable. A module can export a factory function, but something still has to hold that function's private state once it's called, and that something is still a closure, the same mechanism as before ES modules existed. The two solve different-shaped problems: module scope for file-level encapsulation, closures for runtime, per-instance private state.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An ES module exports a `createCounter()` factory function. Each call to `createCounter()` returns its own independent counter with private state. What is actually providing that per-call privacy?",
+          "definition": {
+            "options": [
+              "A closure -- each call to `createCounter()` creates its own fresh local variable, captured by the functions it returns",
+              "The ES module system itself, since exported functions automatically receive private state scoped to each call",
+              "Nothing provides real privacy here -- any code importing `createCounter` can still read its internal variables directly",
+              "The `export` keyword specifically, which is what gives a function access to closure-based private state in JavaScript"
+            ],
+            "correct_index": 0,
+            "explanation": "The module system controls what's visible *between files* -- it has nothing to do with per-call private state *within* one function. Each call to `createCounter()` runs the function body again, creating a brand-new local variable each time, and the returned functions close over that specific call's variable -- the same closure mechanism that predates ES modules, just invoked through an exported factory rather than a hand-written revealing-module wrapper."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A closure keeps the variable itself alive, not a snapshot of its value -- which explains both the classic `var`-in-a-loop bug and the deliberate private-state pattern that makes a counter factory work, as two faces of the exact same mechanism. Lexical scope is fixed by where code is written, never by where it's later called from, so a function carries its enclosing scope with it wherever it ends up running.\n\nES modules handle file-level encapsulation natively today, but they didn't make closures obsolete -- per-instance private state still runs through the same scope rules it always has, whether that state lives behind a hand-written revealing-module wrapper or an exported factory function.\n\nThe next session in this module moves to a different kind of correctness question entirely: how to model errors and exceptions so a function's failure modes are as deliberately designed as its success path."
+    }
+  ]
+}
