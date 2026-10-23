@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ContentExample, ExampleAccordion } from "@/components/example-accordion";
 import { ExerciseSwitch } from "@/components/exercise-switch";
+import { InlineMarkdown } from "@/components/inline-markdown";
 import { Note, NotesPanel } from "@/components/notes-panel";
 import { ReferenceLink, ReferenceLinks } from "@/components/reference-links";
 import { useBlockCompletions } from "@/hooks/use-block-completions";
@@ -332,7 +333,7 @@ export function ContentBlocks({
                     </span>
                   </button>
                   <p className="mt-1 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
-                    {block.body}
+                    <InlineMarkdown text={block.body} />
                   </p>
                   <ExampleAccordion examples={block.examples ?? []} />
                   <ReferenceLinks links={block.reference_links ?? []} />
@@ -371,7 +372,7 @@ export function ContentBlocks({
               {blocks[slideIndex].heading}
             </h3>
             <p className="mt-2 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
-              {blocks[slideIndex].body}
+              <InlineMarkdown text={blocks[slideIndex].body} />
             </p>
             <ExampleAccordion examples={blocks[slideIndex].examples ?? []} />
             <ReferenceLinks links={blocks[slideIndex].reference_links ?? []} />
