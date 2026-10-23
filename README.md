@@ -110,6 +110,15 @@ flask db upgrade
   docker compose exec web npm install
   ```
 
+- **`docker compose exec api flask seed` (or any command needing `CONTENT_DIR`) fails with `IndexError`.** `compose.yaml`'s `api` service only bind-mounts `./apps/api` to `/app` — `content/curriculum/` at the repo root isn't visible inside the container at all, so `app/seed.py`'s path arithmetic runs out of parent directories. Run seeding from the host venv instead, same environment `pytest` already uses:
+
+  ```bash
+  cd apps/api && source .venv/bin/activate
+  APP_ENV=development FLASK_APP=wsgi.py CORS_ORIGINS=http://localhost:3000 \
+    DATABASE_URL=postgresql+psycopg://egh:egh@localhost:5432/engineering_growth_hub \
+    flask seed
+  ```
+
 ## What's intentionally not here yet
 
 - No curriculum content (domains/topics/lessons) is seeded — that's Milestone 1.

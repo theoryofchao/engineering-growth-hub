@@ -1,0 +1,107 @@
+{
+  "title": "Linked Lists, Stacks, Queues, and Deques",
+  "duration_minutes": 25,
+  "sequence": 2,
+  "access_tier": "free",
+  "objective": "Reason about pointer-based structures as the complement to arrays, and recognize stack/queue/deque as usage disciplines that can sit on top of either representation.",
+  "content_blocks": [
+    {
+      "heading": "Why Pointer-Based Structures Come Next",
+      "body": "The last session measured arrays by what contiguous memory buys you: O(1) random access, paid for with O(n) insertion or deletion away from the tail. A linked list makes the opposite trade. Each element (a \"node\") stores its value plus a pointer to the next node, so nodes don't need to sit next to each other in memory at all — inserting or removing a node is O(1) once you're already holding it, because you're just rewiring a couple of pointers, not shifting anything.\n\nThe catch is getting to that node in the first place: there's no `base_address + i * element_size` arithmetic anymore, so reaching the i-th node means walking i pointers from the head, one at a time — O(n), the same cost an array pays for middle insertion, just moved to a different operation.\n\nStacks, queues, and deques aren't new storage mechanisms — they're *access disciplines* layered on top of an array or a linked list, each one restricting you to specific ends so a particular pattern of use stays cheap. This session covers the discipline; which representation backs it is a choice you'll see has real consequences."
+    },
+    {
+      "heading": "Singly Linked Lists: Paying for Insertion With a Pointer Walk",
+      "body": "A singly linked list node is just `{ value, next }`, where `next` points to the following node (or `null` at the end). Inserting a new node right after the head is three pointer assignments and O(1) — no shifting, no matter how long the list is. That's the structural win over an array, where inserting near the front means sliding every later element one slot over.\n\nThe cost shows up the moment you need to insert or delete somewhere that *isn't* the head: to remove the 50th node, you first have to walk 49 `next` pointers just to get there, which is O(n) — you've paid the array's \"shift everything over\" cost in a different currency, one pointer hop at a time instead of one array write at a time. A singly linked list also can't be walked backward; getting from a node to its predecessor means restarting from the head, which is exactly the gap a doubly linked list (two pointers per node: `prev` and `next`) exists to close.\n\nThe practical rule: pick a linked list when your access pattern is dominated by insert/delete at a position you're already visiting sequentially (the head, or wherever a cursor already sits) — not when you need to jump to an arbitrary index.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "You repeatedly need to insert a new element at the very front of a collection, and never need to access an element by its numeric index. Which structure gives you O(1) for that insertion, and why does an array fall short of it?",
+          "definition": {
+            "options": [
+              "A singly linked list -- head insertion just rewires two pointers, no shifting",
+              "An array, because every JavaScript engine specially optimizes `arr.unshift(x)` down to O(1)",
+              "A singly linked list, because its nodes happen to be stored contiguously, the same as an array's",
+              "Neither structure can support O(1) insertion at the front under any circumstances at all"
+            ],
+            "correct_index": 0,
+            "explanation": "Head insertion on a singly linked list touches only the new node's `next` pointer and the list's head pointer — O(1) regardless of list length. An array's elements are contiguous, so inserting at index 0 forces every other element to shift right by one slot, which is O(n); `unshift` does exactly that shifting internally, it isn't a shortcut around it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Stacks: Last-In-First-Out, and the Bracket-Matching Trick",
+      "body": "A stack restricts you to one end: push adds to the top, pop removes from the top, and that's the entire interface. You can build one on an array (push/pop at the tail — the same O(1) amortized operation from the last session) or on a linked list (push/pop at the head) — both give O(1) push and pop, so the choice usually comes down to whether you also need indexed access to things below the top, which only the array version offers.\n\nThe canonical stack problem is validating balanced brackets: push every opening bracket you see, and the moment you hit a closing bracket, it must match whatever is currently on top of the stack — if it doesn't match (or the stack is empty when you expected something), the string is invalid. This works because the *most recently opened* bracket is always the *next one that must close* — exactly the last-in-first-out order a stack enforces for free.\n\nWrite `isValidParentheses(s)` below using an array as the stack: push on an opening bracket, and on a closing bracket, pop and check it matches (returning `false` immediately on any mismatch or on an empty stack).",
+      "exercises": [
+        {
+          "type": "code",
+          "sequence": 1,
+          "prompt": "Write `isValidParentheses(s)` that returns true if every `(`, `[`, and `{` in `s` is closed by the matching bracket type in the correct order, and false otherwise. Assume `s` contains only bracket characters.",
+          "definition": {
+            "language": "javascript",
+            "function_name": "isValidParentheses",
+            "starter_code": "function isValidParentheses(s) {\n  // your code here\n}",
+            "timeout_ms": 2000,
+            "visible_test_cases": [
+              { "input": ["()[]{}"], "expected_output": true },
+              { "input": ["(]"], "expected_output": false }
+            ],
+            "hidden_test_cases": [
+              { "input": [""], "expected_output": true },
+              { "input": ["("], "expected_output": false },
+              { "input": ["([{}])"], "expected_output": true },
+              { "input": ["([)]"], "expected_output": false }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Queues: First-In-First-Out, and Why a Plain Array Struggles",
+      "body": "A queue restricts you the other way: enqueue adds to one end, dequeue removes from the other, so the *first* thing added is the *first* thing removed — the order a line at a checkout counter actually works. A stack built on an array was fine because both of its operations happened at the tail. A queue needs one end at the tail and the other at the front, and that front end is where an array stops cooperating.\n\n`array.shift()` removes the front element, but to keep the array contiguous afterward, every remaining element has to move down one slot — O(n), the exact cost a stack never pays. Run shift() in a loop and what looks like \"just dequeuing\" is secretly O(n) per operation, O(n²) overall for draining a queue of n items.\n\nThe fix is either a linked list (dequeue from the head is O(1), no shifting involved, the same win from the earlier node discussion) or a circular buffer: a fixed-size array with separate head and tail indices that wrap around, so \"removing the front\" is just moving the head index forward instead of physically shifting memory. Most production queue implementations use one of these two, never a raw array with `.shift()`.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A queue is implemented as a plain JavaScript array, enqueuing with `push` and dequeuing with `shift`. What is the time complexity of draining n items from this queue one `shift()` at a time, and why?",
+          "definition": {
+            "options": [
+              "O(n²) total, since each `shift()` call is itself O(n) and it runs n times",
+              "O(n), because `shift()` runs in O(1) time, exactly the same as `pop()` does for a stack",
+              "O(n log n), the same asymptotic complexity as sorting the whole array first",
+              "O(1) total, because JavaScript arrays secretly track a separate front index"
+            ],
+            "correct_index": 0,
+            "explanation": "`shift()` removes index 0 and then moves every remaining element one slot left to keep the array contiguous, which is O(n) per call. Calling it n times to drain the queue is therefore O(n²) overall — the same asymptotic trap as repeatedly inserting at an array's front, just on the removal side instead of the insertion side."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Deques: Stacks and Queues Unified",
+      "body": "A deque (\"double-ended queue\") drops the restriction entirely: push and pop are O(1) at *both* ends. A stack is a deque you only ever touch at one end; a queue is a deque where you push at one end and pop at the other. Rather than three separate structures, it's more accurate to say there's one structure — the deque — and a stack or queue is just a self-imposed discipline about which of its operations you allow yourself to use.\n\nA deque is naturally backed by a doubly linked list (each node's `prev` and `next` pointers make O(1) removal possible from either end) or a circular buffer sized generously enough to grow at both ends without constant resizing. Real uses lean on exactly this flexibility: browser back/forward history and undo/redo stacks push and pop from one end during normal use but need to jump around; and the sliding-window problems from this module's next session rely on a *monotonic* deque — one that stays sorted by discarding from whichever end no longer holds a useful candidate — to track a window's maximum in O(1) amortized time instead of rescanning the whole window.\n\nThat sliding-window use case is a preview, not something to build yet — the goal here is just recognizing a deque by what it offers: O(1) at both ends, nothing more, nothing less.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Which capability does a deque provide that a plain queue (enqueue at the tail, dequeue at the head only) does not?",
+          "definition": {
+            "options": [
+              "O(1) push and pop at the front as well as the back, not just the back",
+              "O(1) random access to any element by index, the way an array provides",
+              "Automatic sorting of elements as they're inserted",
+              "The ability to store elements of mixed types, which a queue cannot do"
+            ],
+            "correct_index": 0,
+            "explanation": "A queue only ever adds at one end and removes at the other. A deque supports O(1) push/pop at *both* ends, which is strictly more capability — a stack and a queue are each just a deque used with one of its two ends left untouched. None of these structures provide O(1) indexed access; that remains an array's advantage, not something a deque adds."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A linked list trades an array's O(1) random access for O(1) insertion and deletion once you're already at the right node — the inverse of the tradeoff the last session measured for arrays. Stacks, queues, and deques aren't competing structures on top of that choice; they're access disciplines (one end only, both ends, or restricted-and-opposite ends) that can sit on either an array or a linked list, and the right backing representation depends on which operations your problem actually needs, not which structure sounds more sophisticated.\n\nThe pattern worth carrying forward: before reaching for a stack or queue, ask which end(s) your problem actually touches — bracket matching only ever needed the top of a stack; a breadth-first traversal (coming up when this module reaches graphs) only ever needs the front and back of a queue. Recognizing that shape is most of the design work.\n\nNext up: hash maps and sets, where the cost model shifts again — this time the question becomes how to get O(1) average-case lookup by *value* instead of by position at all."
+    }
+  ]
+}
