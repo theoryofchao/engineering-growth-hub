@@ -7,6 +7,7 @@ Build an exercise-driven software engineering and technical leadership learning 
 - `docs/PRODUCT.md` — product requirements, curriculum, exercises, Pomodoro, leadership, future monetization.
 - `docs/ARCHITECTURE.md` — stack, boundaries, data model, security, deployment.
 - `docs/ROADMAP.md` — prioritized vertical slices and acceptance criteria.
+- `docs/THREAT_MODEL.md` — code-execution risk register; consult and update before any server-side/Python runner or public/multi-user code-execution work (see ADR 0035).
 - `content/curriculum/README.md` — when authoring a learning session's content, follow its sizing rule (blocks per session, body length, exercises per block) rather than guessing; see ADR 0013.
 
 ## Technical direction
