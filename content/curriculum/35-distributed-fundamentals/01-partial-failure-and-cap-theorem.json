@@ -1,0 +1,104 @@
+{
+  "title": "Partial Failure and the CAP Theorem's Fine Print",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Reason about partial failure as a distinct third state beyond \"working\" and \"crashed,\" and apply CAP and PACELC with the precision their actual definitions require instead of the folk version.",
+  "content_blocks": [
+    {
+      "heading": "A Third State: Partial Failure",
+      "body": "A single process is either running correctly or it has crashed -- there's no in-between state a programmer needs to design around. A distributed system introduces a third possibility that single-process software never has to face: partial failure, where some nodes keep working while others fail, or the network between them degrades, and the working nodes have no reliable way to tell *which* situation they're actually in.\n\nThis isn't a rare edge case to handle defensively -- it's the default condition any distributed system has to be designed around from the start. A node that stops responding might have crashed, might be alive but overloaded and slow, or might be fine with the network simply dropping messages between it and you. From where you're standing, these look identical, and that ambiguity -- not any single failure mode -- is the actual hard problem distributed systems have to solve."
+    },
+    {
+      "heading": "Timeouts Are a Guess, Not a Fact",
+      "body": "A network partition doesn't require a dramatic cable cut splitting the system cleanly in two -- it's any situation where a message is delayed, dropped, or arrives out of order, which happens constantly even on healthy infrastructure. When a request to another node doesn't come back in time, the only tool available is a timeout: wait some duration, then assume failure if nothing's arrived. That assumption is a guess, not a fact -- the other node may complete the work and respond a moment after you've already given up and acted as if it failed.\n\nThis matters concretely: if you time out and retry a payment request, and the first request actually succeeded but its response was merely delayed, the retry can cause a duplicate charge. The system has to decide, in advance, what it's willing to risk: waiting longer (at the cost of responsiveness) or acting on an unconfirmed guess (at the risk of acting twice on work that already happened).",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A service calls a payment API, gets no response within its timeout window, and retries the request. The first request had actually succeeded -- its response was just delayed. What does this scenario illustrate about timeouts?",
+          "definition": {
+            "options": [
+              "A timeout is only a guess, not a fact -- acting on it risks a duplicate action, like charging a customer twice",
+              "This proves the timeout value was configured too short and should simply be raised until the problem stops showing up",
+              "Partitions are rare enough that designing around this exact failure mode usually isn't worth any real engineering effort",
+              "The payment API itself must be broken, since a correctly implemented API would never let any response arrive this late"
+            ],
+            "correct_index": 0,
+            "explanation": "No timeout value eliminates this risk -- it only shifts the tradeoff between waiting longer and reacting sooner to an unconfirmed guess. The response genuinely might arrive one second after any timeout you pick, so the real fix isn't tuning the duration, it's designing the retried operation to be safe to run twice (idempotent), since \"did that actually fail, or did it just respond slowly\" is fundamentally unknowable from the caller's side."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "CAP's Fine Print: \"Consistency\" Means Something Very Specific",
+      "body": "The CAP theorem says that during a network partition, a distributed data store must choose between consistency and availability -- it can't guarantee both. That's the version everyone learns, and it's usually followed by labeling real databases \"CP\" or \"AP\" as if that settles their behavior. The problem, as Martin Kleppmann argues directly, is that CAP's \"C\" means one very specific, very strong guarantee -- linearizability, where every read sees the most recent write as if there were only one copy of the data -- not whatever a given team colloquially means by \"consistent.\"\n\nMost real systems use weaker consistency models that CAP's proof doesn't even describe, which means a single \"CP\" or \"AP\" label glosses over what the system actually guarantees. Kleppmann's conclusion isn't that CAP is wrong -- it's that the theorem is far narrower and more easily misapplied than the folk version most engineers carry around, and that precise language about the *actual* guarantee in play beats reaching for a two-letter label.",
+      "reference_links": [
+        { "label": "Martin Kleppmann -- Please stop calling databases CP or AP", "url": "https://martin.kleppmann.com/2015/05/11/please-stop-calling-databases-cp-or-ap.html" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team describes their database as \"AP\" and assumes this fully characterizes its consistency behavior. What's the specific gap in that reasoning, per Kleppmann's critique?",
+          "definition": {
+            "options": [
+              "CAP's own \"C\" means linearizability -- the label says little about whatever weaker model is actually in play here",
+              "The CAP theorem has since been formally disproven entirely, so no real distributed database can be labeled CP or AP at all",
+              "AP databases are purely theoretical, since every distributed database actually deployed in production turns out to be CP",
+              "There's no gap here at all -- a bare CP or AP label is always a complete and sufficient description of real system behavior"
+            ],
+            "correct_index": 0,
+            "explanation": "CAP's proof is built on linearizability specifically -- a strong, precise guarantee that most real systems don't actually promise. A system labeled \"AP\" might still provide a weaker but still meaningful consistency guarantee (like eventual or causal consistency) that the single letter says nothing about. Kleppmann's point is that the label substitutes for precision rather than providing it, not that CAP itself is invalid."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "PACELC: The Tradeoff That Exists Even Without a Partition",
+      "body": "CAP only describes what happens *during* a partition -- which is relatively rare compared to normal operation. PACELC extends the same idea to the far more common everyday case: even when the network is healthy (no partition, the \"E\" for \"else\"), a system replicating data still has to choose between Latency and Consistency. Wait for every replica to confirm a write before responding (lower latency cost paid in consistency), or respond immediately from whichever replica is closest and accept it might be slightly stale (lower latency, weaker consistency guarantee).\n\nThis is the tradeoff a team actually lives with on a daily basis, far more often than the dramatic partition CAP describes -- which is exactly why PACELC is the more operationally relevant framing for most systems, even though CAP is the one everyone learns first. A system's PACELC choice and its CAP choice aren't even required to match -- a database can be strongly consistent during normal operation yet favor availability the moment an actual partition hits, and both of those are legitimate, independent design decisions.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A multi-region database can respond to a write immediately from the nearest region (and sync to other regions afterward), or wait for all regions to confirm before responding. Which framework describes this specific tradeoff, and under what condition?",
+          "definition": {
+            "options": [
+              "PACELC's latency-vs-consistency tradeoff -- this choice exists during normal operation, with no partition required",
+              "CAP's consistency-vs-availability tradeoff, which strictly requires an active network partition to even apply here",
+              "Neither framework applies -- multi-region replication tradeoffs were never actually covered by CAP or PACELC",
+              "This is purely a hardware limitation that no amount of thoughtful distributed-systems design could ever address"
+            ],
+            "correct_index": 0,
+            "explanation": "This tradeoff exists during completely normal operation, with every region reachable and no partition in sight -- exactly the case CAP is silent about, since CAP only speaks to partition behavior. PACELC's \"else\" branch (latency vs. consistency when there's no partition) is the framework that actually describes this everyday choice, which is why PACELC is often the more practically useful model."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why One Label Rarely Describes the Whole System",
+      "body": "Real systems usually don't make one uniform tradeoff across every operation -- a database might serve reads from a nearby replica (fast, possibly stale) while routing writes through a primary that waits for confirmation (slower, strongly consistent), or offer per-request consistency levels a caller chooses explicitly based on what that particular operation actually needs. A single \"CP\" or \"AP\" label, applied to the whole system, can't represent that kind of per-operation nuance -- it's a simplification of a simplification.\n\nThe practically useful question is never \"is this database CP or AP,\" it's \"for this specific read or write, what happens if a partition or replication lag occurs right now, and is that the tradeoff this particular operation actually needs.\" A payment write and a page-view counter increment have very different tolerances for staleness, and a well-designed system makes that choice deliberately per operation rather than inheriting one label for everything.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A database serves reads from nearby replicas (fast, possibly a few seconds stale) but routes all writes through a primary that waits for multi-region confirmation. What does this setup demonstrate?",
+          "definition": {
+            "options": [
+              "Consistency tradeoffs can be made per operation type -- a single system-wide CP or AP label wouldn't capture this",
+              "This configuration is invalid, since CAP and PACELC require one uniform tradeoff across every operation a system performs",
+              "The reads in this system are fundamentally broken, since any staleness at all means the database isn't usable at all",
+              "This setup proves the system must be purely CP, since writes alone are enough to classify the entire database that way"
+            ],
+            "correct_index": 0,
+            "explanation": "Reads and writes here make genuinely different tradeoffs -- fast-and-possibly-stale for reads, slower-and-strongly-consistent for writes -- which is exactly the kind of per-operation nuance a single whole-system label erases. Neither \"CP\" nor \"AP\" alone would accurately describe this system; the accurate description has to name each operation's own tradeoff separately."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Partial failure is the default condition distributed systems are built around, not an edge case -- a timeout is always a guess about a node's state, never a confirmed fact, which is why idempotent retries matter more than tuning timeout values. CAP's consistency-vs-availability tradeoff only applies during an actual partition and specifically means linearizability, which is why a bare \"CP\" or \"AP\" label says less than it sounds like it does. PACELC fills the far more common gap -- the latency-vs-consistency tradeoff that exists during completely normal operation -- and real systems routinely make different choices for different operations rather than picking one label for everything.\n\nThe habit worth carrying forward: whenever \"CP\" or \"AP\" comes up in a design discussion, ask what specific guarantee is actually meant, for which specific operation, under which specific condition -- the label is a starting point for that question, not an answer to it.\n\nThe next sessions in this module get concrete about what \"consistency\" actually spans between its strongest and weakest forms, and the logical clocks systems use to reason about event ordering when physical clocks across machines can't be trusted to agree."
+    }
+  ]
+}
