@@ -1,0 +1,107 @@
+{
+  "title": "Schema Modeling and Normalization",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Use normal forms to eliminate the update anomalies redundant data causes, and recognize deliberate denormalization as a documented tradeoff rather than a mistake.",
+  "content_blocks": [
+    {
+      "heading": "Why Redundant Data Is a Correctness Hazard, Not Just Waste",
+      "body": "Storing the same fact in two places is usually explained as a storage-efficiency problem, but the real danger is correctness: once a fact exists in two rows, nothing stops them from disagreeing. Update one copy and forget the other -- easy to do, since nothing in the schema signals that a second copy even exists -- and the database now contains two contradictory answers to the same question, with no way to tell which one is current without checking outside the data itself.\n\nNormalization is the discipline of structuring tables so each fact has exactly one place to live, which doesn't just save space -- it makes an entire category of bug structurally impossible, because there's no second copy left to drift out of sync. The normal forms (1NF, 2NF, 3NF, and further) are a series of increasingly strict rules for recognizing when a table still has that kind of redundancy hiding in it, each one targeting a slightly more subtle shape of the same underlying problem."
+    },
+    {
+      "heading": "First Normal Form: Atomic Values, No Repeating Groups",
+      "body": "A table is in first normal form when every column holds one atomic value per row -- no comma-separated lists stuffed into a single text column, no repeating groups of columns like `phone1`, `phone2`, `phone3`. A `tags` column holding `\"urgent,billing,escalated\"` looks like a shortcut, but it breaks the database's own tools: you can't index individual tags, you can't efficiently query \"which rows have the `billing` tag\" without a string scan, and adding a fourth tag means rewriting the whole column instead of inserting a new row.\n\nThe fix is a separate table: one row per (entity, tag) pair, each holding one atomic value. This is the same underlying fix for the `phone1`/`phone2`/`phone3` repeating-group version of the problem -- a variable number of related facts belongs in its own table with a foreign key back, not spread across a fixed, arbitrarily-sized set of columns on the original one.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A `users` table has a `favorite_colors` column storing values like `\"red,blue,green\"`. What normal-form violation is this, and what's the concrete cost?",
+          "definition": {
+            "options": [
+              "A 1NF violation -- the column isn't atomic, so individual colors can't be indexed or queried directly",
+              "A 3NF violation -- `favorite_colors` is transitively dependent on some other non-key attribute here",
+              "No violation at all -- first normal form only restricts primary keys, never ordinary columns like this",
+              "A 2NF violation, which only ever applies to tables that already have a composite primary key defined"
+            ],
+            "correct_index": 0,
+            "explanation": "First normal form requires every column to hold a single atomic value, not a packed list -- `\"red,blue,green\"` in one column is exactly the repeating-group pattern 1NF forbids. The concrete cost is real: querying \"who likes blue\" needs a string-matching scan instead of an index lookup, and adding a color means rewriting the whole string rather than inserting a row into a separate `user_favorite_colors` table."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Second Normal Form: Depend on the Whole Key, Not Part of It",
+      "body": "Second normal form applies to tables with a composite primary key and forbids *partial* dependency: every non-key column must depend on the *entire* key, not just part of it. An `order_items` table keyed on `(order_id, product_id)` that also stores `product_name` violates this -- `product_name` depends only on `product_id`, not on the combination, so it's duplicated across every order that includes that product, and renaming a product means updating every single order row that ever referenced it, not one row in one place.\n\nThe fix is to move `product_name` out to a `products` table keyed on `product_id` alone, where it actually belongs, and have `order_items` reference it by id. `order_items` then only stores facts that genuinely depend on the full `(order_id, product_id)` pair, like `quantity` -- which really is a fact about *this order's* line for *this* product, not about the product in general.",
+      "examples": [
+        {
+          "label": "Before/after: pulling product_name out of order_items",
+          "content": "-- 2NF violation: product_name depends only on product_id, not the full (order_id, product_id) key\nCREATE TABLE order_items (\n  order_id INT,\n  product_id INT,\n  product_name TEXT,  -- duplicated across every order containing this product\n  quantity INT,\n  PRIMARY KEY (order_id, product_id)\n);\n\n-- Fixed: product_name lives once, in products, looked up via product_id\nCREATE TABLE order_items (\n  order_id INT,\n  product_id INT REFERENCES products(id),\n  quantity INT,\n  PRIMARY KEY (order_id, product_id)\n);"
+        }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An `enrollments` table keyed on `(student_id, course_id)` also stores `course_title`. What's the problem, and what does fixing it look like?",
+          "definition": {
+            "options": [
+              "A 2NF violation -- `course_title` depends on `course_id` alone; move it to its own `courses` table",
+              "A 1NF violation -- having a composite primary key at all is itself forbidden under first normal form",
+              "A 3NF violation -- `course_title` transitively depends on `student_id` by way of an unrelated path",
+              "No violation -- a composite key means every column on the row counts as fully dependent on it anyway"
+            ],
+            "correct_index": 0,
+            "explanation": "`course_title` is determined entirely by `course_id` -- it has nothing to do with which student is enrolled, so it only depends on *part* of the composite key, the textbook definition of a 2NF violation. The fix moves it into a `courses` table keyed on `course_id`, leaving `enrollments` to hold only facts that genuinely depend on the full (student, course) pair, like an enrollment date or a grade."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Third Normal Form: No Dependency on a Non-Key Column",
+      "body": "Third normal form goes a step further than 2NF and forbids *transitive* dependency: a non-key column that depends on another non-key column instead of depending on the key itself. A `products` table storing both `category_id` and `category_name` has exactly this problem -- `category_name` depends on `category_id`, not directly on the product's own `id` -- so renaming a category means finding and updating every product row in that category instead of changing one row in a dedicated `categories` table.\n\nThe pattern to notice is the same one as 2NF, just one step removed: whenever a column's value is fully determined by some *other* column on the same row rather than by the row's own identity, that's a sign it belongs on a different table, keyed by whatever it actually depends on. Ask \"if this other column changed, would this one need to change too, for every row sharing that other column's value?\" -- if yes, it's transitively dependent and doesn't belong here.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A `products` table stores `id`, `name`, `category_id`, and `category_name` together. What's the specific problem, and which normal form addresses it?",
+          "definition": {
+            "options": [
+              "A 3NF violation -- `category_name` transitively depends on `category_id`, not on the product's own id",
+              "A 1NF violation -- `category_name` and `category_id` together form a repeating group on this one table",
+              "A 2NF violation -- that rule applies here specifically because `products` lacks a composite primary key",
+              "No violation -- storing a human-readable name next to its id is always a harmless denormalization"
+            ],
+            "correct_index": 0,
+            "explanation": "`category_name` doesn't depend on the product's own key (`id`) -- it depends on `category_id`, a non-key column, which in turn determines the name. That chain (product -> category_id -> category_name) is a transitive dependency, exactly what 3NF forbids. The fix is a `categories` table holding `id` and `name` once, with `products.category_id` as a foreign key; renaming a category then touches one row instead of every product row in it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Denormalization: a Deliberate, Documented Tradeoff",
+      "body": "Normalization isn't a purity test to maximize -- it's a default that trades write-time simplicity for read-time cost, since a normalized schema often needs several joins to reassemble data that was split apart for correctness. When a specific read path is hot enough that those joins become the actual bottleneck, deliberately storing a denormalized copy (a cached `product_name` back on `order_items`, say) can be the right call -- but only as a conscious decision with a plan for keeping the copy in sync, not a shortcut taken because joining felt inconvenient.\n\nThe dividing line that matters in review: an *accidental* duplicate column with no sync mechanism is a 2NF/3NF violation waiting to cause a bug. A *documented* denormalized column -- with a comment explaining why, and either a trigger, an application-level write path, or an accepted eventual-consistency window keeping it current -- is an informed tradeoff. The schema looks identical either way; the difference is entirely in whether the redundancy was chosen on purpose and is being actively maintained.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team adds a denormalized `total_order_count` column to `customers`, updated by a trigger whenever an order is placed or canceled, with a comment explaining the read-performance reason. Is this a normalization violation?",
+          "definition": {
+            "options": [
+              "Technically yes, but it's an informed, actively-maintained tradeoff, not the same risk as an accident",
+              "No, because triggers are part of the SQL standard and are therefore exempt from normal-form rules here",
+              "Yes, and it should be reverted on sight regardless of the stated read-performance justification given",
+              "No, because a computed aggregate like a count is never subject to normal-form rules in the first place"
+            ],
+            "correct_index": 0,
+            "explanation": "Normal forms don't stop applying just because a column is documented or trigger-maintained -- this is still redundant, derivable data living in two places. What changes is the risk profile: it's being kept in sync deliberately and visibly, with a stated reason, rather than silently drifting the way an unplanned duplicate would. That's exactly the distinction worth making in review, rather than treating all denormalization as either always fine or always forbidden."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Each normal form targets a specific shape of redundancy: 1NF bans non-atomic columns and repeating groups, 2NF bans a non-key column depending on only part of a composite key, and 3NF bans a non-key column depending on another non-key column instead of the key itself. Each one closes off a specific way two rows could end up silently disagreeing about the same fact, by giving that fact exactly one place to live.\n\nDenormalizing on purpose, with a sync mechanism and a stated reason, is a legitimate engineering tradeoff -- the failure mode worth watching for in review isn't redundancy itself, it's redundancy nobody decided to accept. A quick habit that catches most real violations: for every non-key column, ask what it actually depends on, and check that it's the row's full key -- nothing less, nothing from another table's identity creeping in.\n\nThe next session moves from table shape to querying that shape: joins, CTEs, and window functions for pulling normalized data back together efficiently at read time."
+    }
+  ]
+}

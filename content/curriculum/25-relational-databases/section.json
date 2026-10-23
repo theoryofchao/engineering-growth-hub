@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Data & Storage",
+    "slug": "data-storage",
+    "description": "SQL, persistence design, caching, data architecture"
+  },
+  "module": {
+    "title": "Data & Storage"
+  },
+  "section": {
+    "title": "Relational Databases",
+    "slug": "25-relational-databases",
+    "description": "Build correct and efficient relational persistence.",
+    "proficiency_tier": "D"
+  }
+}
