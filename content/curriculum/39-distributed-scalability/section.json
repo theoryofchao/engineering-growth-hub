@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Distributed Systems",
+    "slug": "distributed-systems",
+    "description": "Failure modes, consistency, messaging, resilience"
+  },
+  "module": {
+    "title": "Distributed Systems"
+  },
+  "section": {
+    "title": "Distributed Scalability",
+    "slug": "39-distributed-scalability",
+    "description": "Design practical scaling and fault tolerance approaches.",
+    "proficiency_tier": "W"
+  }
+}
