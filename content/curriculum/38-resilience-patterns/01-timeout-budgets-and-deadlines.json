@@ -1,0 +1,104 @@
+{
+  "title": "Timeout Budgets and Deadlines: Picking a Number That Isn't a Guess",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Choose a timeout by matching an acceptable false-timeout rate to a downstream dependency's real latency distribution, propagate a shrinking deadline across a multi-hop call chain, and recognize how uncoordinated per-layer retries multiply load during an outage.",
+  "content_blocks": [
+    {
+      "heading": "Waiting Forever Isn't Resilience -- It's the Next Failure Waiting to Happen",
+      "body": "A call with no timeout, or an overly generous one, doesn't protect a system from a slow or dead dependency -- it just lets that dependency's failure consume the caller's own resources (open connections, waiting threads, memory) for as long as the wait continues. Module 35's distributed-fundamentals content already covered why distributed calls can't offer the same reliability guarantee a local call does; a timeout is the concrete mechanism that turns \"this call might hang indefinitely\" into \"this call fails predictably after a bounded wait,\" which is what actually lets the caller recover instead of being dragged down with the dependency that's struggling.\n\nAmazon's own Builders' Library, in its article on timeouts, retries, and backoff, frames the timeout choice directly as a tradeoff: too long, and a failing dependency ties up the caller's resources for longer than necessary; too short, and perfectly healthy, just-slightly-slow responses get cut off and treated as failures that never actually were.",
+      "reference_links": [
+        { "label": "Amazon Builders' Library -- Timeouts, retries, and backoff with jitter", "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/" }
+      ]
+    },
+    {
+      "heading": "Picking the Number: Match an Acceptable False-Timeout Rate to Real Latency",
+      "body": "Rather than guessing a round number like \"5 seconds feels reasonable,\" the AWS guidance ties the timeout value to the downstream dependency's own measured latency distribution: decide an acceptable false-timeout rate -- say, 0.1% of genuinely healthy calls being needlessly cut off -- and set the timeout at the downstream service's corresponding latency percentile, in this case its p99.9. That percentile is a measured fact about the dependency's real behavior, not a guess, and it directly controls how often a healthy-but-slow response gets wrongly treated as a failure.\n\nThis also means a timeout chosen once needs revisiting if the downstream dependency's latency profile changes -- a timeout tuned to an old p99.9 can become either too aggressive (if the dependency got consistently slower) or unnecessarily generous (if it got faster), in both cases no longer matching the false-timeout rate it was originally chosen to deliver.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team wants no more than 0.1% of calls to a dependency to be falsely treated as timeouts. According to this approach, how should they pick the actual timeout value?",
+          "definition": {
+            "options": [
+              "Set the timeout to the dependency's own measured p99.9 latency, since that directly matches a 0.1% false-timeout rate",
+              "Pick a conservative round number like 10 seconds, since rounder numbers are inherently safer regardless of real latency",
+              "Set the timeout as low as technically possible, since a shorter timeout always reduces the false-timeout rate further",
+              "The false-timeout rate has no real connection to the actual timeout value chosen; the two are unrelated to each other"
+            ],
+            "correct_index": 0,
+            "explanation": "A 0.1% false-timeout tolerance directly corresponds to the dependency's p99.9 latency: 99.9% of real, healthy calls finish at or before that point, so setting the timeout there means only the slowest 0.1% of genuinely healthy calls get needlessly cut off. This ties the number to the dependency's actual measured behavior, not a guess."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Deadlines Propagate -- They Don't Reset at Every Hop",
+      "body": "A single request can pass through several services -- a client calls service A, which calls B, which calls C. If each service independently picks its own \"reasonable\" timeout for its own downstream call, a request that's already used 90% of its total acceptable time budget by the time it reaches B can still have B hand C a fresh, full timeout -- meaning the whole chain's actual end-to-end time budget is effectively ignored past the first hop.\n\nThe more coherent approach propagates a shrinking deadline alongside the request itself: the client sets an overall deadline (\"this whole request must finish within 2 seconds\"), and each hop computes its own downstream timeout as whatever time remains of that original budget, not a timeout picked in isolation. A service receiving a request with only 200ms of its original budget left should give its own downstream call at most that 200ms, not its own independently-chosen default.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A request has an overall 2-second deadline. By the time it reaches the third hop in a call chain, only 300ms of that budget remains. What should the third hop's own downstream timeout be?",
+          "definition": {
+            "options": [
+              "At most the 300ms actually remaining in the original deadline, not a fresh, independently-chosen timeout",
+              "A fresh default timeout chosen independently by the third hop, since each hop's timeout is unrelated to earlier hops",
+              "The full original 2-second deadline again, since every hop in the chain deserves an equal, repeated time budget",
+              "Whatever timeout value is the third hop's own configured default, regardless of how much of the budget is left"
+            ],
+            "correct_index": 0,
+            "explanation": "Propagating a shrinking deadline means each hop's own downstream timeout is bounded by what's actually left of the original end-to-end budget, not reset independently at each step. Giving the third hop a fresh full timeout would let the total chain blow past the 2-second deadline the client actually needs honored."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Retry Amplification Problem: Why Timeouts and Retries Can't Be Designed in Isolation",
+      "body": "AWS's own guidance includes a concrete, worked number that makes an easy-to-miss danger vivid: a call chain five layers deep, where each layer independently retries a failed call up to 3 times, multiplies load on the bottom-most service by 3^5 -- 243 times the normal request rate -- if every layer along the chain is retrying at once during a real outage. A design that looks reasonable at any single layer (\"retry up to 3 times, that seems safe\") becomes a self-inflicted overload when every layer does the same thing simultaneously.\n\nThe practical fix AWS recommends is retrying at a single, deliberately chosen point in the stack -- not independently at every layer -- so the amplification factor stays bounded and predictable instead of compounding multiplicatively with every additional hop a request happens to pass through.\n\nThis is also why a timeout chosen correctly in isolation (block 2's approach) isn't automatically a safe choice end to end -- a well-tuned timeout paired with an uncoordinated retry policy at every layer can still produce exactly this amplification, since the timeout value and the retry count are two separate dials that both affect the same underlying load multiplier.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A request passes through 5 layers, and each layer independently retries a failed call up to 3 times. During an outage where every layer is retrying, what's the resulting load multiplier on the bottom-most service?",
+          "definition": {
+            "options": [
+              "3^5, or 243 times normal load -- each layer's retries compound multiplicatively with every layer above it",
+              "Exactly 15 times normal load, since 5 layers times 3 retries each simply adds up across the whole chain",
+              "3 times normal load total, since only the single failing call at the very bottom actually gets retried at all",
+              "No real amplification occurs at all, since retries are evenly distributed and absorbed across all 5 layers equally"
+            ],
+            "correct_index": 0,
+            "explanation": "Each layer's up-to-3 retries multiply with every layer above it that's also retrying, since a single top-level request can trigger up to 3 retries at each subsequent hop -- 3 x 3 x 3 x 3 x 3 = 243. This is exactly the self-inflicted overload AWS's guidance warns about, and why retries are better handled at one deliberately chosen point rather than independently at every layer."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Realistic Failure: Retries Turning a Blip Into an Outage",
+      "body": "A downstream service experiences a brief, real slowdown -- nothing catastrophic, just momentarily past its usual latency. Every layer upstream, each independently configured to retry 3 times on a slow response, starts retrying at once. The resulting multiplied load (block 4's 243x scenario, in miniature) is now far larger than the original blip, pushing the downstream service from \"briefly slow\" into \"actually overloaded and failing,\" which then triggers a fresh round of retries from every layer again -- a self-reinforcing cycle that turns a minor, recoverable slowdown into a sustained outage.\n\nThis is precisely the scenario the next sessions' subtopics exist to prevent: a circuit breaker that stops sending requests to an already-struggling dependency instead of retrying into it further, and backoff-with-jitter that spaces out retries instead of letting every caller retry in the same synchronized instant. Timeout and retry choices made without considering this amplification risk are a common, well-documented way systems make their own outages worse, not a hypothetical edge case.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A brief, minor slowdown in a downstream service triggers synchronized retries from every upstream layer, which pushes that service into genuine overload. What does this scenario illustrate?",
+          "definition": {
+            "options": [
+              "Retry amplification can turn a minor, recoverable blip into a self-inflicted, sustained outage here",
+              "This outcome is extremely rare and essentially never actually happens in real production systems of any size",
+              "The original slowdown alone was the sole cause; the retries themselves played no real role in this outcome",
+              "Adding even more retries at each layer would have fully prevented this specific outcome from happening at all"
+            ],
+            "correct_index": 0,
+            "explanation": "The original slowdown was minor and likely recoverable on its own -- it's the synchronized, uncoordinated retries from every upstream layer that multiplied load past what the service could handle, turning a blip into a real outage. This is a well-documented real failure pattern, which is exactly why circuit breakers and jittered backoff exist as the next line of defense."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A timeout is a deliberate tradeoff, not a round-number guess: matching an acceptable false-timeout rate to a dependency's real measured latency percentile (its p99.9, for a 0.1% tolerance) ties the number to actual behavior instead of intuition. Across a multi-hop call chain, a deadline should propagate and shrink with each hop, not reset independently at every layer, or the end-to-end budget a client actually needs becomes meaningless past the first hop. And timeouts can't be designed in isolation from retries -- AWS's own 3^5-layers-deep example shows how independently-reasonable per-layer retry policies compound into genuine self-inflicted overload during a real outage.\n\nThe next sessions in this module build directly on this foundation: exponential backoff with jitter (spacing retries apart instead of letting them synchronize), circuit breakers and bulkheads (stopping traffic to an already-struggling dependency instead of retrying into it), rate limiting and load shedding, isolation and degradation, and failure injection as the way to verify these controls actually work before a real outage tests them for you."
+    }
+  ]
+}

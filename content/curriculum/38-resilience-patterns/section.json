@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Distributed Systems",
+    "slug": "distributed-systems",
+    "description": "Failure modes, consistency, messaging, resilience"
+  },
+  "module": {
+    "title": "Distributed Systems"
+  },
+  "section": {
+    "title": "Resilience Patterns",
+    "slug": "38-resilience-patterns",
+    "description": "Prevent cascading failures and recover predictably.",
+    "proficiency_tier": "W"
+  }
+}
