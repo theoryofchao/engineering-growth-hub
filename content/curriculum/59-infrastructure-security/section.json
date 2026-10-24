@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Security & Privacy",
+    "slug": "security-privacy",
+    "description": "Application security, secure delivery, privacy"
+  },
+  "module": {
+    "title": "Security & Privacy"
+  },
+  "section": {
+    "title": "Infrastructure Security",
+    "slug": "59-infrastructure-security",
+    "description": "Design operational defense in depth.",
+    "proficiency_tier": "W"
+  }
+}
