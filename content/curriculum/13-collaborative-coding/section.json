@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Programming & Code Quality",
+    "slug": "programming-code-quality",
+    "description": "Idiomatic programming, maintainability, collaborative practice"
+  },
+  "module": {
+    "title": "Programming & Code Quality"
+  },
+  "section": {
+    "title": "Collaborative Coding",
+    "slug": "13-collaborative-coding",
+    "description": "Raise quality and shared understanding through collaboration.",
+    "proficiency_tier": "D"
+  }
+}

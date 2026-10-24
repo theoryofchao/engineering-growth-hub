@@ -1,0 +1,124 @@
+{
+  "title": "Pull Requests and Code Review: Improving Code Health, Not Demanding Perfection",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Apply the standard that a review should ask whether a change clearly improves the codebase's health rather than whether it's perfect, distinguish catches a reviewer makes that tests and linters can't, and recognize how change size directly affects review quality.",
+  "content_blocks": [
+    {
+      "heading": "The Actual Standard: Does This Improve Code Health?",
+      "body": "Google's own published engineering practices state the standard directly: a reviewer should favor approving a change once it clearly improves the overall code health of the system, even if it isn't perfect -- because, as the guide puts it, there's no such thing as perfect code, only better code. This reframes what a reviewer is actually checking for: not \"is this exactly how I'd have written it,\" but \"does merging this leave the codebase better off than it was.\"\n\nThat distinction matters because the opposite failure mode -- insisting every small stylistic preference gets addressed before approval -- turns review into a bottleneck that slows a team down without a proportional quality gain, and trains authors to dread review rather than treat it as useful. The standard isn't \"anything goes\"; a reviewer can and should still block a change that's genuinely wrong or harmful. It's specifically about not holding a net-positive change hostage to achieving an unreachable ideal.",
+      "reference_links": [
+        { "label": "Google Engineering Practices -- The Standard of Code Review", "url": "https://google.github.io/eng-practices/review/reviewer/standard.html" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A reviewer is deciding whether to approve a pull request that clearly fixes a real bug and improves the code, but isn't written exactly the way the reviewer personally would have written it. What does the code-health standard suggest?",
+          "definition": {
+            "options": [
+              "Favor approving it -- the standard is whether it clearly improves code health, not personal preference",
+              "Block it until rewritten to match the reviewer's own preferred style, since consistency outweighs merging a working fix",
+              "The standard offers no real guidance here -- this decision is purely a matter of each reviewer's personal taste",
+              "Wait until the change is proven the single best possible implementation of every conceivable alternative approach"
+            ],
+            "correct_index": 0,
+            "explanation": "The standard explicitly favors approving a change that clearly improves code health over holding it to an unreachable \"perfect\" bar -- there's no such thing as perfect code, only better code. A reviewer's personal stylistic preference, absent a real correctness or design problem, isn't grounds to block a net-positive change."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Must-Fix vs. Nice-to-Have: Not All Feedback Blocks a Merge",
+      "body": "A practical consequence of the code-health standard is that review feedback isn't one undifferentiated pile -- a reviewer should distinguish feedback that must be addressed before merging (a real bug, a security issue, a design flaw that will cause real pain later) from feedback that's a genuine improvement but optional (a naming suggestion, a minor restructuring that would be nice but isn't necessary). Marking feedback explicitly as a suggestion, rather than leaving its priority ambiguous, lets the author use their own judgment about which optional suggestions to take.\n\nWithout that distinction, every comment reads as equally blocking by default, which is exactly the review-as-bottleneck failure mode block 1 described -- an author can't tell whether a comment about variable naming is a condition of approval or a take-it-or-leave-it suggestion unless the reviewer says so explicitly.\n\nMany teams formalize this with a lightweight convention -- prefixing a comment with \"blocking:\" or \"nit:\" -- precisely so the distinction doesn't depend on the reviewer's tone being correctly read, and an author scanning a long list of comments can immediately tell which ones actually gate the merge.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A reviewer leaves ten comments on a PR: one flags a real off-by-one bug, the other nine suggest minor naming improvements. What's the risk of not distinguishing which comments actually block approval?",
+          "definition": {
+            "options": [
+              "The author can't tell which of the ten comments are required vs. optional, turning the review into an ambiguous bottleneck",
+              "There's no real risk here -- every comment a reviewer leaves should always be treated as an equally mandatory blocker by default",
+              "The risk only applies to the bug comment specifically; naming suggestions never cause any ambiguity about priority at all",
+              "This situation can't actually cause any delay, since PRs are always merged immediately regardless of how feedback is phrased"
+            ],
+            "correct_index": 0,
+            "explanation": "Without explicitly marking which feedback is required versus optional, an author has no way to know whether all ten comments must be resolved before merging, or just the one real bug -- exactly the ambiguity that turns review into an unnecessary bottleneck, even when most of the feedback was never meant to block approval in the first place."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "What a Reviewer Catches That Tests and Linters Don't",
+      "body": "Automated checks are good at catching what they're explicitly built to catch: a linter flags style violations, a test suite (module 40's domain) catches whether the code produces the right output for the cases it exercises. Neither can tell you the code solves the wrong problem, or solves the right problem in a way that will be painful to extend -- a human reviewer bringing context the author might lack is what catches \"this works, but it's not actually what we need\" or \"this will conflict with the migration another team is mid-way through.\"\n\nThis is why code review and automated testing are complementary layers, not substitutes for each other: a PR can pass every test and every linter rule and still deserve real review scrutiny, because tests verify behavior against cases someone already thought to write, while review brings a second perspective on intent, design, and context that no automated check is positioned to evaluate.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A PR passes every automated test and every linter check. Why might it still deserve genuine scrutiny from a human reviewer?",
+          "definition": {
+            "options": [
+              "Tests and linters can't catch that the code solves the wrong problem or will conflict with other context the reviewer has",
+              "It doesn't deserve any further scrutiny at all -- passing every automated check is a complete, sufficient guarantee of quality",
+              "Human review at that point only exists to double-check that the automated tools themselves ran correctly, nothing else",
+              "This situation never actually happens in practice, since tests and linters together always catch every category of real issue"
+            ],
+            "correct_index": 0,
+            "explanation": "Automated tests check behavior against cases someone already wrote, and linters check mechanical style rules -- neither evaluates whether the change actually solves the intended problem or interacts badly with context a reviewer might know about (another team's in-progress migration, a design decision made elsewhere). That's specifically what a human reviewer's judgment adds on top of passing automated checks."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why Smaller Changes Get Better Review",
+      "body": "Google's own guidance on change size is direct: a small, focused change gets reviewed faster and more thoroughly, because a reviewer can actually hold its full scope in mind at once, while a large, sprawling change invites skimming -- a reviewer facing 2,000 changed lines across a dozen files is far more likely to miss a real problem buried in the middle than one reviewing a focused 200-line change doing exactly one thing.\n\nThis isn't just about reviewer convenience -- it's a direct quality-vs-risk tradeoff: a large PR bundles more changes into one all-or-nothing review decision, and the bigger that bundle, the harder it becomes to actually verify that every part of it is individually correct before approving the whole thing at once.\n\nSmall changes also make bisecting a later regression (module 12's territory) far more useful: a focused PR narrows a bisect result to one clear, reviewable change, while a large bundled PR only narrows it to \"somewhere in this sprawling set of changes,\" echoing module 12's point about commit granularity limiting bisect's precision.",
+      "reference_links": [
+        { "label": "Google Engineering Practices -- Small CLs", "url": "https://google.github.io/eng-practices/review/developer/small-cls.html" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why does a 2,000-line PR touching a dozen files tend to get lower-quality review than a focused 200-line PR doing one thing?",
+          "definition": {
+            "options": [
+              "A reviewer can't hold a huge change's full scope in mind, making it more likely a real problem gets skimmed past entirely",
+              "Large PRs are technically impossible to review, so they're always merged without any review ever actually happening at all",
+              "Review quality is actually identical regardless of size -- a PR's size has no real bearing on review thoroughness here either",
+              "Reviewers specifically favor larger PRs, since reviewing more code at once is considered a far more efficient use of their time"
+            ],
+            "correct_index": 0,
+            "explanation": "A reviewer's attention and working memory are finite -- a small, focused change is something they can actually hold in mind in full, while a large, sprawling one invites skimming, where a real problem can hide in the middle without being caught. This is a direct, practical reason to prefer smaller, focused PRs over large bundled ones."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Review in Practice: Separating a Real Bug From a Style Preference",
+      "body": "A PR fixes a reported timeout issue by adding a retry loop, but the retry loop has no upper bound -- under a sustained outage, it would retry forever rather than eventually failing. The same PR also uses a variable name the reviewer finds slightly unclear. Applying this session's framework: the unbounded retry is a real correctness issue (module 11's \"actively misleading\" territory doesn't even apply here -- this is a functional bug, not a naming smell) and should block the merge; the naming preference is exactly the optional, suggestion-tagged feedback block 2 described, left to the author's judgment.\n\nMarking these two comments distinctly -- one as \"blocking: this needs a max-retry bound before merging\" and the other as \"nit: consider renaming this, up to you\" -- gives the author a clear, actionable path to merge quickly once the one real issue is fixed, instead of an undifferentiated list that makes every comment look equally mandatory.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A reviewer finds an unbounded retry loop (a real bug under sustained outages) and a slightly unclear variable name in the same PR. How should these two pieces of feedback be treated differently?",
+          "definition": {
+            "options": [
+              "The unbounded retry should block the merge as a real bug; the naming issue should be a non-blocking, optional suggestion",
+              "Both issues should block the merge equally, since any reviewer comment left on a PR should always be treated as mandatory",
+              "Neither issue should actually block the merge, since code review is only meant to catch style and formatting problems",
+              "The naming issue should block the merge, while the retry bug should be left for a separate, later PR to address instead"
+            ],
+            "correct_index": 0,
+            "explanation": "The unbounded retry loop is a genuine correctness problem -- under sustained failure it would never stop retrying -- and fits exactly the kind of issue that should block a merge. The naming concern is a stylistic preference with no correctness impact, exactly the optional, suggestion-tagged feedback this session's must-fix-vs-nice-to-have framing calls for."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Code review's actual job is asking whether a change clearly improves the codebase's health, not whether it's perfect -- a standard that should also shape how feedback gets communicated: real problems clearly marked as blocking, everything else clearly marked as optional. Review complements automated tests and linters rather than duplicating them, catching intent-and-context problems no automated check is positioned to see. Change size is a direct, practical lever on review quality -- a reviewer can actually hold a small, focused change in mind, where a large one invites skimming and lets real problems hide.\n\nThe next sessions in this module build on this same collaborative-practice foundation: phrasing review feedback constructively, pair programming and mobbing as real-time alternatives to asynchronous review, repository standards and documentation, dependency upgrades, and engineering handoffs."
+    }
+  ]
+}
