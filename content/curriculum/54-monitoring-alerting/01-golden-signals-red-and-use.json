@@ -1,0 +1,107 @@
+{
+  "title": "Golden Signals: RED and USE as Two Complementary Lenses",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Apply the four golden signals and the RED method to detect that a service is unhealthy from the outside, and recognize how USE's resource-centric view complements RED by explaining why a service is unhealthy once a problem is detected.",
+  "content_blocks": [
+    {
+      "heading": "A Small, Deliberate Set of Signals, Not Comprehensive Dashboards",
+      "body": "A real production service can expose hundreds of possible metrics, but most of them don't actually answer the question that matters most during an incident: is this system currently failing its users. The golden-signals idea, from Google's own SRE book, is a deliberately small set of measurements chosen specifically to answer that one question well, rather than trying to capture everything that could conceivably be measured.\n\nThe book's own chapter on monitoring distributed systems names four: latency, traffic, errors, and saturation -- argued to be close to the minimum viable set for giving a service decent monitoring coverage, with a human paged whenever any one of them looks wrong.\n\nThe point isn't that these four are the only metrics worth collecting -- plenty of other data has real diagnostic value -- it's that they're specifically the ones worth watching continuously and alerting on, with everything else available to dig into once one of the four signals says something's actually wrong.",
+      "reference_links": [
+        { "label": "Google SRE Book -- Monitoring Distributed Systems", "url": "https://sre.google/sre-book/monitoring-distributed-systems/" }
+      ]
+    },
+    {
+      "heading": "The Easy-to-Miss Detail: Separate Failed-Request Latency From Successful-Request Latency",
+      "body": "A specific, non-obvious guidance from the SRE book's own treatment of latency: track the latency of successful requests separately from the latency of failed requests. A request that fails fast -- an immediate error response -- has low latency by the numbers, but averaging it in with successful requests can actively hide a real problem: a service returning errors instantly for a growing fraction of traffic can show a *falling* average latency even as it's failing more and more requests, exactly backward from what the number seems to suggest.\n\nThis single detail is a concrete illustration of why the golden signals have to be measured carefully, not just collected -- the same four names (latency, traffic, errors, saturation) can tell a genuinely misleading story if the underlying measurement doesn't account for a failure mode like this one.\n\nThe practical fix is simple once the risk is understood: track and alert on failed-request latency and successful-request latency as two separate series, rather than one blended average that can mask exactly the failure a monitoring system exists to catch.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A service's average request latency starts dropping even as its error rate climbs. What's a likely explanation, given the SRE book's guidance on measuring latency?",
+          "definition": {
+            "options": [
+              "Failed requests are returning fast errors and getting averaged in with successful ones, pulling the overall average down",
+              "The service is genuinely getting healthier overall, since lower average latency is always an unambiguous sign of improvement",
+              "This combination is actually impossible to observe in any real system; latency and error rate always move in the same direction",
+              "The monitoring system itself must be malfunctioning, since latency and error rate can never move in opposite directions"
+            ],
+            "correct_index": 0,
+            "explanation": "A fast-failing request still counts as a low-latency data point if failed and successful requests aren't tracked separately, so a rising share of quick failures can drag the average down even while real user impact (the error rate) is getting worse -- exactly why the SRE book recommends tracking these separately."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "RED: the Golden Signals, Reshaped for Request-Driven Services",
+      "body": "Tom Wilkie's RED method -- Rate, Errors, Duration, measured per service -- was developed partly as a direct, explicit reaction to Brendan Gregg's USE method (module 62's territory): USE's Utilization/Saturation/Errors framing fits hardware and infrastructure resources naturally, but doesn't map as cleanly onto a request-driven microservice, where what actually matters is how many requests are arriving, how many are failing, and how long they're taking.\n\nGrafana's own write-up of the method frames its practical benefit directly: a consistent, small set of metrics applied the same way across every service reduces the cognitive load on whoever's on-call, letting them reason about a service's health even if they didn't write it -- exactly the situation an on-call engineer is in during a real incident involving an unfamiliar part of the system.\n\nThat consistency is the real payoff: once every service exposes Rate, Errors, and Duration the same way, an on-call engineer's dashboard muscle memory transfers from one service to the next, rather than needing to relearn a bespoke set of metrics for each one during an active incident.",
+      "reference_links": [
+        { "label": "Grafana Labs -- The RED Method: How to Instrument Your Services", "url": "https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why was the RED method (Rate, Errors, Duration) developed as a reaction to the USE method, specifically for monitoring request-driven microservices?",
+          "definition": {
+            "options": [
+              "USE's resource-centric framing doesn't map cleanly onto a service where rate, failures, and duration matter most",
+              "USE was found factually incorrect for measuring infrastructure resources, and RED exists to permanently replace it entirely",
+              "RED and USE actually measure the exact same three things, just given different names chosen purely for marketing purposes",
+              "RED was developed first, with USE created afterward as a simplified version of it aimed specifically at beginners"
+            ],
+            "correct_index": 0,
+            "explanation": "USE (Utilization, Saturation, Errors) is naturally suited to hardware and infrastructure resources. A request-driven microservice's health is better captured by request rate, error rate, and request duration -- which is exactly the gap RED was created to fill, as a complement to USE rather than a replacement for it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why You Need Both: RED Detects, USE Explains",
+      "body": "RED answers \"is this service healthy right now\" from the outside -- a spike in Duration or Errors tells an on-call engineer something is wrong with this specific service, without requiring them to know anything about its internals. USE answers the next question once that detection has happened: once you know *this* service is unhealthy, which specific resource underneath it -- CPU, memory, a database connection pool, a downstream dependency -- is actually saturated or erroring, which is what you need to know to actually fix anything.\n\nThis is a genuine detection-then-diagnosis pipeline, not two competing choices to pick between: RED's service-level view is what a dashboard or an alert should be built around for noticing a problem quickly, and USE's resource-level view is what you drill into once RED has told you where to look.\n\nTeams that pick only one of the two tend to struggle in a specific, predictable way: RED-only setups detect problems but leave engineers guessing at the cause, while USE-only setups surface resource issues that may or may not actually be hurting any real customer yet.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An on-call engineer sees a RED-based alert fire for elevated Duration on the checkout service. What should they reach for next to actually diagnose the cause?",
+          "definition": {
+            "options": [
+              "USE-style resource metrics for the checkout service's own dependencies, to find which specific resource is saturated",
+              "Nothing further -- the RED alert alone already specifies the exact root cause without needing any additional metrics",
+              "A completely different RED dashboard for an unrelated service, since the problem is unlikely to be in checkout itself",
+              "Only the service's error logs, since RED and USE metrics together never actually help with root-cause diagnosis at all"
+            ],
+            "correct_index": 0,
+            "explanation": "RED tells you *that* checkout is unhealthy, but not *why* -- that's exactly what USE's resource-centric view is for, drilling into the specific CPU, memory, connection pool, or dependency that's actually saturated or failing underneath the service RED flagged."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Worked Incident: From RED Alert to USE Root Cause",
+      "body": "A RED-based alert fires: the checkout service's Duration has spiked and its Errors are climbing -- exactly the customer-impact signal this module's learning objective is about detecting, with low noise, from one consistent set of service-level metrics. The on-call engineer doesn't yet know why, only that checkout itself is degraded.\n\nDrilling into USE-style metrics for checkout's own dependencies reveals the actual cause: its database connection pool is fully saturated, exactly the kind of contention scenario module 64 already covered, where too many requests competing for too few connections drives up latency and error rates together. RED caught the customer-impacting symptom quickly and generically; USE's resource-level view supplied the specific, actionable cause once attention was already correctly directed at checkout.\n\nWithout RED's alert, the saturated pool might only have been noticed once customers were already complaining; without USE's resource-level detail, the on-call engineer would know checkout was unhealthy but have no concrete lead on what to actually go fix.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "In this incident, RED flagged checkout's rising Duration and Errors, and USE-style metrics then revealed a saturated database connection pool as the cause. What does this sequence illustrate about the two methods together?",
+          "definition": {
+            "options": [
+              "RED detects customer-impacting symptoms quickly and generically; USE then supplies the specific, actionable root cause",
+              "RED and USE are redundant here; either one alone would have been equally sufficient to both detect and diagnose the issue",
+              "USE should have been used first, since RED is only useful after the actual root cause has already been fully identified",
+              "This sequence is unusual; in most real incidents, RED and USE metrics never actually end up pointing at the same service"
+            ],
+            "correct_index": 0,
+            "explanation": "RED's service-level view is what caught the customer-impacting degradation quickly, without requiring prior knowledge of checkout's internals. USE's resource-level view is what then explained the specific cause (the saturated connection pool) once attention was already correctly focused on checkout -- exactly the detect-then-diagnose relationship between the two methods."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Golden signals exist to answer one focused question -- is this system failing its users -- with a deliberately small set of measurements rather than exhaustive dashboards, and the SRE book's own guidance (track failed-request latency separately) shows how easy it is to get even a simple metric subtly wrong. RED reshapes this for request-driven services specifically, giving a consistent, low-cognitive-load signal any on-call engineer can use to detect that a service is unhealthy. USE, already covered in module 62, is the complementary resource-level lens for diagnosing why once RED has pointed at where to look.\n\nThe next sessions in this module build on this detect-then-diagnose foundation directly: application and infrastructure dashboards, SLI instrumentation, alert tuning and actionable paging, synthetics and real user monitoring, and the alert-noise and ownership practices that keep this whole system from becoming something on-call engineers learn to ignore."
+    }
+  ]
+}

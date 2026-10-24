@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Observability & Reliability",
+    "slug": "observability-reliability",
+    "description": "Instrumentation, monitoring, SRE, incident response"
+  },
+  "module": {
+    "title": "Observability & Reliability"
+  },
+  "section": {
+    "title": "Monitoring & Alerting",
+    "slug": "54-monitoring-alerting",
+    "description": "Detect important customer impact with low-noise alerts.",
+    "proficiency_tier": "D"
+  }
+}
