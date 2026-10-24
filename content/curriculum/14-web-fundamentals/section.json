@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Web & Frontend",
+    "slug": "web-frontend",
+    "description": "Browser, React, accessibility, frontend performance"
+  },
+  "module": {
+    "title": "Web & Frontend"
+  },
+  "section": {
+    "title": "Web Fundamentals",
+    "slug": "14-web-fundamentals",
+    "description": "Build robust interfaces using web platform primitives.",
+    "proficiency_tier": "D"
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "title": "Semantic HTML and Forms: A Role Is a Promise You Have to Keep Yourself",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Recognize what native HTML elements provide for free -- keyboard operability, accessible naming, built-in validation -- and understand why repurposing a generic element with ARIA shifts that work onto the author instead.",
+  "content_blocks": [
+    {
+      "heading": "A Native Element Comes With Behavior Attached, Not Just Appearance",
+      "body": "A `<button>` element isn't just a piece of markup that happens to render as a clickable-looking box -- the browser also makes it focusable via Tab, activatable via Enter or Space, and automatically exposes its accessible name and role to assistive technology, all without a single line of extra code. A `<div>` styled to look identical gets none of that: it's not in the Tab order, pressing Enter or Space does nothing, and a screen reader has no idea it's meant to be interactive at all.\n\nThis is the core fact semantic HTML is really about: native elements bundle behavior with appearance, and choosing one over a generic element with custom styling is a choice about how much of that behavior you're taking on the responsibility to rebuild yourself.\n\nThe same pattern holds across the whole native element catalog, not just buttons: a `<a href>` is in the Tab order and opens on Enter automatically; an `<input type=\"checkbox\">` toggles on Space and exposes its checked state to assistive technology without any extra code at all."
+    },
+    {
+      "heading": "\"A Role Is a Promise\" -- the W3C's Own Framing",
+      "body": "The W3C's ARIA Authoring Practices Guide states this tradeoff directly: \"a role is a promise.\" Adding `role=\"button\"` to a `<div>` tells assistive technology to treat it as a button, but ARIA roles don't make the browser actually provide any of a real button's behavior -- no automatic keyboard support, no built-in styling, nothing. The moment you add that role, you've promised keyboard operability that a native `<button>` gives you automatically and that you now have to implement yourself, by hand, with your own event listeners.\n\nThis is precisely why the guide's broader advice is to prefer a native element over a repurposed generic one whenever one exists for the job: a native `<button>` keeps its promise automatically, while a `<div role=\"button\">` only keeps its promise if the author remembers to wire up every behavior the role implies, and keeps remembering every time the component is touched again later.",
+      "reference_links": [
+        { "label": "W3C ARIA Authoring Practices Guide -- Read Me First", "url": "https://www.w3.org/WAI/ARIA/apg/practices/read-me-first/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A developer adds `role=\"button\"` to a `<div>` instead of using a native `<button>` element. According to the W3C's \"a role is a promise\" framing, what has the developer actually committed to?",
+          "definition": {
+            "options": [
+              "Implementing the button's keyboard behavior themselves, since ARIA roles don't make the browser provide it automatically",
+              "Nothing extra at all -- adding an ARIA role automatically grants the exact same built-in keyboard behavior a native button has",
+              "Making the element visually identical to a native button, which is the only actual requirement the ARIA role imposes",
+              "Removing the need for any keyboard support entirely, since ARIA roles are specifically meant for mouse-only interactions"
+            ],
+            "correct_index": 0,
+            "explanation": "An ARIA role only communicates intent to assistive technology -- it doesn't make the browser add keyboard focusability or activation the way a native element provides automatically. Adding `role=\"button\"` is a promise that the element behaves like a button, which the developer now has to fulfill by hand with their own keyboard event handling."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Forms Get Even More For Free: Validation and Submission",
+      "body": "A native `<form>` with `<input required type=\"email\">` gets browser-enforced validation without any JavaScript at all -- the browser blocks submission and shows a built-in error message if the field is empty or isn't a valid email shape. Rebuilding this with a styled `<div>`-based \"form\" means reimplementing validation logic, error messaging, and focus management on invalid submission entirely by hand, in JavaScript, with every edge case the native behavior already covers for free.\n\nNative form elements also handle keyboard submission (pressing Enter in a text field submits the form), label association (clicking a `<label>` focuses its associated input), and default browser autofill -- all behaviors a custom-built form has to either give up or painstakingly reimplement, usually imperfectly, since these are exactly the small details that are easy to miss until a real user hits the gap.\n\nThis is also why browser vendors invest heavily in getting native form behavior right across platforms: it's shared infrastructure every site built on top of it benefits from automatically, rather than each site separately reinventing the same validation and submission logic with its own set of bugs.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team builds a signup form using styled `<div>` elements instead of native `<form>` and `<input>` elements. What do they lose by default?",
+          "definition": {
+            "options": [
+              "Browser-enforced validation, label-click-to-focus, Enter-to-submit, and autofill -- all built into native form elements",
+              "Nothing meaningful -- styled divs can be made visually identical, which is the only thing that actually matters here",
+              "Only the visual styling options available to them, since native forms are more restrictive in appearance than custom markup",
+              "The ability to submit any data to a server at all, since only native form elements are capable of sending HTTP requests"
+            ],
+            "correct_index": 0,
+            "explanation": "Native form elements bundle a long list of behaviors the browser provides automatically: field validation against constraints like `required` and `type=\"email\"`, label-click focusing its input, Enter-key submission, and autofill. A `<div>`-based form gets none of these for free and has to reimplement each one manually, usually imperfectly."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Real Cost Isn't Visual -- It's Everyone Who Can't See the Visual Design",
+      "body": "A sighted mouse user often can't tell the difference between a native button and a well-styled `<div>` that merely looks like one -- both can be made pixel-identical. The actual cost shows up specifically for users who don't interact visually with a mouse: someone navigating by keyboard alone hits a dead end at the fake button, unable to Tab to it or activate it; someone using a screen reader hears nothing indicating it's interactive at all, since there's no role or accessible name being exposed.\n\nThis is why semantic HTML is often framed as an accessibility topic specifically -- not because it's a nice-to-have on top of \"real\" functionality, but because the entire category of behavior native elements provide for free is the exact behavior that keyboard and assistive-technology users depend on to use the interface at all, not merely to use it comfortably.\n\nThis also means accessibility testing that only checks visual appearance against a design mockup will systematically miss this entire class of problem -- the page can look exactly right in a screenshot while being genuinely unusable for someone navigating it without a mouse.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A fake button built from a styled `<div>` with no ARIA role or keyboard handling looks pixel-identical to a real `<button>`. Who is actually affected by the missing native behavior?",
+          "definition": {
+            "options": [
+              "Keyboard-only users and screen reader users, who depend on the behavior native elements provide, not just visual appearance",
+              "No one at all -- since the visual result is pixel-identical, there's no practical difference for any user whatsoever",
+              "Only users on slower internet connections, since the missing behavior is purely a page-load performance concern here",
+              "Only mobile users specifically, since keyboard navigation and screen readers are both exclusively desktop-only technologies"
+            ],
+            "correct_index": 0,
+            "explanation": "A sighted mouse user often can't visually distinguish the fake button from a real one. The actual cost falls on users who don't rely on visual mouse interaction -- keyboard-only users who can't Tab to or activate it, and screen reader users who get no indication it's interactive -- exactly the group semantic HTML's built-in behavior is meant to serve."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Concrete Example: a Custom Dropdown Built From Scratch",
+      "body": "A team builds a custom-styled dropdown menu using `<div>`s because a native `<select>` can't be styled as flexibly as they want. To match a native select's behavior, they now have to implement: keyboard navigation (arrow keys to move between options, Enter to choose, Escape to close), focus trapping while the menu is open, announcing the currently-highlighted option to screen readers via ARIA attributes, and closing the menu when focus moves elsewhere -- a substantial list of behavior a native `<select>` provides automatically, now entirely the team's own responsibility to get right and keep right as the component evolves.\n\nThis doesn't mean custom dropdowns should never be built -- sometimes the design genuinely requires it -- but it means that choice should be made with eyes open about exactly how much behavior is being taken on, not discovered piecemeal as bug reports arrive from keyboard and screen-reader users one at a time.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team replaces a native `<select>` with a custom `<div>`-based dropdown for more flexible styling. What's the most accurate way to frame the tradeoff they've made?",
+          "definition": {
+            "options": [
+              "They've taken on reimplementing keyboard navigation, focus handling, and screen-reader announcements themselves",
+              "They've made a purely visual tradeoff with no behavioral consequences, since styling and behavior are entirely separate",
+              "They've actually gained extra built-in behavior beyond what a native select provides, as a side benefit of custom markup",
+              "There's no real tradeoff at all -- custom dropdowns and native selects are functionally identical once styling is applied"
+            ],
+            "correct_index": 0,
+            "explanation": "A native `<select>` bundles keyboard navigation, focus management, and accessible announcements automatically. Replacing it with custom markup for styling flexibility means the team has taken on reimplementing all of that behavior themselves -- a real, substantial tradeoff worth making deliberately, not one that disappears just because the visual result looks right."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Native HTML elements bundle behavior with appearance -- keyboard operability, accessible naming, and for forms specifically, built-in validation and submission handling -- all for free, without writing any JavaScript. The W3C's own framing captures the tradeoff precisely: a role like `role=\"button\"` is a promise, and ARIA alone doesn't keep that promise -- only the author's own code can, by rebuilding every behavior a native element would have provided automatically. That rebuilding cost falls disproportionately on keyboard-only and screen-reader users, who depend on exactly the behavior a repurposed generic element is missing.\n\nNone of this means custom components are never justified -- it means the choice to repurpose a generic element should be made knowing the full list of behavior being taken on, not discovered one missing keyboard shortcut at a time. The next sessions in this module build on these same web-platform primitives directly: CSS layout and responsive styling, JavaScript and TypeScript in the browser, DOM events and Fetch, HTTP caching and cookies, and cross-browser compatibility."
+    }
+  ]
+}
