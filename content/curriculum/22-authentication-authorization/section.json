@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Backend & APIs",
+    "slug": "backend-apis",
+    "description": "Service architecture, API contracts, identity, job processing"
+  },
+  "module": {
+    "title": "Backend & APIs"
+  },
+  "section": {
+    "title": "Authentication & Authorization",
+    "slug": "22-authentication-authorization",
+    "description": "Enforce identity and permissions across trust boundaries.",
+    "proficiency_tier": "D"
+  }
+}

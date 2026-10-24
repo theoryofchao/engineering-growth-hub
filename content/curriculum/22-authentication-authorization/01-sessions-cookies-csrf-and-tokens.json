@@ -1,0 +1,107 @@
+{
+  "title": "Sessions, Cookies, and CSRF: Why the Browser's Helpfulness Is the Vulnerability",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Explain why a browser's automatic cookie attachment is exactly what makes CSRF possible, why the SameSite cookie attribute is a strong but incomplete defense, and why CSRF tokens remain the primary, browser-behavior-independent protection.",
+  "content_blocks": [
+    {
+      "heading": "HTTP Is Stateless -- Cookies Are How \"Logged In\" Persists",
+      "body": "Each HTTP request is independent by default; nothing inherently connects one request to the next as coming from the same authenticated user. A session cookie bridges that gap: after a successful login, the server sets a cookie containing a session identifier, and the browser automatically attaches that same cookie to every subsequent request it sends to that domain -- which is exactly what lets a server recognize \"this request is from the user who logged in earlier\" without requiring a fresh login on every single request.\n\nThis automatic attachment is genuinely convenient -- it's the entire mechanism that makes staying logged in across page loads possible at all -- but it's also, as this session covers, exactly the property a cross-site request forgery attack exploits.\n\nThis session works through that attack specifically, the modern browser default that blocks most of it automatically, a real gap that default still leaves open, and the token-based defense that closes it completely."
+    },
+    {
+      "heading": "The CSRF Attack: Exploiting the Browser's Own Helpfulness",
+      "body": "A browser attaches a domain's cookies to any request sent to that domain, regardless of which page or site actually triggered the request. If a user is logged into `example.com` and then visits a malicious or compromised page containing a hidden form that submits to `example.com/delete-account`, the browser still attaches the user's real `example.com` session cookie to that request -- because, as far as the browser's cookie-attachment rule is concerned, it's just a request to `example.com`, regardless of where the request actually originated.\n\nThe server receiving that request sees a seemingly legitimate, authenticated request -- the correct session cookie is right there -- with no inherent way to tell the difference between a request the user actually intended and one a malicious page tricked their browser into sending on their behalf.\n\nThis is precisely why the attack is named *forgery*: the attacker never sees or steals the victim's session cookie at all -- they don't need to -- they simply forge a request and let the victim's own browser supply the real, valid credential on their behalf.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A user logged into example.com visits a malicious page containing a hidden form that submits to example.com/delete-account. Why does the browser attach the user's real session cookie to that request?",
+          "definition": {
+            "options": [
+              "The browser attaches a domain's cookies to any request sent to that domain, regardless of which page actually triggered it",
+              "The malicious page must have somehow stolen the user's session cookie directly in order for this attack to work at all",
+              "This can't actually happen; browsers refuse to attach cookies to requests triggered by a different page or site entirely",
+              "The server itself is what sends the cookie along with the request, not the browser, which is the actual source of this bug"
+            ],
+            "correct_index": 0,
+            "explanation": "A browser's cookie-attachment rule is based purely on the destination domain, not on which page or site actually triggered the request -- a hidden form on a malicious page submitting to example.com still gets example.com's real cookies attached by the browser, with no theft or interception required at all."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "SameSite: the Modern Default Defense",
+      "body": "MDN's own cookie documentation describes the SameSite attribute, set by the server, that tells the browser when a cookie should actually be included in a cross-site request. `Strict` never sends the cookie cross-site at all; `Lax` withholds it from cross-site subresource requests and cross-site form submissions (like the hidden-form attack above), but still sends it on a top-level navigation -- following an ordinary link from an external site.\n\nChrome made `Lax` the default for any cookie that doesn't explicitly set a `SameSite` value, starting in February 2020 -- which is why modern browsers now block most POST-based CSRF automatically, even for an application that's never done anything itself to specifically defend against it.\n\n`Strict` offers stronger protection still, at a real usability cost: a user following a link from an external site into an app set to `Strict` arrives looking logged out, since the cookie isn't sent on that very first navigation either.",
+      "reference_links": [
+        { "label": "MDN -- Cookies (SameSite)", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Since Chrome made SameSite=Lax the default in 2020, why does this block most POST-based CSRF attacks automatically, without any application-level defense being added?",
+          "definition": {
+            "options": [
+              "Lax withholds the cookie from cross-site form submissions, exactly the mechanism the hidden-form attack relies on",
+              "Lax blocks every single cross-site request of any kind, including ordinary link navigation from an external site",
+              "This default only applies to cookies an application has explicitly and deliberately marked as SameSite=Lax itself",
+              "POST-based CSRF was never actually a real, practically exploitable vulnerability before this particular default changed"
+            ],
+            "correct_index": 0,
+            "explanation": "SameSite=Lax specifically withholds the cookie from cross-site subresource requests and cross-site form submissions -- exactly the mechanism the hidden-form CSRF attack depends on. Making this the browser default means that protection now applies automatically, even to applications that never set the attribute themselves."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Gotcha: Lax Still Allows GET-Based CSRF",
+      "body": "OWASP's own CSRF Prevention Cheat Sheet is specific about SameSite's actual limits: `Lax` still sends the cookie on a top-level GET navigation -- an ordinary link click -- which means a state-changing action exposed through a GET request is not protected by SameSite=Lax at all. If an application lets a GET request to `/delete-account?id=123` actually delete an account, a malicious page's plain `<a href>` or auto-loading image tag pointing at that URL still carries the user's session cookie, SameSite default included.\n\nThe actual fix here isn't a cookie setting -- it's a design discipline that predates SameSite entirely: state-changing operations belong behind POST (or another non-GET method), never GET, which is exactly the HTTP semantics distinction GET's \"safe method\" expectation was always meant to enforce. SameSite is a strong, genuinely useful default, but it's not a substitute for getting this basic design choice right.",
+      "reference_links": [
+        { "label": "OWASP -- Cross-Site Request Forgery Prevention Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An application exposes account deletion through a GET request to /delete-account?id=123, relying on SameSite=Lax for CSRF protection. Why doesn't this actually protect the endpoint?",
+          "definition": {
+            "options": [
+              "SameSite=Lax still sends the cookie on top-level GET navigation, so a plain link or image tag can trigger it",
+              "SameSite=Lax provides no CSRF protection of any kind, regardless of which HTTP method a given endpoint uses",
+              "This can't actually happen in practice, since no real application would ever expose a state change via GET",
+              "The real fix is switching to SameSite=None instead, which gives stronger protection than Lax does for this case"
+            ],
+            "correct_index": 0,
+            "explanation": "SameSite=Lax specifically still allows the cookie on top-level GET navigation (an ordinary link click), since that's needed for normal browsing to work. A GET-based state change is exactly the gap Lax doesn't close -- the real fix is never exposing a state change through GET in the first place, not a different cookie setting."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "CSRF Tokens: Defense That Doesn't Depend on Browser Cookie Behavior",
+      "body": "A CSRF token is a server-generated, unpredictable value embedded in a legitimate page (often in a hidden form field) and checked against the session on submission. An attacker's malicious page can still trigger a cross-site request with the user's cookie attached, but it has no way to know or produce the correct token value, since that token was never exposed to the malicious page in the first place -- the request fails the server's check regardless of SameSite settings, regardless of whether the endpoint happens to use GET or POST, and regardless of any cookie-attribute mistake an application might have made.\n\nThis is why OWASP recommends CSRF tokens as the primary defense, with SameSite cookies as a valuable, complementary layer -- not the other way around: tokens don't depend on getting every cookie setting and HTTP-method choice right across an entire application, which is exactly the kind of place a mistake like the GET-based example above can otherwise slip through unnoticed.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why does a CSRF token continue to protect an endpoint even in the exact GET-based scenario where SameSite=Lax fails?",
+          "definition": {
+            "options": [
+              "The token is never exposed to the malicious page, so it can't produce the right value regardless of cookies used",
+              "CSRF tokens work by changing which HTTP method browsers are able to use, making GET-based state changes impossible",
+              "CSRF tokens and SameSite cookies are actually two names for the exact same underlying browser mechanism entirely",
+              "This isn't actually solved by tokens either; nothing can protect a GET-based state change once it's exposed"
+            ],
+            "correct_index": 0,
+            "explanation": "A CSRF token's protection has nothing to do with cookies, SameSite settings, or which HTTP method an endpoint uses -- it works because the malicious page simply never had access to the correct token value, so its forged request fails the server's check regardless of the specific mistake (like a GET-exposed state change) that might otherwise let an attack through."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A session cookie's automatic attachment to every request for its domain is what makes staying logged in work at all -- and also exactly what a CSRF attack exploits, since the browser can't tell a user-intended request from one a malicious page tricked it into sending. SameSite=Lax, now the browser default, blocks most cross-site form-submission CSRF automatically, but it has a real, documented gap: a state-changing GET endpoint still isn't protected, which is why state changes belong behind non-GET methods as a design discipline, not a cookie setting. CSRF tokens close that gap completely, since their protection doesn't depend on cookie attributes or HTTP-method choices at all -- which is why OWASP treats them as the primary defense, with SameSite as valuable defense-in-depth on top.\n\nThe next sessions in this module build on this identity foundation directly: OAuth 2.0 and OpenID Connect, password/passkey/MFA concepts, RBAC/ABAC and policy enforcement, tenant isolation and authorization testing, and token rotation, revocation, and identity providers."
+    }
+  ]
+}
