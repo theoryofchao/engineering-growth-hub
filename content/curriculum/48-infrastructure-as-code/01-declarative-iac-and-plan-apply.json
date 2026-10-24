@@ -1,0 +1,107 @@
+{
+  "title": "Terraform/OpenTofu: Declarative Infrastructure and the Plan/Apply Workflow",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Explain why Terraform-style infrastructure as code is declarative rather than imperative, how the plan/apply workflow separates proposing changes from making them, and why Terraform's state file is what makes that comparison possible at all.",
+  "content_blocks": [
+    {
+      "heading": "Infrastructure Described in Text, Not Clicked Together by Hand",
+      "body": "Infrastructure as code means describing servers, networks, and managed services in version-controlled text files rather than configuring them by hand in a cloud console. This directly extends module 13's code-review content to infrastructure itself: a proposed infrastructure change becomes a reviewable diff, with the same must-fix-vs-nice-to-have feedback discipline applying, rather than an undocumented click a reviewer has no way to see or question after the fact.\n\nThis also makes infrastructure genuinely reproducible in the way module 47's cloud-platforms content assumed but didn't dwell on: the same text file can stand up an identical environment a second time, rather than depending on someone correctly remembering every manual step they took the first time.\n\nThis session covers Terraform specifically, by far the most widely used tool in this category, along with OpenTofu, its open-source fork -- the two share the same core model this session describes, for reasons covered later in this session."
+    },
+    {
+      "heading": "Declarative, Not Imperative: Describe the Destination, Not the Steps",
+      "body": "HashiCorp's own introduction to Terraform frames the core idea directly: you write configuration describing the infrastructure you want to exist -- the desired state -- rather than a sequence of commands describing how to get there. An imperative script says \"create this server, then attach this disk, then open this port, in this exact order\"; a declarative Terraform configuration just says \"this server, this disk, this port should exist,\" and Terraform itself works out what actual steps are needed to make that true.\n\nThis distinction matters practically: an imperative script run twice might try to create the same server twice and fail or duplicate it, while a declarative configuration applied twice simply recognizes everything already matches the desired state and makes no changes the second time -- the same configuration file is safe to re-apply, not just safe to run once.\n\nThis property -- safe to run repeatedly, with no effect if nothing's actually changed -- is often called idempotence, the same term module 24's background-processing content already used for a job handler that tolerates being run more than once.",
+      "reference_links": [
+        { "label": "HashiCorp -- Terraform: What is Terraform?", "url": "https://developer.hashicorp.com/terraform/intro" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A declarative Terraform configuration describing one server is applied twice in a row, with nothing changed in between. What happens the second time?",
+          "definition": {
+            "options": [
+              "Nothing -- Terraform recognizes the actual state already matches the desired state and makes no changes",
+              "The same server gets created a second time, since applying a configuration always creates everything it describes fresh",
+              "Terraform throws an error and refuses to run at all, since applying the same configuration twice is never actually allowed",
+              "The server gets deleted and immediately recreated from scratch, even though nothing about it actually needed to change"
+            ],
+            "correct_index": 0,
+            "explanation": "Because Terraform is declarative, it compares the desired state in the configuration against the actual, current state of real infrastructure -- if they already match, there's nothing to change, and re-applying the same configuration is a safe no-op rather than a repeated creation attempt."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Plan, Then Apply: Proposing Changes Before Making Them",
+      "body": "HashiCorp's own documentation describes a deliberate two-step workflow: `terraform plan` checks the actual, live state of each resource through the cloud provider's own API, compares it against the desired state in the configuration, and lists exactly what would change -- without making any of those changes yet. `terraform apply` runs that same comparison and then actually executes the changes, typically asking for explicit confirmation first.\n\nThis propose-then-confirm separation is a deliberate safety mechanism, not an extra step for its own sake: a plan can be reviewed by a human (or another system) before anything real happens, catching an unexpected or unintended change -- a resource that would be destroyed and recreated instead of updated in place, say -- while it's still just a proposal and not yet an action already taken against real infrastructure.\n\nA saved plan file can also be handed directly to `apply` later, guaranteeing the exact changes a reviewer actually approved are the ones that get executed, rather than re-running plan a second time and risking it computing something subtly different if real infrastructure happened to shift in between.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why does Terraform separate `plan` (propose changes) from `apply` (actually make them) into two distinct steps, rather than combining them into one command?",
+          "definition": {
+            "options": [
+              "It lets a human review changes before they happen to real infrastructure, catching unintended ones early",
+              "It exists purely for historical reasons left over from an early version and serves no real safety purpose today",
+              "Plan and apply actually do the exact same thing -- the separation is cosmetic and has no practical effect at all",
+              "Combining them into one step is technically impossible, given how cloud provider APIs happen to be designed"
+            ],
+            "correct_index": 0,
+            "explanation": "Separating propose from execute means a plan's output -- exactly which resources would be created, changed, or destroyed -- can be reviewed before anything real happens, catching a genuinely unintended change (like an unexpected resource replacement) while it's still just a proposal rather than an action already taken."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "State: What Makes the Desired-vs-Actual Comparison Possible",
+      "body": "Terraform's state file tracks what it has actually created and the dependencies between those resources -- without it, comparing desired state against actual state wouldn't be enough information on its own: if a resource is removed from the configuration entirely, Terraform needs the state file to know that resource used to exist and should now be destroyed, since there's nothing left in the configuration itself pointing at it.\n\nState also records resource dependencies, which determines the order operations have to happen in -- a database has to exist before an application server that depends on its connection string can be created, and state is what lets Terraform work that ordering out automatically rather than requiring it to be specified by hand every time.\n\nState is also the foundation for drift detection (this module's own 48.5 subtopic): a `plan` run that queries live infrastructure and finds it no longer matches what state recorded is exactly how an out-of-band manual change -- someone editing a resource directly in the cloud console -- gets surfaced at all.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A resource is deleted entirely from a Terraform configuration file. How does Terraform know this resource needs to be destroyed in real infrastructure, given that the configuration itself no longer mentions it at all?",
+          "definition": {
+            "options": [
+              "The state file still records that the resource was previously created, which is what tells Terraform it now needs removing",
+              "Terraform can't actually detect this case at all; a resource removed from configuration is simply left running indefinitely",
+              "The cloud provider's own API automatically notifies Terraform whenever a resource is no longer referenced anywhere at all",
+              "Terraform re-reads the configuration's full git history to reconstruct which resources used to exist before being removed"
+            ],
+            "correct_index": 0,
+            "explanation": "The configuration alone only describes what should exist going forward -- it has nothing to say about a resource that's been removed entirely. The state file is what preserves the fact that Terraform previously created that resource, which is exactly what lets it recognize the removal and plan to destroy it."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why Two Names: Terraform and OpenTofu",
+      "body": "This module's own subtopic name -- \"Terraform/OpenTofu\" -- reflects a real, documented split: HashiCorp relicensed Terraform from the open-source Mozilla Public License to the more restrictive Business Source License in August 2023. In response, a community fork -- first called OpenTF, then renamed OpenTofu -- formed and was brought under the Linux Foundation in September 2023, continuing development as an open-source alternative built from Terraform's own prior codebase.\n\nThe practical consequence for a learner: the two tools share nearly identical syntax and the same core declarative, plan/apply model this session covers, since OpenTofu forked from Terraform's existing code rather than starting over -- the underlying concepts transfer directly between them, even as the two projects have since diverged and HashiCorp and the Linux Foundation have disputed aspects of the fork, a dispute whose current resolution isn't something this session takes a position on.",
+      "reference_links": [
+        { "label": "OpenTofu -- Announcing the Fork of Terraform", "url": "https://opentofu.org/blog/opentofu-announces-fork-of-terraform/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "OpenTofu forked from Terraform's own existing codebase after HashiCorp's 2023 license change. What does this mean for someone who already knows Terraform's declarative, plan/apply model?",
+          "definition": {
+            "options": [
+              "The core concepts transfer directly, since OpenTofu shares nearly identical syntax and the same underlying model it forked from",
+              "Nothing transfers at all; OpenTofu was built completely from scratch and shares no real conceptual overlap with Terraform",
+              "Only the command-line syntax transfers; the underlying declarative and plan/apply concepts are completely different in OpenTofu",
+              "This information is irrelevant to learning either tool, since the license dispute has no bearing on how either one works"
+            ],
+            "correct_index": 0,
+            "explanation": "Because OpenTofu forked from Terraform's existing codebase rather than being built from scratch, it kept the same declarative configuration model and plan/apply workflow this session covers -- the core concepts, and most of the syntax, transfer directly between the two tools even as they've since diverged in other respects."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Infrastructure as code turns infrastructure changes into reviewable, reproducible text, extending module 13's code-review discipline to servers and networks rather than just application code. Terraform's declarative model describes a desired destination rather than a sequence of steps, which is what makes re-applying the same configuration safe. The plan/apply workflow deliberately separates proposing a change from making it, giving a human a chance to catch something unintended before it happens to real infrastructure, and the state file is specifically what makes comparing desired against actual state possible at all -- including knowing what to remove when a resource disappears from configuration. OpenTofu's fork from Terraform's own codebase means the concepts in this session apply directly to either tool.\n\nThe next sessions in this module build on this foundation: state, plans, modules, and providers in more depth; secrets and sensitive outputs; environment promotion; drift detection and policy; and immutable, repeatable provisioning as the practice this session's declarative model makes possible."
+    }
+  ]
+}

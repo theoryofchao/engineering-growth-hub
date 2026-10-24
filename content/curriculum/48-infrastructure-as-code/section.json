@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Infrastructure & Cloud",
+    "slug": "infrastructure-cloud",
+    "description": "Linux, containers, orchestration, cloud, IaC"
+  },
+  "module": {
+    "title": "Infrastructure & Cloud"
+  },
+  "section": {
+    "title": "Infrastructure as Code",
+    "slug": "48-infrastructure-as-code",
+    "description": "Provision auditable reproducible environments.",
+    "proficiency_tier": "W"
+  }
+}
