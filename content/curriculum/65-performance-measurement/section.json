@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Performance Engineering",
+    "slug": "performance-engineering",
+    "description": "Profiling, optimization, load and capacity"
+  },
+  "module": {
+    "title": "Performance Engineering"
+  },
+  "section": {
+    "title": "Performance Measurement",
+    "slug": "65-performance-measurement",
+    "description": "Produce trustworthy performance evidence.",
+    "proficiency_tier": "W"
+  }
+}

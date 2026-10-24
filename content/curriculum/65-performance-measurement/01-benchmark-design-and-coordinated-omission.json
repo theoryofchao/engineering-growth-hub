@@ -1,0 +1,107 @@
+{
+  "title": "Benchmark Design: Why a Closed-Loop Load Test Lies About Your Tail Latency",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Recognize coordinated omission as a structural flaw in closed-loop load testing that systematically hides the worst latencies, and understand why an open-loop, fixed-arrival-rate benchmark is required to measure tail latency trustworthily.",
+  "content_blocks": [
+    {
+      "heading": "A Bad Benchmark Is Worse Than No Benchmark",
+      "body": "A benchmark's entire purpose is producing trustworthy evidence about how a system actually behaves under load -- the throughput, latency, and concurrency numbers module 64 already covered, measured deliberately rather than guessed. A benchmark with a hidden structural flaw is more dangerous than having no number at all, because it produces a precise-looking figure that creates false confidence -- a team trusts a number that quietly isn't measuring what they think it's measuring, and makes real decisions based on it.\n\nThis session covers one specific, well-documented flaw that affects an entire common category of load-testing tool: closed-loop benchmarking, and the systematic way it corrupts exactly the measurement -- tail latency -- that teams usually care about most.\n\nThe module's own learning objective -- producing trustworthy performance evidence -- starts with knowing which common benchmarking approaches are themselves untrustworthy by construction, before getting into the specific tests and interpretation skills the rest of this module covers."
+    },
+    {
+      "heading": "Closed-Loop Testing's Hidden Flaw: Coordinated Omission",
+      "body": "A closed-loop load generator sends a request, waits for the response, then sends the next one -- a natural way to simulate a user clicking and waiting. Gil Tene's widely-cited talk on this exact failure mode names the resulting problem \"coordinated omission\": if the system under test stalls for 200 milliseconds (a garbage-collection pause, a slow downstream call), a closed-loop generator doesn't record a backlog of requests that should have been sent during that stall -- it simply sends fewer requests overall, because it was blocked waiting rather than queuing more work.\n\nThe generator's own behavior ends up \"coordinating\" with the system's slowdown to omit exactly the measurements that would have revealed it: the requests that would have piled up behind a real stall, in a real production system facing real concurrent traffic, were never sent at all in the closed-loop test.\n\nThe name itself captures the irony: the measurement tool isn't lying on purpose, but its own waiting behavior passively cooperates with the exact failure it was supposed to detect, hiding the evidence rather than recording it.",
+      "reference_links": [
+        { "label": "Gil Tene -- How NOT to Measure Latency (QCon San Francisco 2012)", "url": "https://qconsf.com/sf2012/dl/qcon-sanfran-2012/slides/GilTene_HowNotToMeasureLatency.pdf" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A closed-loop load generator sends a request, then waits for the response before sending the next one. The system under test stalls for 200ms. What does the generator actually do during that stall?",
+          "definition": {
+            "options": [
+              "It sends fewer requests overall during the stall, rather than recording a backlog of requests that should've gone out",
+              "It queues every request that would have been sent during the stall and sends them all at once once it finally ends",
+              "It detects the stall directly and marks every request sent right afterward as artificially delayed in its own report",
+              "It automatically switches over to an open-loop sending pattern for the rest of the test once a stall is first detected"
+            ],
+            "correct_index": 0,
+            "explanation": "A closed-loop generator is blocked waiting for a response, so it can't send more requests during a stall -- it just sends fewer overall, rather than building up a backlog the way real concurrent traffic would. This is exactly the \"coordinated omission\" Gil Tene's talk names: the generator's own waiting behavior omits the measurements that would reveal the stall's real impact."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why This Specifically Corrupts the Tail, Not the Average",
+      "body": "Coordinated omission doesn't distort every measurement equally -- it specifically erases the slowest requests, the ones that would have piled up behind a real stall, since those are exactly the requests a closed-loop generator never got around to sending. Marc Brooker's own benchmark comparison found this effect can be severe: in his bimodal example, a closed-loop test underestimated the real p99 latency by at least a factor of 25, understating the actual tail behavior by an order of magnitude or more.\n\nThis means a closed-loop benchmark's reported p99 (the exact percentile subtopic 65.3 covers in depth) can look reassuringly tight while production's real p99, measured correctly or experienced by actual concurrent users, is dramatically worse -- not because production is somehow different, but because the benchmark structurally never measured the requests that would have shown the problem.",
+      "reference_links": [
+        { "label": "Marc Brooker -- Open Versus Closed", "url": "https://brooker.co.za/blog/2023/05/10/open-closed" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why does coordinated omission specifically corrupt a benchmark's reported tail latency (p99) much more than its average latency?",
+          "definition": {
+            "options": [
+              "The requests omitted are specifically the slowest ones that would have piled up behind a stall, which are exactly what the tail measures",
+              "It actually corrupts the average more severely than the tail, since most requests in any benchmark are fast ones by default",
+              "Tail latency and average latency are both affected completely equally; there's no meaningful difference in how severely each is distorted",
+              "This effect is purely theoretical and has never actually been measured or confirmed in any real benchmark comparison"
+            ],
+            "correct_index": 0,
+            "explanation": "Coordinated omission specifically erases the requests that would have been delayed behind a stall -- exactly the slow requests that make up a distribution's tail. Brooker's own measured comparison found this can understate real p99 by a factor of 25 or more, a severe, documented distortion specifically concentrated in tail latency."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Fix: Open-Loop, Fixed-Arrival-Rate Testing",
+      "body": "An open-loop load generator keeps sending requests at a fixed, planned rate regardless of how long previous responses are taking -- it never waits for one response before scheduling the next. Critically, each request's latency is measured from when it was *supposed* to be sent, not from when it actually got sent, so a stall that delays sending shows up as elevated latency on the backlog of requests behind it, rather than silently vanishing from the measurement entirely.\n\nThis correctly models what real, concurrent production traffic actually does: real users don't coordinate with a server's slowdown by politely sending fewer requests during it -- new requests keep arriving at roughly their normal rate regardless of whether the server is currently struggling, which is exactly the behavior an open-loop benchmark is designed to reproduce.\n\nTools built around this fixed-arrival-rate model (wrk2 and k6's arrival-rate executor are commonly cited examples) exist specifically because popular default load-testing setups are closed-loop by default, and switching tools -- not just tuning settings -- is often what's actually required to get a trustworthy tail-latency measurement.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An open-loop load generator measures each request's latency from when it was supposed to be sent, not from when it was actually sent. Why does this specific detail matter for capturing a real stall's impact?",
+          "definition": {
+            "options": [
+              "A delayed send now shows elevated latency on the backlog behind the stall, instead of silently vanishing from the data",
+              "It doesn't actually matter at all -- measuring from either the intended or the actual send time gives identical results",
+              "This detail only affects throughput numbers, and has no real bearing on how latency itself gets measured or reported",
+              "It matters only for extremely long stalls lasting several minutes; brief stalls aren't affected by which send time is used"
+            ],
+            "correct_index": 0,
+            "explanation": "Measuring from the intended send time means a request delayed behind a stall is correctly recorded as having waited that extra time, rather than the generator simply skipping it. This is exactly what captures the real backlog effect of a stall, instead of letting coordinated omission erase it from the results entirely."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Realistic Case: a Benchmark That Approved a Regression",
+      "body": "A team runs a closed-loop benchmark before and after a code change and sees the reported p99 improve, so they ship it with confidence. In production, real users start experiencing noticeably worse tail latency -- the change actually introduced a rare but real stall under concurrent load, something the closed-loop benchmark structurally couldn't have detected, since any requests queued up behind that stall were simply never sent by the waiting generator in the first place.\n\nThis is precisely the \"worse than no benchmark\" risk from block 1 made concrete: the team didn't lack data, they had a specific, confidently-reported number that was systematically blind to the exact failure mode that mattered, and trusted it because it looked precise rather than because it was actually measuring the right thing.\n\nThe fix going forward isn't a smarter reading of the same closed-loop number -- it's switching to an open-loop benchmark before the next change ships, so the next \"improved\" result is actually trustworthy rather than merely reassuring.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A closed-loop benchmark shows an \"improved\" p99 after a change, but production tail latency actually gets worse once the change ships. What's the most likely explanation, given this session's content?",
+          "definition": {
+            "options": [
+              "The change introduced a rare stall under real concurrent load that coordinated omission prevented the benchmark from detecting",
+              "The benchmark and production environments must simply have different hardware, which is the only possible explanation here",
+              "This outcome is essentially impossible if the benchmark reported an improvement; production issues must be unrelated to the change",
+              "The team's monitoring in production is broken and is reporting inaccurate numbers that don't reflect the real user experience"
+            ],
+            "correct_index": 0,
+            "explanation": "A closed-loop benchmark structurally can't capture the backlog effect of a rare stall under real concurrent load -- coordinated omission means the requests that would have revealed the regression were never sent by the waiting generator, letting a real problem slip through a benchmark that looked reassuring."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A benchmark's value depends entirely on whether it actually measures what it claims to, and closed-loop load testing has a well-documented structural blind spot -- coordinated omission -- that specifically erases the slowest requests from its results, understating real tail latency by a factor of 25 or more in documented cases. Open-loop, fixed-arrival-rate testing fixes this by sending at a planned rate regardless of response times and measuring latency from the intended send time, correctly capturing the backlog a real stall creates.\n\nThe next sessions in this module build directly on getting this foundation right: load, stress, and soak tests as different deliberate ways to apply this kind of traffic; p50/p95/p99 interpretation in more depth; experiment controls and noise; regression gates that automatically catch a performance regression before it ships; and performance budgets as the practical mechanism for keeping a system's measured behavior within agreed bounds."
+    }
+  ]
+}
