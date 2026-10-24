@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Product & Collaboration",
+    "slug": "product-collaboration",
+    "description": "Product thinking, execution, communication"
+  },
+  "module": {
+    "title": "Product & Collaboration"
+  },
+  "section": {
+    "title": "Cross-Functional Engineering",
+    "slug": "75-cross-functional-engineering",
+    "description": "Build alignment across functions without hiding engineering constraints.",
+    "proficiency_tier": "G"
+  }
+}

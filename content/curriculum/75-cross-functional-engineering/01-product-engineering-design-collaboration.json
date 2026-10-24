@@ -1,0 +1,104 @@
+{
+  "title": "Product Engineering Design Collaboration: The Product Trio",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Recognize why sequential handoff between product, design, and engineering causes late, expensive rework, and apply the product trio model of collaborative discovery to surface technical constraints while they're still cheap to address.",
+  "content_blocks": [
+    {
+      "heading": "The Sequential Handoff's Specific, Recurring Failure",
+      "body": "A traditional sequential process -- product writes requirements, design creates a polished mockup, engineering receives it to implement -- looks efficient on paper: each function does its own specialized work, then passes a finished artifact to the next. The specific, recurring failure this causes is that engineering only discovers a real technical constraint once the design is already fully finalized, well past the point where changing direction is still cheap.\n\nThis directly extends module 71's requirements content: separating a stated problem from an assumed solution matters, but *who's actually in the room* doing that separating matters just as much -- a problem explored only by product and design, without engineering present, can arrive at a solution that's already technically assumed to be feasible before anyone who'd actually know has had a chance to say otherwise.\n\nThe fix isn't more documentation at the handoff point -- a more detailed spec still arrives too late to change course cheaply. The fix is changing who's involved in shaping the decision in the first place, which is exactly what this session covers next."
+    },
+    {
+      "heading": "The Product Trio: Discovery as Collaboration, Not Handoff",
+      "body": "Teresa Torres's Product Talk describes the product trio model directly: a product manager, a designer, and a software engineer working together on product discovery -- deciding what to build -- rather than handing that decision off in sequence from one role to the next. Critically, the trio stays embedded within the delivery team responsible for actually building the result, rather than operating as a separate group that hands a finished decision down to engineers who had no part in making it.\n\nThis isn't a claim that engineers should design interfaces or that designers should write requirements -- each role still brings its own specific expertise. It's a claim about timing and presence: an engineer's technical judgment is most valuable *during* the decision about what to build, not only afterward, once that decision has already been made without them.\n\nThis also reframes what \"discovery\" actually means -- not a product-and-design-only activity that precedes engineering's involvement, but a genuinely joint activity engineering is a real participant in from the start.",
+      "reference_links": [
+        { "label": "Teresa Torres / Product Talk -- Core Concept: The Product Trio", "url": "https://www.producttalk.org/product-trio/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "In the product trio model, why does an engineer participate during product discovery itself, rather than only receiving a finished design to implement afterward?",
+          "definition": {
+            "options": [
+              "Their judgment is most valuable while the decision about what to build is still being made, not after it's final",
+              "Engineers in this model take over the actual design and requirements work themselves, fully replacing those roles",
+              "This is purely a matter of team morale; it has no real effect on what actually gets decided or how work turns out",
+              "The trio model requires engineers to attend purely as silent observers, with no real influence on discovery decisions"
+            ],
+            "correct_index": 0,
+            "explanation": "The product trio's point isn't reassigning who does design or requirements work -- it's timing: an engineer's technical judgment catches feasibility issues while the decision is still open, rather than after a design has already been finalized without that input."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Worked Contrast: the API Limitation Caught Early vs. Caught Late",
+      "body": "Sequential handoff: product writes a spec for a feature, design produces detailed mockups built around that spec, and only once engineering receives the finished mockups do they discover a required third-party API doesn't actually support the specific behavior the design assumed. Weeks of design work now have to be revisited, and the schedule slips by however long that rework takes.\n\nProduct trio: the same API limitation comes up in an early discovery conversation, before any detailed mockups exist -- the engineer simply mentions it as soon as the team starts discussing the feature's rough shape. Design adjusts its approach before investing real effort in detailed work, and the constraint that would have caused expensive rework later costs almost nothing to accommodate this early, specifically because it surfaced while the decision was still genuinely open.\n\nThe constraint itself is identical in both scenarios -- what changes entirely is when it's discovered, and that single difference in timing is what separates a cheap adjustment from weeks of lost design work.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "In the product trio scenario, an engineer mentions a third-party API limitation during an early discovery conversation, before detailed design work has started. Why does this cost so much less than discovering the same limitation after design is finished?",
+          "definition": {
+            "options": [
+              "The constraint surfaces while the decision is still open, so almost no invested work has to be redone to accommodate it",
+              "Early-stage API limitations are inherently easier to work around technically than the exact same limitation discovered later",
+              "There's no actual cost difference at all; the timing of when a constraint is discovered doesn't affect how much rework results",
+              "The engineer in this scenario is simply more skilled than the one in the sequential handoff scenario, which is the real difference"
+            ],
+            "correct_index": 0,
+            "explanation": "The cost difference comes entirely from timing, not from the constraint itself or anyone's individual skill -- surfacing it before detailed design work has been invested means there's almost nothing built yet to undo, while surfacing the same constraint after mockups are finished means that invested work has to be revisited."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why Engineers Sometimes Stay Silent -- and Why That Costs Everyone",
+      "body": "A common reason the API-limitation example in block 3 doesn't get caught early in practice isn't that no engineer was present -- it's that an engineer in the room during discovery sometimes hesitates to raise a technical concern, worried it will read as blocking progress or overstepping into product and design's territory. This hesitation is exactly what this module's own learning objective names directly: building alignment across functions without hiding engineering constraints.\n\nThe product trio model only works if that hesitation doesn't win out -- a constraint raised early is a contribution to a decision still being shaped, not an objection to someone else's finished work, and treating it that way (both by the engineer raising it and by the product and design peers hearing it) is what actually makes collaborative discovery pay off instead of just adding another meeting on top of the same sequential handoff underneath.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An engineer in a discovery conversation hesitates to mention a real technical constraint, worried it will look like blocking the team's progress. What does this session's framing suggest about that hesitation?",
+          "definition": {
+            "options": [
+              "It undermines the trio model's whole point -- a constraint raised early is a contribution, not an objection",
+              "The hesitation is justified -- raising technical concerns during discovery is generally seen as overstepping here",
+              "This has no real effect on outcomes; the constraint surfaces at the same point in the process regardless anyway",
+              "This only matters for junior engineers specifically, since senior engineers never hesitate this way at all ever"
+            ],
+            "correct_index": 0,
+            "explanation": "The product trio model depends on exactly this kind of input happening early and being treated as a normal, valuable contribution to a decision still being shaped -- not as blocking or overstepping. An engineer's hesitation to raise it, left unaddressed, quietly defeats the model's entire purpose."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Trio Isn't a Rigid Headcount Rule",
+      "body": "Product Talk is explicit that the trio's composition is flexible, not fixed at exactly three people filling exactly three roles -- a team building a machine-learning feature might add a data scientist to the core trio, making it a quad for that specific problem, without abandoning the underlying idea. The actual principle is cross-functional presence during discovery specifically, scaled to whatever expertise a given problem genuinely needs represented in the room.\n\nThis matters because treating \"exactly three roles, always\" as the rule misses the point just as much as skipping collaborative discovery entirely -- the goal is making sure whoever has relevant judgment is actually present while a decision is still being shaped, not hitting a specific headcount for its own sake.\n\nA team that insists on exactly three people even when a problem clearly needs a fourth kind of expertise represented has turned a practical principle into a rigid ritual, the same mistake module 72's content already warned against for Agile ceremonies more broadly.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team building a machine-learning feature adds a data scientist to their product/design/engineering discovery group, forming a quad instead of a trio. Does this contradict the product trio model?",
+          "definition": {
+            "options": [
+              "No -- the actual principle is cross-functional presence scaled to need, not a fixed three-person rule to follow",
+              "Yes, completely -- the model strictly requires exactly three roles, and a fourth person violates its definition",
+              "Yes, but only because data scientists are specifically excluded from any discovery conversation under this model",
+              "This isn't addressed by the model at all, since it was only ever designed for teams with no specialized roles"
+            ],
+            "correct_index": 0,
+            "explanation": "The product trio's composition is explicitly described as flexible -- the underlying principle is making sure whoever has relevant expertise is present during discovery, not a rigid three-person headcount. A data scientist joining for an ML-specific problem is exactly the model scaling to what that problem actually needs."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Sequential handoff between product, design, and engineering has a specific, recurring failure: technical constraints surface only after a design is already finalized, when fixing them costs far more than it would have earlier. The product trio model addresses this by having product, design, and engineering collaborate during discovery itself -- deciding what to build together, embedded in the delivery team, not handed a decision already made without them. The model's composition flexes to whatever expertise a specific problem actually needs; the fixed point is cross-functional presence while the decision is still open, not a specific headcount.\n\nThe next sessions in this module build on this collaborative foundation directly: requirement negotiation, stakeholder mapping, conflict handling, tradeoff communication, and customer feedback loops as the mechanisms for keeping that same honest, cross-functional collaboration going once a decision moves from discovery into actually being built."
+    }
+  ]
+}
