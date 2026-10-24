@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Product & Collaboration",
+    "slug": "product-collaboration",
+    "description": "Product thinking, execution, communication"
+  },
+  "module": {
+    "title": "Product & Collaboration"
+  },
+  "section": {
+    "title": "Software Project Execution",
+    "slug": "72-software-project-execution",
+    "description": "Plan and guide deliverable increments with explicit risks.",
+    "proficiency_tier": "G"
+  }
+}

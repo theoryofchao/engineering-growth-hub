@@ -1,0 +1,107 @@
+{
+  "title": "Agile and Kanban Principles: Values Beneath the Ceremonies",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Distinguish Agile's actual values and principles from the specific ceremonies often mistaken for them, and recognize WIP limits -- not just a visual board -- as Kanban's defining mechanism for turning work tracking into real flow control.",
+  "content_blocks": [
+    {
+      "heading": "\"Agile\" Is a Set of Values, Not a Specific Ritual",
+      "body": "The Agile Manifesto itself is short: four value statements and twelve supporting principles, published in 2001 by a group of practitioners looking for a better way to build software than heavyweight, plan-everything-upfront processes. It doesn't mandate standups, sprints, or any specific ceremony at all -- those are practices various methodologies (Scrum among them) later built on top of the manifesto's values, not the values themselves.\n\nThis distinction matters because \"we do agile\" often gets reduced in practice to \"we run sprints and have a daily standup\" while missing the actual value underneath -- a team can faithfully run every Scrum ceremony and still not be particularly responsive to change, or faithfully embody the manifesto's values with a completely different set of practices.\n\nKanban, covered later in this same session, is itself a real example of the second case: a methodology that embodies the manifesto's values without using sprints at all, built around continuous flow instead of fixed-length iterations.",
+      "reference_links": [
+        { "label": "Manifesto for Agile Software Development", "url": "https://agilemanifesto.org/" }
+      ]
+    },
+    {
+      "heading": "Two Values Worth Specifically Highlighting",
+      "body": "The manifesto's own text states its values as preferences, not absolutes -- valuing one thing \"over\" another, not to the total exclusion of it. Two are particularly easy to lose sight of in practice: \"working software is the primary measure of progress,\" which explicitly rejects things like hours logged or tickets closed as the real signal of whether a project is actually moving forward, and \"responding to change over following a plan,\" which treats a plan as a starting point to revise, not a commitment to defend once reality diverges from it.\n\nBoth values point at the same underlying idea from a different angle: progress and planning are both judged against what's actually true and actually working right now, not against how closely activity matches an original schedule or an estimate made before anyone had real information.\n\nThis doesn't mean plans or schedules are worthless -- the manifesto values responding to change *over* following a plan, not the complete absence of planning, which is exactly the kind of estimation and milestone work this module's later subtopics cover in practice.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team is proud that they've completed every ticket on their original sprint plan, even though the resulting software doesn't yet do anything a user could actually use. According to the manifesto's own stated values, is this genuine progress?",
+          "definition": {
+            "options": [
+              "Not necessarily -- the manifesto treats working software, not plan adherence or ticket count, as real progress",
+              "Yes, absolutely -- completing every planned ticket is explicitly what the manifesto itself defines as progress",
+              "The manifesto takes no real position here; ticket completion and working software are treated as equivalent",
+              "This can't be evaluated against the manifesto at all, since its values only apply to planning, not progress"
+            ],
+            "correct_index": 0,
+            "explanation": "The manifesto explicitly names working software as the primary measure of progress, not plan or ticket adherence. A team can complete every planned item and still not have made real progress by this standard if the resulting software doesn't actually work or isn't usable yet."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Kanban's Actual Core Practices: Visualize, Then Limit WIP",
+      "body": "The official Kanban Guide describes Kanban as a strategy for optimizing the flow of value through a process using a visual, pull-based system, built on defining and visualizing a workflow, then actively managing items within it. A workflow has explicit start and finish points, named states in between, and -- critically -- a way of controlling how much work is in progress (WIP) at once.\n\nThe guide is specific about what actually makes this a pull system rather than just a visual to-do list: a WIP limit caps how much can be in progress in a given state, and new work only enters that state once capacity opens up -- work is pulled in when there's room, not pushed in regardless of how much is already underway.\n\nThe guide treats visualizing the workflow as a necessary first step, not the whole practice -- a visible board makes the current state of work transparent, but transparency alone doesn't control flow; that's specifically the WIP limit's job, covered next.",
+      "reference_links": [
+        { "label": "The Kanban Guide (2020.7)", "url": "https://kanbanguides.org/the-kanban-guide/2020.7" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team has a board with columns like \"To Do,\" \"In Progress,\" and \"Done,\" but no limit on how many items can sit in \"In Progress\" at once. According to the official Kanban Guide, is this actually a pull system?",
+          "definition": {
+            "options": [
+              "Not fully -- without a WIP limit, work can enter regardless of capacity, which a genuine pull system requires",
+              "Yes, completely -- visual columns representing a workflow are the full, complete definition of a pull system",
+              "The guide never actually distinguishes a pull system from any other kind of visual board tracking work at all",
+              "This can't be answered without knowing exactly how many items sit in each individual column right now"
+            ],
+            "correct_index": 0,
+            "explanation": "The guide specifically ties the pull system to WIP limits -- new work is pulled in only when capacity opens up. A board with visual columns but no WIP limit lets new work enter regardless of how much is already in progress, missing the actual mechanism that makes it a pull system rather than just a visualization."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why WIP Limits Matter: the Same Lever Module 64 Already Covered",
+      "body": "A WIP limit on a kanban board is the same underlying lever module 64's concurrency content already covered, applied to work items instead of network requests: concurrency (how much is in flight) directly affects how long any one thing takes to finish, and an unlimited amount of concurrent work in progress means things sit around half-finished for longer, not that more actually gets completed per unit time.\n\nCapping WIP forces a real tradeoff into the open -- a team can't just start a new item whenever they feel like it if the limit is already reached, which surfaces blocked or stuck work immediately (something has to get unblocked or finished before anything new starts) instead of letting it quietly pile up unnoticed behind an ever-growing pile of simultaneously-started work.\n\nThis is also why a WIP limit set too high defeats its own purpose -- a limit of 50 on a team of five barely constrains anything, and the pull-system discipline it's meant to create never actually kicks in.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "How does a WIP limit on a Kanban board relate to the throughput/latency/concurrency relationship module 64 already covered?",
+          "definition": {
+            "options": [
+              "It's the same lever applied to work items -- capping in-progress work controls how long any one item takes to finish",
+              "It's an entirely unrelated concept; WIP limits and module 64's throughput/concurrency content don't actually connect at all",
+              "A WIP limit works in the opposite direction from module 64's content, since more concurrent work always finishes faster",
+              "WIP limits only affect how a board looks visually and have no actual bearing on how quickly real work gets completed"
+            ],
+            "correct_index": 0,
+            "explanation": "This is the same concurrency-affects-completion-time relationship module 64 covered for requests, applied to work items: too much simultaneously in-progress work means each item sits around longer before finishing, not that more work gets done per unit time -- capping WIP is the practical lever for managing that tradeoff."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Realistic Case: the Board That Looked Fine but Wasn't Flowing",
+      "body": "A team's \"In Progress\" column has no limit, and over a few weeks it fills with a dozen half-finished items -- nobody's blocked from starting something new, so when a task gets stuck (waiting on a dependency, waiting on review), the easy path is to just start another one rather than confront the stuck item directly. The board looks active -- lots of cards, lots of movement into \"In Progress\" -- but the team's actual cycle time, how long anything takes from start to finish, keeps getting worse.\n\nA WIP limit would have forced a different, more useful behavior: once the limit is hit, starting something new isn't an option anymore, and the only way forward is actually unblocking or finishing something already in flight -- surfacing the stuck item as a problem to solve immediately, rather than letting it sit quietly alongside a dozen other half-finished things that make the backlog look busy without anything actually moving toward done.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team's unlimited \"In Progress\" column fills with half-finished, stuck items, while cycle time keeps getting worse. What would a WIP limit have changed about this situation?",
+          "definition": {
+            "options": [
+              "It would block starting new work once the limit is hit, forcing the team to unblock or finish stuck items instead",
+              "It would have no real effect at all; WIP limits only change how a board looks, not what the team is actually able to do",
+              "It would automatically and immediately resolve whatever external dependency is causing items to get stuck in the first place",
+              "It would only help if the team also added more columns to the board, since the column structure itself is the actual problem"
+            ],
+            "correct_index": 0,
+            "explanation": "A WIP limit directly blocks starting new work once it's reached -- the team can no longer sidestep a stuck item by just starting something else. That forces the actual blocker to be addressed, which is exactly the real-flow-control behavior an unlimited column structurally allows a team to avoid."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Agile's actual content is a short set of values and principles -- working software as the real measure of progress, responding to change over rigidly following a plan -- not any specific ceremony built on top of them. Kanban's defining mechanism isn't a visual board with columns; it's the WIP limit that turns a board into a genuine pull system, directly connected to the same concurrency-affects-completion-time logic module 64 already covered for network requests. A board without a WIP limit can look busy while actively hiding the stuck work a real limit would force a team to confront.\n\nThe next sessions in this module build on these same principles in practice: estimation and uncertainty, dependency mapping, milestone and incremental delivery, risk registers and mitigation, and retrospectives and course corrections as the mechanism for actually acting on what a team learns -- all of it grounded in the same underlying commitment to responding honestly to what's actually true, rather than defending a plan made before anyone knew better."
+    }
+  ]
+}
