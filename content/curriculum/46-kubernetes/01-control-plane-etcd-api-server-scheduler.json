@@ -1,0 +1,107 @@
+{
+  "title": "The Control Plane: etcd, the API Server, and the Scheduler",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Explain why every Kubernetes control-plane component reads and writes through the API server rather than touching etcd directly, and why the scheduler's job is narrowly limited to deciding where a Pod runs, not running it.",
+  "content_blocks": [
+    {
+      "heading": "The Same Declarative Question, Asked Continuously",
+      "body": "Module 48's Terraform content already covered the declarative model: describe the state you want, and let the tool reconcile reality to match it, via a one-shot plan-then-apply cycle. Kubernetes answers the exact same kind of question -- here's the desired state, make it true -- but continuously, for a live, running cluster, rather than as a single apply a human triggers.\n\nThat continuous reconciliation needs somewhere authoritative to keep both the desired state and the cluster's actual observed state, and a clear, controlled way for every other piece of the system to read and change that state safely. This session covers exactly those two pieces: etcd, which holds the state, and the API server, which is the only way anything is allowed to touch it.\n\nA third piece -- the scheduler, covered later in this same session -- shows how a specific control-plane component actually participates in that continuous reconciliation, deciding where new work should run as part of the same ongoing process."
+    },
+    {
+      "heading": "etcd: the Cluster's Single Source of Truth",
+      "body": "etcd is a distributed, strongly consistent key-value store that holds the Kubernetes cluster's entire state -- every object's desired configuration and its last-known observed status. It achieves that consistency using the Raft consensus algorithm module 36 already covered: a leader coordinates writes, and a write is only considered committed once a majority of etcd's own replicas have it, the same majority-overlap safety property that guarantees a committed write survives a leader failure.\n\nIf etcd becomes unavailable or its data becomes inconsistent, the control plane loses the one place it relies on to know what's actually supposed to be running -- which is exactly why etcd's own reliability matters as much as anything it's actually storing.\n\nThis is also why production Kubernetes clusters typically run etcd as its own carefully-managed, odd-numbered cluster (module 36's sizing reasoning again), separate from the nodes actually running application workloads.",
+      "reference_links": [
+        { "label": "etcd -- Why etcd (Raft-based consistency)", "url": "https://etcd.io/docs/v3.5/learning/why/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "etcd uses the Raft consensus algorithm, the same one module 36 covered for leader/follower replication. What does this directly buy Kubernetes' cluster state?",
+          "definition": {
+            "options": [
+              "A committed write to the cluster's state survives a leader failure, since any new leader's majority overlaps the old one",
+              "Writes to etcd happen instantly with no coordination at all, since Raft is specifically designed to skip consensus overhead",
+              "etcd becomes immune to ever losing data, regardless of how many replicas fail simultaneously or at the same time",
+              "Raft is only used for read operations in etcd; all writes bypass consensus entirely for the sake of better performance"
+            ],
+            "correct_index": 0,
+            "explanation": "Raft's majority-commit property is exactly what module 36 covered: any two majorities from the same replica set must overlap, which is what guarantees a write already committed to etcd survives a leader crash and re-election -- the same safety property, just applied here to the cluster's own state."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The API Server: the Only Door to Cluster State",
+      "body": "Kubernetes' own documentation describes the API server directly: it's the front end for the Kubernetes control plane, exposing the Kubernetes API that every other component -- `kubectl`, the scheduler, every controller -- actually talks to. Nothing else is meant to read or write etcd directly; every single change to cluster state is supposed to flow through this one component, which validates and persists it.\n\nThis single-door design is deliberate, not incidental: it gives Kubernetes exactly one place to enforce authentication, authorization, and validation on every change to the cluster, regardless of which specific component or user is making it -- precisely the mechanism this module's own closing subtopic, RBAC and admission controls, is built directly on top of.\n\nThe API server is also designed to scale horizontally -- running several instances behind a load balancer -- without weakening this single-door guarantee, since every instance still enforces the exact same validation rules against the same underlying etcd state.",
+      "reference_links": [
+        { "label": "Kubernetes Documentation -- Kubernetes Components", "url": "https://kubernetes.io/docs/concepts/overview/components/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why does Kubernetes route every component's reads and writes through the API server, rather than letting controllers and the scheduler talk to etcd directly?",
+          "definition": {
+            "options": [
+              "It creates one place to enforce authentication, authorization, and validation on every change, regardless of source",
+              "etcd is technically incapable of handling more than one simultaneous connection at once, the actual reason for this design",
+              "This design only exists for historical reasons from early Kubernetes versions and serves no real purpose today",
+              "The API server is just a thin network proxy with no real validation logic, so this design adds no actual value"
+            ],
+            "correct_index": 0,
+            "explanation": "Funneling every change through one component means every single write to cluster state passes through the same authentication, authorization, and validation logic, regardless of which component or user initiated it -- exactly the single point of control RBAC and admission controls rely on."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Scheduler: Deciding Where, Not Running Anything",
+      "body": "Kubernetes' own documentation defines the scheduler's job narrowly: it's the control plane component that watches for newly created Pods with no assigned node, and selects a node for them to run on. That's the entire job -- the scheduler reads Pod objects through the API server, evaluates which available node best fits a Pod's resource requirements and constraints, and writes that assignment decision back, also through the API server.\n\nThe scheduler itself never starts a container or touches a node directly -- actually running the assigned Pod is a separate component's job (the kubelet running on that node, outside this session's scope), watching the API server for Pods assigned to its own node and starting them locally. Deciding *where* and actually *running* are two genuinely separate concerns, each handled by a different, narrowly-scoped component.\n\nThis narrow scoping is itself a deliberate design choice -- a component that only has to decide placement is far simpler to reason about and test than one that also has to manage actually starting, monitoring, and restarting containers across every node in the cluster.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A new Pod is created with no node assigned yet. According to Kubernetes' own definition of the scheduler's role, what does the scheduler actually do?",
+          "definition": {
+            "options": [
+              "It selects which node the Pod should run on and writes that decision back, without ever starting the container itself",
+              "It both selects a node for the Pod and then directly starts the container running on that chosen node right away",
+              "It only selects a node for Pods specifically marked as high-priority; all other Pods are scheduled by a different component",
+              "It assigns the Pod to every available node simultaneously, letting each node decide independently whether to run it"
+            ],
+            "correct_index": 0,
+            "explanation": "Kubernetes' own documentation scopes the scheduler's job narrowly: watch for Pods with no assigned node, and select one for them. Actually starting the container is a separate concern, handled by the kubelet on the chosen node -- the scheduler's responsibility ends at the assignment decision itself."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Tracing One Request Through the Control Plane",
+      "body": "A user runs `kubectl apply` to create a new Pod. `kubectl` talks only to the API server, which validates the request and writes the new Pod object to etcd -- with no node assigned yet. The scheduler, itself only watching the API server (never etcd directly), notices this unassigned Pod, evaluates available nodes, and writes its assignment decision back through the API server, which persists that update to etcd in turn.\n\nAt no point in this entire flow does any component other than the API server ever touch etcd directly -- `kubectl`, the scheduler, and eventually the node's own kubelet (picking up the now-assigned Pod) all interact exclusively through the one front end, exactly the single-door design block 3 described, applied concretely to a Pod's actual path from creation to being scheduled.\n\nEvery one of these interactions is also just a watch on, or a write to, API server objects -- there's no separate, special-purpose channel for \"scheduling decisions\" distinct from the ordinary object read/write mechanism every other component already uses.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "In the flow from `kubectl apply` to a Pod being assigned a node, which components ever touch etcd directly?",
+          "definition": {
+            "options": [
+              "None of them -- only the API server touches etcd; kubectl, the scheduler, and the kubelet go through it instead",
+              "kubectl and the scheduler both write to etcd directly, with only the kubelet needing to go through the API server",
+              "Every component here writes to etcd directly, since the API server is purely a read-only observer of the process",
+              "This depends on cluster configuration; some clusters allow direct etcd access for every single component here"
+            ],
+            "correct_index": 0,
+            "explanation": "The entire flow -- kubectl's request, the scheduler noticing an unassigned Pod, the eventual kubelet pickup -- routes exclusively through the API server. Only the API server itself ever touches etcd directly, which is exactly the single-door design this session has covered from block 3 onward."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Kubernetes answers the same declarative question module 48's Terraform content covered, but continuously: etcd holds the cluster's entire desired and observed state, kept consistent via the same Raft majority-commit property module 36 already covered, and the API server is the sole front end every other component reads and writes through -- never etcd directly. The scheduler's job is narrowly scoped to deciding where a Pod should run, not running it, with that decision itself flowing back through the same API server. Tracing one Pod's creation end to end shows this single-door design holding at every single step, not just in the abstract.\n\nThe next sessions in this module build directly on this control-plane foundation: controllers and reconciliation (the continuous loop that actually keeps reality matching desired state), Pods, Deployments, Services, and Ingress as the objects that state actually describes, CNI/CSI and storage, probes/autoscaling/disruption budgets, and RBAC and admission controls as the enforcement layer built directly on top of the API server's single-door design."
+    }
+  ]
+}
