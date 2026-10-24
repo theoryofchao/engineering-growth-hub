@@ -1,0 +1,104 @@
+{
+  "title": "RFCs, ADRs, and Design Documents: Writing Down Why, Not Just What",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Apply Michael Nygard's Architecture Decision Record format -- including recording all consequences and superseding rather than deleting reversed decisions -- and distinguish an ADR's after-the-fact record role from an RFC or design document's before-the-fact debate role.",
+  "content_blocks": [
+    {
+      "heading": "A Decision Gets Made Either Way -- the Question Is Whether 'Why' Survives It",
+      "body": "Every real engineering decision happens whether or not anyone writes it down -- a team picks a database, a framework, an architecture, and moves on. What a written decision record actually buys isn't the decision itself, it's the ability for someone who wasn't in the room -- a new hire, a different team, the same team eighteen months later -- to reconstruct *why* that choice was made, not just discover *what* was chosen.\n\nThis matters because \"why\" is exactly what gets lost first: the what is usually still visible in the code or the infrastructure itself, but the tradeoffs considered and rejected, the constraints that mattered at the time, and the alternatives that were genuinely on the table all disappear the moment the people who remember them move on, unless something was written down specifically to preserve that reasoning.\n\nThis session covers three related but distinct written artifacts -- RFCs, design documents, and ADRs -- that exist specifically to capture this kind of reasoning, each suited to a different point in a decision's actual lifecycle."
+    },
+    {
+      "heading": "The ADR Format: Context, Decision, Consequences",
+      "body": "Michael Nygard's original 2011 post, which established the Architecture Decision Record format most teams use today, specifies a short, pattern-like structure: a short noun-phrase title, a Context section describing the forces at play -- technological, political, social, project-local -- written in deliberately value-neutral language rather than arguing for the choice, a Decision section stating the actual response in active voice (\"we will...\"), and a Consequences section.\n\nThe value-neutral Context is a specific, deliberate choice: it's meant to honestly lay out what was pulling in different directions, not to pre-argue for the decision that follows -- a reader should be able to see the real tension the team was navigating, not just a one-sided case for the answer that was ultimately chosen.\n\nThis structure is also short by design -- a few paragraphs, not a lengthy report -- specifically so it actually gets written and read, rather than becoming its own burden heavy enough that teams quietly stop bothering with it after the first few.",
+      "reference_links": [
+        { "label": "Michael Nygard -- Documenting Architecture Decisions", "url": "https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Nygard's ADR format specifies that the Context section should be written in \"value-neutral\" language. What does this actually mean in practice?",
+          "definition": {
+            "options": [
+              "It should honestly describe the real forces and tensions at play, rather than already arguing for the decision that follows",
+              "It should avoid using any technical terminology at all, so the document remains readable by a completely non-technical audience",
+              "It should be written anonymously, with no indication of which specific team or person is actually making the decision",
+              "It should be written only after the Decision section, so the Context can be adjusted to better justify whatever was already decided"
+            ],
+            "correct_index": 0,
+            "explanation": "Value-neutral Context means describing the real, often-competing forces at play -- technical, political, social, project-local -- honestly, without already building the case for the eventual decision. The Decision section is where the actual response gets stated; Context exists to let a reader see the genuine tension being navigated."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Consequences: All of Them, Not Just the Favorable Ones",
+      "body": "Nygard's format is specific on this point: the Consequences section should list all consequences of a decision, not only the positive ones. An ADR that only enumerates benefits reads as a justification for a decision already made -- marketing copy for a choice that's no longer actually up for debate -- rather than a genuine record useful to someone later evaluating whether the decision still holds up.\n\nIncluding the real costs and tradeoffs -- what got harder, what got given up, what risk was knowingly accepted -- is what makes an ADR something a team can actually revisit honestly later: if circumstances change and a listed cost becomes newly unacceptable, the record itself already names exactly what to weigh against reversing the decision.\n\nA useful discipline when writing this section: if every listed consequence sounds purely positive, that's itself a signal to go back and ask what was actually given up, since almost no real engineering decision is a pure, costless win.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An ADR's Consequences section lists only the benefits of the decision made, with no mention of any tradeoffs or costs. What's the practical problem with this?",
+          "definition": {
+            "options": [
+              "It reads as a one-sided justification, giving a future reader no honest basis for revisiting the decision later",
+              "There's no real problem here -- Nygard's format only ever requires listing a decision's positive consequences",
+              "This only matters if the decision later turns out objectively wrong in hindsight, which is rarely knowable anyway",
+              "Consequences sections are optional in this format, so skipping the negative ones is a fully acceptable shortcut"
+            ],
+            "correct_index": 0,
+            "explanation": "Nygard's format specifically calls for listing all consequences, not just favorable ones. An ADR that only lists benefits functions as a justification for a settled decision rather than an honest record -- it gives nobody later a real basis for weighing whether circumstances have changed enough to revisit the choice."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Superseding, Not Deleting: Preserving the Actual History",
+      "body": "When a decision gets reversed, Nygard's format calls for marking the old ADR as superseded rather than deleting or editing it -- the original record stays exactly as it was, with a new ADR recorded alongside it explaining the reversal. This preserves the actual sequence of reasoning a team went through, not just its current end state.\n\nThis matters concretely for a specific, recurring situation: someone later asks \"why don't we just do X instead,\" and X turns out to be exactly what an earlier, now-superseded ADR already tried and deliberately walked back, for reasons that are still just as valid. Without the superseded record kept intact, that history is invisible, and the same already-rejected idea can resurface and consume real debate time all over again.\n\nThis also makes an ADR collection a genuine timeline of how a system's architecture actually evolved, readable in sequence, rather than just a snapshot of its current state with no trace of the paths that were tried and abandoned along the way.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team reverses a past architectural decision. According to Nygard's format, what should happen to the original ADR that recorded it?",
+          "definition": {
+            "options": [
+              "It stays in place, marked as superseded, while a new ADR records the reversal and the reasoning behind it",
+              "It gets deleted entirely, since it no longer reflects the team's current, actually-in-effect architectural decision",
+              "It gets edited in place to reflect the new decision, keeping the ADR count accurate and avoiding any duplicate records",
+              "Nothing changes at all; the original ADR is left exactly as-is with no indication anywhere that it's since been reversed"
+            ],
+            "correct_index": 0,
+            "explanation": "Marking the original as superseded (rather than deleting or silently editing it) preserves the real sequence of reasoning a team went through -- useful later specifically when someone proposes an already-tried-and-rejected idea, since the superseded record still explains exactly why it didn't work out, without needing anyone to remember it firsthand."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Before vs. After: RFCs/Design Docs vs. ADRs",
+      "body": "An RFC or design document is typically written *before* a decision is finalized, specifically to solicit input and debate real alternatives while the forces are still genuinely unresolved -- its job is to open a question up, not close one. An ADR is typically written *after* a decision has actually been reached, to record what was decided and why, once the forces described in its Context section have already been weighed and resolved into an actual choice.\n\nThese aren't competing formats for the same job -- a real decision lifecycle often uses both: a design document circulates first to gather input and settle on a direction, and once that direction is actually settled, an ADR records the resulting decision (and its honestly-listed consequences) as the durable, after-the-fact artifact future readers will actually find.\n\nConflating the two causes real friction: treating a still-open RFC as if it were a settled decision shuts down legitimate debate prematurely, while treating an already-decided ADR as if it were still open for input re-litigates a question the team has already worked through.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team is still debating which of three possible database options to choose, with no decision made yet. Which artifact fits this stage, and which would be premature?",
+          "definition": {
+            "options": [
+              "An RFC or design document fits now, to gather input on the live debate; an ADR would be premature before a decision exists",
+              "An ADR fits now, since ADRs are specifically meant to be written before any decision has actually been reached by the team",
+              "Neither artifact applies to this situation at all; undecided debates should never be documented in any written form",
+              "Both artifacts are fully interchangeable here, and the team can pick whichever one they simply happen to prefer writing"
+            ],
+            "correct_index": 0,
+            "explanation": "An RFC/design document exists specifically to open a live, unresolved debate up for input while alternatives are still genuinely on the table. An ADR records a decision that's already been reached -- writing one before the team has actually decided anything would have nothing real to record yet."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A written decision record's real value is preserving *why* a choice was made, not just documenting *what* was chosen -- the why is exactly what disappears first once the people who remember it move on. Nygard's ADR format makes this concrete: value-neutral Context describing real competing forces, an active-voice Decision, and a Consequences section listing every real tradeoff, not just the favorable ones. Superseding rather than deleting a reversed decision preserves the actual history, specifically so an already-rejected idea doesn't quietly resurface and waste a team's time relitigating it. RFCs and design documents serve the earlier, still-undecided stage of the same lifecycle, with ADRs recording the result once it's actually settled.\n\nThe next sessions in this module build on this same written-communication foundation: diagrams and technical writing, audience-aware summaries for stakeholders who need a different level of detail than engineers do, design presentations, incident communication, and decision logs for async alignment across a team that isn't all in the same room at the same time."
+    }
+  ]
+}

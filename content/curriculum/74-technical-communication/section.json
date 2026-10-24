@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Product & Collaboration",
+    "slug": "product-collaboration",
+    "description": "Product thinking, execution, communication"
+  },
+  "module": {
+    "title": "Product & Collaboration"
+  },
+  "section": {
+    "title": "Technical Communication",
+    "slug": "74-technical-communication",
+    "description": "Explain constraints decisions and tradeoffs to varied audiences.",
+    "proficiency_tier": "G"
+  }
+}
