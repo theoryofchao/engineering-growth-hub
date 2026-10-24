@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "DevOps & Delivery",
+    "slug": "devops-delivery",
+    "description": "CI/CD, releases, platforms, delivery metrics"
+  },
+  "module": {
+    "title": "DevOps & Delivery"
+  },
+  "section": {
+    "title": "Deployment Strategies",
+    "slug": "50-deployment-strategies",
+    "description": "Release software with limited disruption and safe recovery.",
+    "proficiency_tier": "W"
+  }
+}

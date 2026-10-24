@@ -1,0 +1,107 @@
+{
+  "title": "Rolling, Blue-Green, and Canary: Three Ways to Limit a Bad Release's Reach",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Distinguish blue-green deployment's instant full cutover and rollback from canary release's deliberately limited exposure to real users, and recognize rolling deployment as a third, instance-by-instance middle ground between them.",
+  "content_blocks": [
+    {
+      "heading": "Deploying Is Itself a Risk, Not a Formality Once Tests Pass",
+      "body": "A change that passes every automated test can still fail once it meets real production traffic and real production data -- module 65's benchmark-design content already established how easy it is for pre-production testing to miss something real load reveals. Deployment strategies exist specifically to limit the damage a release like this can do: how many real users are exposed before anyone notices, and how quickly the system can get back to a known-good state once something goes wrong.\n\nThis connects directly to module 55's error-budget framing: a bad release that degrades a service is exactly the kind of event that burns through an error budget, and the deployment strategy chosen is a direct lever on how much budget any single bad release actually costs.\n\nThis session covers the three most common strategies for controlling that exposure -- blue-green, canary, and rolling deployment -- each trading off exposure speed, rollback simplicity, and how much control a team has over exactly who's affected first."
+    },
+    {
+      "heading": "Blue-Green: Instant Full Cutover, Instant Full Rollback",
+      "body": "Martin Fowler's own bliki entry describes blue-green deployment directly: maintain two production environments, as identical as possible, with only one of them live -- receiving real traffic -- at any given time. Deploying the new version means standing it up fully in the idle environment, validating it there, then cutting traffic over by switching a router or load balancer, moving 100% of traffic to the new version all at once.\n\nRollback is just as immediate in the other direction: switching the router back to the environment that was never touched by the new release, which still has the entire previous version fully intact and ready, not partially torn down or needing to be rebuilt. This makes blue-green's rollback uniquely fast, but it also means a problem only visible under full production load hits every single user the moment the cutover happens, not a limited subset.\n\nThe simplicity of blue-green's rollback is a real, concrete advantage: no code change, no partial state to reconcile, just a routing switch back to an environment that's been sitting there completely untouched the whole time, ready the instant it's needed.",
+      "reference_links": [
+        { "label": "Martin Fowler -- BlueGreenDeployment", "url": "https://martinfowler.com/bliki/BlueGreenDeployment.html" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team using blue-green deployment cuts traffic over to the new version, and a bug only visible under real production load shows up immediately. What's the actual scope of impact at that moment?",
+          "definition": {
+            "options": [
+              "Every user is affected at once, since blue-green's cutover moves 100% of traffic to the new version all at the same time",
+              "Only a small, deliberately chosen subset of users are affected, since blue-green always limits exposure the same way canary does",
+              "No users are affected yet, since blue-green requires a separate, additional confirmation step before any real traffic is exposed",
+              "The exact scope depends entirely on which specific router or load balancer brand the team happens to be using for cutover"
+            ],
+            "correct_index": 0,
+            "explanation": "Blue-green's cutover is a full, instant switch -- there's no partial or gradual exposure step built into the model itself. Every user hits the new version the moment the switch happens, which is exactly why a problem that only shows up under full production load affects everyone at once rather than a limited group."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Canary: Deliberately Limited Exposure, Expanded Gradually",
+      "body": "Fowler's CanaryRelease entry describes a different approach to the same underlying risk: deploy the new version to infrastructure no users are routed to yet, then deliberately send a small, chosen subset of real users to it -- a random sample, internal employees, or users matching a specific profile -- before expanding that exposure further once the team is satisfied nothing's gone wrong.\n\nThe key difference from blue-green: both versions run simultaneously, serving real traffic at the same time, with the split between them a deliberate choice rather than an all-or-nothing switch. A problem that only shows up under real production conditions still gets caught, but it only affects the small, chosen slice of users routed to the canary -- not everyone -- while the team decides whether to keep expanding or pull back.\n\nThis gradual-expansion step is what lets a team build real confidence incrementally -- each successful stage of a canary's rollout is itself evidence the release is safe to expose to more people, rather than a single all-or-nothing bet made once and never revisited.",
+      "reference_links": [
+        { "label": "Martin Fowler -- CanaryRelease", "url": "https://martinfowler.com/bliki/CanaryRelease.html" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "How does canary release's exposure to a bad release differ from blue-green's, given that both are meant to reduce deployment risk?",
+          "definition": {
+            "options": [
+              "Canary deliberately limits exposure to a small, chosen subset of users first, rather than switching 100% of traffic at once",
+              "There's no real difference between the two; canary and blue-green expose exactly the same share of users to a new release",
+              "Canary actually exposes more users than blue-green does, since canary releases are specifically designed to reach everyone faster",
+              "Canary requires completely tearing down the old version immediately, unlike blue-green which keeps it available as a fallback"
+            ],
+            "correct_index": 0,
+            "explanation": "Canary's whole point is deliberately routing only a small, chosen slice of real users to the new version first, while the old version keeps serving everyone else -- a sharp contrast with blue-green's instant, all-at-once full cutover. Both reduce risk, but through genuinely different exposure mechanisms."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Rolling Deployment: the Less Deliberate Middle Ground",
+      "body": "A rolling deployment replaces instances of the old version with the new one a few at a time -- say, one server out of ten, then another, continuing until every instance runs the new version -- rather than blue-green's instant full switch or canary's deliberately targeted user subset. Like canary, both versions run simultaneously during the rollout; unlike canary, which instance a given user happens to hit (and therefore which version they see) is essentially incidental to the rollout mechanics, not a deliberate targeting choice based on who the user is.\n\nThis makes rolling deployment a genuine middle ground between the other two: it avoids blue-green's instant full exposure, but without canary's deliberate control over exactly which users see the new version first -- a real tradeoff between operational simplicity (no separate targeting logic needed) and the precision canary offers over who's actually exposed.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "During a rolling deployment, which users end up hitting the new version first, as the old instances get replaced one at a time?",
+          "definition": {
+            "options": [
+              "Essentially whichever users happen to be routed to whichever instance was updated first -- not a deliberate targeting choice",
+              "Specifically chosen users, matching exactly the same deliberate targeting logic canary release uses to select its subset",
+              "No real users at all during the rollout itself; rolling deployments only expose the new version once every instance is updated",
+              "Exactly half of all users immediately, the same instant-cutover exposure pattern blue-green deployment uses for its switch"
+            ],
+            "correct_index": 0,
+            "explanation": "Rolling deployment replaces instances incrementally, but which users land on an already-updated instance versus an old one is incidental to how traffic happens to route, not a deliberate selection the way canary's targeting is -- this is exactly what makes it a middle ground between canary's precision and blue-green's instant full exposure."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Choosing Canary for a Data-Dependent Bug",
+      "body": "A bug that only manifests under real production data -- an edge case in a specific customer's data shape, say -- is exactly the scenario where the choice between these strategies matters most. With blue-green, the instant full cutover means every single user with that data shape hits the bug the moment the switch happens, with no earlier warning. With canary, the small initial exposure means that bug is far more likely to surface while only a handful of users (ideally including, by design, a representative mix) are actually affected, giving the team a chance to catch and reverse course before expanding further.\n\nThis is the concrete version of block 1's framing: the deployment strategy chosen directly determines how large the blast radius of exactly this kind of hard-to-catch bug actually is, which is precisely why this module's own learning objective pairs \"limited disruption\" with \"safe recovery\" as two sides of the same concern.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A bug only shows up for a specific, uncommon shape of customer data. Why would canary release likely catch this bug with less overall impact than blue-green's instant cutover?",
+          "definition": {
+            "options": [
+              "Canary's exposure is deliberately small, so even if the bug surfaces, only a limited slice of users are hit",
+              "Canary somehow prevents this specific category of data-dependent bug from ever occurring in the first place at all",
+              "Blue-green is technically incapable of ever deploying code with this kind of data-dependent bug at all whatsoever",
+              "There's no real difference in outcome between the two strategies for this specific kind of bug either way at all"
+            ],
+            "correct_index": 0,
+            "explanation": "Canary's defining feature is limiting initial exposure to a small, chosen subset -- if the bug surfaces during that phase, it's affected a much smaller group than blue-green's full, instant cutover would have exposed, giving the team a chance to catch and reverse course with far less overall impact."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Blue-green deployment trades instant, all-at-once exposure for uniquely fast, uniquely simple rollback -- switch the router back, and the previous version is right there, untouched. Canary release deliberately limits exposure to a small, chosen subset of real users first, catching problems before they reach everyone, at the cost of more deliberate targeting infrastructure. Rolling deployment sits between them -- incremental, simpler to set up than canary's targeting, but without canary's precision over exactly who's exposed first. All three exist to answer the same underlying question from block 1: how much damage can a bad release do before anyone notices, and how fast can it be undone.\n\nThe next sessions in this module build directly on this foundation: feature flags and dark launch as a complementary (and often combined) technique, progressive release metrics for deciding whether to keep expanding a rollout, backward-compatible schema changes that make any of these strategies actually safe to use, automated and manual rollback mechanics, and blast radius control as the unifying theme tying all of it together."
+    }
+  ]
+}
