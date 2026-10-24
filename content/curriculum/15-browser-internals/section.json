@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Web & Frontend",
+    "slug": "web-frontend",
+    "description": "Browser, React, accessibility, frontend performance"
+  },
+  "module": {
+    "title": "Web & Frontend"
+  },
+  "section": {
+    "title": "Browser Internals",
+    "slug": "15-browser-internals",
+    "description": "Explain browser scheduling and rendering and diagnose jank.",
+    "proficiency_tier": "D"
+  }
+}
