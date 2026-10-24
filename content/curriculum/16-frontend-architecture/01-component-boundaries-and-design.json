@@ -1,0 +1,104 @@
+{
+  "title": "Component Boundaries and Design: Where One Component's Job Ends",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Draw component boundaries around a single responsibility rather than by convenience or screen layout alone, and recognize prop drilling as a symptom pointing at a boundary problem rather than a problem to patch with more props.",
+  "content_blocks": [
+    {
+      "heading": "A UI Is a Tree -- but Where the Branches Split Is a Design Decision",
+      "body": "Any interface naturally decomposes into a hierarchy -- a page contains sections, sections contain smaller pieces, down to individual buttons and labels. React's own official docs, in their \"Thinking in React\" guide, start exactly here: draw a box around every visually distinct piece and name it, then decide which boxes become their own components versus which stay folded into a parent.\n\nThat second step -- deciding where a boundary actually goes -- isn't automatic or obvious from the visual layout alone. Two adjacent pieces that happen to sit next to each other on screen don't necessarily belong in the same component, and two pieces that are visually far apart might genuinely belong together if they share the same reason to change. Component boundaries are an architectural decision with the same weight as any other module boundary, not a byproduct of how a designer happened to group things in a mockup.",
+      "reference_links": [
+        { "label": "React -- Thinking in React", "url": "https://react.dev/learn/thinking-in-react" }
+      ]
+    },
+    {
+      "heading": "Single Responsibility, Applied to a Component",
+      "body": "React's own guidance states the rule plainly: a component should ideally only do one thing, and if it ends up growing to do more, it should be decomposed into smaller subcomponents. This is the same single-responsibility idea module 10's architecture content already covers, applied specifically to a UI component: a component mixing data-fetching, business logic, and rendering together is harder to test, harder to reuse, and harder to reason about than three smaller pieces each doing one of those jobs.\n\nJust like a hard-to-name function (module 11's territory) is often a sign of unclear scope, a component that resists a clean, specific name -- `ProductTableAndFiltersAndSortingLogic` -- is itself a signal that it's doing more than one job and the boundary should be redrawn before the naming problem gets any worse.\n\nTesting difficulty is a second, independent signal pointing at the same underlying issue: a component that needs a dozen mocked dependencies and setup steps just to render in a test is usually one that's absorbed far more than its own single job, and splitting it tends to make each resulting piece trivially testable on its own.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A component handles fetching data from an API, applying business logic to filter it, and rendering the result, all in one place. According to the single-responsibility framing, what does this suggest?",
+          "definition": {
+            "options": [
+              "The component is likely doing too much and should be split into smaller, more focused subcomponents instead",
+              "This is the ideal structure already -- combining every related concern into one single place is the best practice here",
+              "The issue only matters if the component gets reused elsewhere; one used just once is exempt from this concern entirely",
+              "Data fetching, business logic, and rendering are inherently inseparable in React, so no decomposition is ever possible"
+            ],
+            "correct_index": 0,
+            "explanation": "A component bundling three distinct jobs -- fetching, business logic, and rendering -- is a textbook case for decomposition: each concern can become its own smaller, testable, reusable piece instead of one component that's hard to reason about, test, or reuse because it's doing everyone's job at once."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Props Are the Boundary's Actual Contract",
+      "body": "A component's props are the explicit interface through which it communicates with whatever renders it -- exactly analogous to a function's parameters. A well-drawn boundary has a props contract that's neither too wide (a component accepting a dozen loosely-related flags because it's secretly doing several jobs) nor too narrow (a component silently reaching outside its own boundary through a global or shared mutable object instead of receiving what it needs explicitly).\n\nA props list that keeps growing every time a new feature is added is often the same smell block 2 described, showing up at the interface level instead of inside the component's body: the component's responsibility has quietly expanded past what it was originally drawn to handle, and the growing prop list is just where that expansion becomes visible first.\n\nA useful habit here is periodically asking, for each prop, whether it genuinely belongs to this component's one job or whether it's really configuration for a second, unrelated job the component has quietly taken on alongside its original one.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A component's props list has grown to 15 loosely-related flags over several feature additions, each one controlling a slightly different behavior. What does this most likely indicate?",
+          "definition": {
+            "options": [
+              "The component's responsibility quietly expanded past its boundary, and the growing props list is the visible symptom",
+              "This is simply normal, healthy growth for any component as a codebase matures, needing no response at all here",
+              "The props themselves are the root problem; just renaming them to shorter names would resolve the underlying design issue",
+              "15 props is an arbitrary number with no real significance -- prop count alone never indicates anything meaningful here"
+            ],
+            "correct_index": 0,
+            "explanation": "A props list ballooning with loosely-related flags over time is the interface-level version of the single-responsibility smell -- the component has likely absorbed more and more distinct jobs as features were added, and the growing contract is where that scope creep becomes visible, not the root cause itself."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Prop Drilling Is a Symptom, Not a Props Problem",
+      "body": "Prop drilling -- passing a prop through several layers of components that don't use it themselves, just to reach one that does -- is frequently treated as something to fix by adding more props or a shortcut syntax. The more useful read is that it's often a signal the component boundaries themselves are drawn wrong: if data has to pass through three components that have no actual use for it, those three components may not be the right boundary between the data's source and its real consumer at all.\n\nThe actual fixes -- lifting the relevant state to a common ancestor and passing it down more directly, using composition (passing a child element down instead of drilling data through it), or reaching for context when the data is genuinely needed widely -- all address the boundary problem directly, rather than treating the drilling itself as the thing to optimize away with a cleverer passing mechanism.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A prop has to be passed through three intermediate components that never use it themselves, just to reach a deeply nested component that does. What does this session's framing suggest the real problem is?",
+          "definition": {
+            "options": [
+              "The component boundaries between the data's source and its actual consumer may be drawn wrong, not just the passing mechanism",
+              "This is purely a syntax inconvenience; any mechanism that reduces the typing involved in passing it down fully solves it",
+              "The three intermediate components should each independently fetch the same data themselves instead of receiving it as a prop",
+              "Prop drilling through multiple layers like this is always unavoidable in React and has no real underlying cause to fix at all"
+            ],
+            "correct_index": 0,
+            "explanation": "Prop drilling through components that have no actual use for the data is frequently a sign the boundaries themselves don't match how the data actually flows -- the real fix (restructuring via composition, lifting state, or context) addresses that mismatch directly, rather than treating the drilling as a passing-syntax inconvenience to paper over."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Concrete Decomposition: react.dev's Own Worked Example",
+      "body": "React's own \"Thinking in React\" guide walks through a product-filtering UI, decomposed into `FilterableProductTable` (the top-level container), containing `SearchBar` (the filter inputs) and `ProductTable` (the data display), with `ProductTable` further broken into `ProductCategoryRow` and `ProductRow`. Each piece has exactly one job: `SearchBar` only handles filter input, `ProductTable` only handles laying out rows, `ProductRow` only handles rendering one row's data.\n\nThe guide also makes an explicit judgment call worth noting: the table's header initially stays inside `ProductTable` rather than becoming its own component, specifically because it's simple enough not to need separating yet -- and the guide says this is only promoted to its own component later, if the header grows complex enough (adding sorting, for instance) to justify the split. This illustrates that boundaries aren't decided once and fixed forever; they're revisited as a piece's actual complexity changes.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "In react.dev's worked example, the table header initially stays inside `ProductTable` instead of becoming its own component. What does the guide say justifies splitting it out later?",
+          "definition": {
+            "options": [
+              "If it grows complex enough (adding sorting, say) that splitting it out finally becomes worth the new boundary",
+              "Headers must always be split into their own component from the very start, no matter how simple they start out",
+              "The split should happen the moment any new prop is added, no matter how small or closely related that change is",
+              "Boundaries are decided once at a project's start and should never be revisited as the codebase evolves afterward"
+            ],
+            "correct_index": 0,
+            "explanation": "The guide treats this as a judgment call tied to actual complexity, not a fixed rule: the header stays folded into its parent while it's simple, and gets promoted to its own component once added complexity (like sorting) makes that split actually worth the boundary it introduces -- illustrating that component boundaries are revisited, not decided once and frozen."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A UI naturally forms a tree, but where that tree's boundaries actually split is a real design decision, not a given from the visual layout -- React's own guidance points to single responsibility as the organizing principle: a component should do one thing, and growing scope is the signal to decompose. Props are the boundary's real contract, and a props list that keeps expanding is often the same scope-creep problem showing up at the interface level. Prop drilling specifically is best read as a symptom pointing at a boundary mismatch, not a problem to solve by passing data more cleverly.\n\nThe next sessions in this module build directly on having boundaries drawn well: React's rendering model, hooks, and state; routing and data fetching; the CSR/SSR/SSG/streaming spectrum and hydration; state management and cache consistency; and micro-frontends as this same boundary question applied across entire applications instead of individual components."
+    }
+  ]
+}

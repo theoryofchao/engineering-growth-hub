@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Web & Frontend",
+    "slug": "web-frontend",
+    "description": "Browser, React, accessibility, frontend performance"
+  },
+  "module": {
+    "title": "Web & Frontend"
+  },
+  "section": {
+    "title": "Frontend Architecture",
+    "slug": "16-frontend-architecture",
+    "description": "Choose frontend boundaries and rendering strategies deliberately.",
+    "proficiency_tier": "D"
+  }
+}
