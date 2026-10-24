@@ -1,0 +1,104 @@
+{
+  "title": "TCP/IP Layering, the Handshake, and Slow Start: What a Connection Actually Costs",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Reason about networking in terms of the practical TCP/IP layering model, and understand the real latency cost a TCP connection pays before any application data moves -- the handshake's extra round trip and slow start's gradual throughput ramp-up.",
+  "content_blocks": [
+    {
+      "heading": "Layering: Each Level Solves One Problem and Hides It From the Rest",
+      "body": "A request leaving a browser passes down through a stack of layers, each wrapping the previous layer's output with its own header: the application layer (HTTP) hands off to the transport layer (TCP or UDP), which hands off to the network layer (IP), which hands off to the link layer (Ethernet or Wi-Fi) that actually puts bits on a wire or radio signal. Each layer only has to solve its own problem -- TCP handles reliable ordered delivery, IP handles routing packets across networks -- without knowing or caring what's inside the layer above it.\n\nThis is also why upgrading one layer doesn't require rewriting the others: HTTP evolved from version 1.1 to 2 to 3 while TCP (and increasingly UDP, for HTTP/3) kept doing its own job underneath, unaware of which HTTP version is riding on top of it. The practical TCP/IP model (application/transport/network/link) is what engineers actually reason with day to day, more so than the fuller academic seven-layer OSI model it's often taught alongside."
+    },
+    {
+      "heading": "The Three-Way Handshake: A Full Round Trip Before Any Data Moves",
+      "body": "Before a TCP connection can carry a single byte of actual application data, the two ends have to complete a three-way handshake: the client sends a SYN, the server replies with a SYN-ACK, and the client replies with an ACK. Ilya Grigorik's *High Performance Browser Networking* lays out the direct consequence: that handshake costs one full round trip of latency, paid before the request itself has even been sent, let alone answered -- on a connection with 100ms of round-trip latency, the handshake alone adds 100ms before any useful work starts.\n\nThis is precisely why reusing an already-open TCP connection (HTTP keep-alive) is meaningfully faster than opening a fresh one per request: a reused connection has already paid its handshake cost once, while a new connection pays that same round trip again, every single time, regardless of how fast the actual request/response exchange itself would otherwise be.",
+      "reference_links": [
+        { "label": "Ilya Grigorik -- High Performance Browser Networking: Building Blocks of TCP", "url": "https://hpbn.co/building-blocks-of-tcp/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A client on a connection with 100ms round-trip latency opens a brand-new TCP connection for a request. Before the actual HTTP request can even be sent, what latency cost has already been paid?",
+          "definition": {
+            "options": [
+              "A full round trip (about 100ms), spent completing the three-way handshake before any application data can move",
+              "No latency cost at all -- the handshake happens instantaneously, in parallel with the application data being sent",
+              "Exactly half a round trip, since only the client's initial SYN packet needs to physically reach the server first",
+              "The cost depends entirely on which HTTP version is used, since HTTP itself is what performs the TCP handshake"
+            ],
+            "correct_index": 0,
+            "explanation": "The three-way handshake (SYN, SYN-ACK, ACK) requires a full round trip between client and server before the connection is established -- on a 100ms-RTT connection, that's 100ms spent before any actual request data has even been sent. HTTP doesn't perform or shortcut this; it's a TCP-layer cost paid underneath whichever HTTP version sits on top."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Slow Start: New Connections Ramp Up Gradually, Not Instantly",
+      "body": "Even after the handshake completes, a new TCP connection doesn't immediately send data at full available bandwidth -- it starts with a small congestion window (how much data it'll send before waiting for acknowledgment) and roughly doubles that window with each round trip that confirms data arrived successfully, a mechanism called slow start. This exists to avoid a brand-new connection immediately flooding a network path whose actual available capacity is unknown, but it means the first few round trips of any new connection run meaningfully below the connection's eventual steady-state throughput.\n\nThis compounds directly with the handshake cost from block 2: a short-lived, frequently-reopened connection never gets to spend much time at its ramped-up, steady-state throughput before it's torn down and a new one -- paying the handshake again, starting slow start again from scratch -- takes its place. A long-lived, reused connection pays both costs once and then runs at full throughput for the rest of its life.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "An application opens a brand-new TCP connection for every small request instead of reusing one long-lived connection. Beyond the repeated handshake cost, what additional throughput cost does this pattern pay?",
+          "definition": {
+            "options": [
+              "Each new connection restarts slow start from scratch, running below steady-state throughput for its first few round trips",
+              "There's no additional cost beyond the handshake -- slow start only affects connections that transfer very large files",
+              "Slow start only applies to the very first TCP connection a client ever opens, never to any connection opened after that",
+              "Opening more connections actually increases available throughput per connection, since each gets its own fresh congestion window"
+            ],
+            "correct_index": 0,
+            "explanation": "Slow start applies to every new TCP connection, not just large transfers -- each one starts with a small congestion window and ramps up gradually. A connection that's constantly reopened never spends much time at its eventual steady-state throughput, compounding the handshake's repeated latency cost with repeated below-capacity throughput too."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "TCP's Guarantees Aren't Free -- That's Exactly What UDP Skips",
+      "body": "TCP's handshake and slow start aren't arbitrary overhead -- they're the mechanism behind guarantees TCP actually provides: reliable delivery (lost packets get retransmitted), in-order delivery (packets arriving out of sequence get reordered before the application sees them), and congestion-aware throughput (slow start and its ongoing adjustments). UDP provides none of these guarantees, and pays none of their cost either: no handshake, no retransmission, no reordering -- a UDP packet is sent and the network either delivers it or doesn't, with no automatic recovery.\n\nThat tradeoff is a deliberate design choice, not a missing feature: an application like DNS, voice calls, or live video is often better served by UDP's lower latency and willingness to simply drop a late or lost packet than by TCP's insistence on perfect, in-order delivery at the cost of waiting for retransmissions -- a dropped video frame is usually less disruptive than the stall required to guarantee it arrives.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A live video call application chooses UDP over TCP for its media stream, even though UDP offers no guaranteed delivery or ordering. What's the engineering reasoning behind that choice?",
+          "definition": {
+            "options": [
+              "Dropping or skipping a late frame is usually less disruptive than the stall TCP's retransmission-and-reordering would cause",
+              "UDP is simply a strictly newer, more advanced replacement for TCP, so modern applications should default to using it",
+              "TCP is actually incapable of transmitting video data at all, which is why UDP has to be used for any video application",
+              "The choice is arbitrary here and has no real effect on call quality one way or the other -- either protocol performs the same"
+            ],
+            "correct_index": 0,
+            "explanation": "TCP's guarantees come at a real latency cost -- a lost packet means waiting for retransmission before anything later in the stream can be delivered, which would stall a live call. UDP simply drops what doesn't arrive, which for a video or voice stream is usually the less disruptive outcome: a brief glitch rather than a frozen call waiting on a retransmit."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Concrete Case: Why Most DNS Queries Use UDP",
+      "body": "A typical DNS query -- resolving a hostname to an IP address -- fits in a single small packet, and the response usually does too. Using UDP for this is a direct application of block 4's tradeoff: no handshake round trip to pay before the query can even be sent, no connection setup overhead for an exchange that's naturally just one packet out and one packet back. If the single UDP packet is lost, the resolver simply retries the whole query -- cheap, since there was no connection state to re-establish in the first place.\n\nDNS does fall back to TCP for certain cases -- a response too large to fit in one UDP packet, or newer protocols like DNS-over-HTTPS that run on top of TCP/TLS for privacy reasons -- which illustrates that the UDP-vs-TCP choice isn't permanent or absolute even within one protocol; it's made per-exchange based on which guarantees that specific exchange actually needs.\n\nThe same reasoning generalizes well beyond DNS: any protocol designer facing a similar choice is really asking the same question this session keeps returning to -- does this specific exchange need TCP's guarantees badly enough to justify paying for them, or would a cheaper, best-effort delivery serve it just as well.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Most DNS queries use UDP rather than TCP. Given this session's framing of TCP vs. UDP tradeoffs, why is UDP the natural fit for a typical DNS query?",
+          "definition": {
+            "options": [
+              "The query and response usually fit in one packet each, so there's no benefit to paying TCP's handshake cost first",
+              "DNS queries are specifically forbidden from using TCP at all, under every circumstance, by the protocol's own design",
+              "UDP guarantees in-order, reliable delivery for small packets specifically, which is why DNS relies on that guarantee",
+              "TCP cannot carry hostname-resolution data at all, which is the actual reason DNS defaults to UDP for its queries"
+            ],
+            "correct_index": 0,
+            "explanation": "A typical DNS exchange is naturally one small packet out and one small packet back -- paying TCP's handshake round trip first would add pure overhead for an exchange that doesn't need TCP's ordering or retransmission guarantees. DNS does use TCP when a response is too large for one UDP packet, showing the choice is made per-exchange, not fixed."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "The TCP/IP layering model -- application, transport, network, link -- is what lets HTTP evolve independently of TCP, and TCP evolve independently of IP, each layer solving one problem without needing to know what's riding on top of it. TCP's actual guarantees (reliable, ordered delivery) come from mechanisms with a real latency cost: the three-way handshake's extra round trip before any data moves, and slow start's gradual throughput ramp-up afterward -- both of which make connection reuse a genuine performance lever, not just a minor optimization. UDP skips both costs by skipping the guarantees that create them, which is exactly why latency-sensitive, loss-tolerant traffic like DNS queries and live media often prefers it.\n\nThe next sessions in this module build directly on this foundation: DNS resolution and caching in more depth, the fuller TCP/UDP/QUIC connection-lifecycle picture, how HTTP/1.1 through HTTP/3 each build on these transport-layer tradeoffs differently, and the TLS handshake that layers its own additional round trip on top of TCP's."
+    }
+  ]
+}

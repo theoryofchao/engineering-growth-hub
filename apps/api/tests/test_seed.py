@@ -44,7 +44,7 @@ def test_seed_all_imports_full_curriculum_map(app):
         assert Topic.query.count() == 17
         assert Section.query.count() == 81
 
-        wip_section = Section.query.filter_by(slug="05-computer-networking").first()
+        wip_section = Section.query.filter_by(slug="06-mathematics-for-computing").first()
         assert wip_section is not None
         assert wip_section.learning_sessions == []  # no lesson authored yet -> WIP
 
@@ -57,6 +57,11 @@ def test_seed_all_imports_full_curriculum_map(app):
         assert os_section is not None
         assert os_section.proficiency_tier == "W"
         assert len(os_section.learning_sessions) == 1
+
+        networking_section = Section.query.filter_by(slug="05-computer-networking").first()
+        assert networking_section is not None
+        assert networking_section.proficiency_tier == "D"
+        assert len(networking_section.learning_sessions) == 1
 
         ai_section = Section.query.filter_by(slug="70-ai-assisted-software-development").first()
         assert ai_section is not None

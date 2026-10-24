@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Computer Science Foundations",
+    "slug": "computer-science-foundations",
+    "description": "Algorithms, memory, operating systems, networking, theory"
+  },
+  "module": {
+    "title": "Computer Science Foundations"
+  },
+  "section": {
+    "title": "Computer Networking",
+    "slug": "05-computer-networking",
+    "description": "Trace a request end to end and isolate network faults.",
+    "proficiency_tier": "D"
+  }
+}

@@ -26,7 +26,8 @@ def test_dashboard_lists_only_sections_with_content(app, client):
     assert "01-data-structures" in slugs  # now has real lesson content
     assert "03-computer-architecture" in slugs  # now has real lesson content too
     assert "04-operating-systems" in slugs  # now has real lesson content too
-    assert "05-computer-networking" not in slugs  # still WIP, no learning sessions
+    assert "05-computer-networking" in slugs  # now has real lesson content too
+    assert "06-mathematics-for-computing" not in slugs  # still WIP, no learning sessions
 
 
 def test_dashboard_reflects_study_time_and_progress(app, client):
