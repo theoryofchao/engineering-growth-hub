@@ -1,0 +1,104 @@
+{
+  "title": "Job Queues, Workers, and the Visibility Timeout: Why Duplicate Processing Is Normal",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Explain how a job queue's visibility timeout mechanism works, why it makes duplicate job processing an expected case rather than a bug, and how sizing that timeout trades off against both wasted duplicate work and slow crash recovery.",
+  "content_blocks": [
+    {
+      "heading": "Decoupling \"Accept the Request\" From \"Do the Work\"",
+      "body": "Background processing splits a request into two separate steps: accepting it quickly (often just writing a job description to a queue) and actually doing the work later, on a separate worker process pulling from that queue. This matters for exactly the kind of work module 20's backend-fundamentals content flagged as a poor fit for a synchronous request/response cycle -- anything slow, anything that might need retrying, anything whose caller shouldn't have to wait for it to finish before getting a response at all.\n\nOnce work moves to a queue and a separate worker, this is also now a distributed system in the sense module 35's content already covered: the thing that enqueued the job and the thing that eventually processes it are separate failure domains, connected by a queue that itself has to make real guarantees -- or admit where it doesn't -- about what happens if a worker crashes mid-job."
+    },
+    {
+      "heading": "The Visibility Timeout: How a Queue Actually Hands Out Work Safely",
+      "body": "When a worker receives a job from a queue, the job isn't deleted immediately -- it becomes temporarily invisible to other workers for a configured window (Amazon SQS's own documentation calls this the visibility timeout, defaulting to 30 seconds). The receiving worker is expected to finish the job and explicitly delete it within that window. If the worker finishes in time, the job is removed for good; if the window expires without a delete -- because the worker crashed, got stuck, or simply ran longer than expected -- the job becomes visible again, and a different worker can pick it up and try again.\n\nThis is the queue's actual recovery mechanism for a crashed worker: rather than needing to detect the crash directly, the queue just waits out the timeout and assumes anything not explicitly completed within that window needs to be retried by someone else.\n\nThis is a deliberately simple mechanism -- the queue never has to know *why* a job wasn't completed, only *whether* it was, which keeps the recovery logic the same regardless of whether the original worker crashed outright, lost network connectivity, or was simply still running when the window closed.",
+      "reference_links": [
+        { "label": "AWS -- Amazon SQS Visibility Timeout", "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/AboutVT.html" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A worker receives a job and then crashes before finishing it or deleting it from the queue. What actually happens to that job?",
+          "definition": {
+            "options": [
+              "Once the visibility timeout expires, the job becomes visible again for a different worker to pick up and retry",
+              "The job is permanently lost the instant the worker crashes, with absolutely no mechanism to recover or retry it",
+              "The queue immediately detects the crash itself and reassigns the job to another worker within milliseconds",
+              "The same worker, once it restarts, automatically resumes processing exactly where it had left off before"
+            ],
+            "correct_index": 0,
+            "explanation": "The queue doesn't detect a crash directly -- it simply waits out the visibility timeout. If the job hasn't been explicitly deleted by the time that window expires, it becomes visible again for any worker to pick up, which is how the system recovers from a crashed or stuck worker without needing to know the crash happened."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why Duplicate Processing Is a Normal Case, Not an Edge Case",
+      "body": "AWS's own guidance states this directly for standard queues: receiving the same message more than once is an expected possibility, not a guarantee violation, and application code is expected to handle it. A worker that's still genuinely working on a job -- just slower than the visibility timeout allows -- looks, from the queue's perspective, identical to a crashed one: the timeout expires either way, and the job becomes available for a second worker to pick up, even though the first worker might still be actively finishing it.\n\nThis means a job can genuinely be processed twice, concurrently, by two different workers, with neither one having done anything wrong -- the queue's own recovery mechanism, working exactly as designed, is what creates this possibility, which is precisely why job handlers need to be written to tolerate it rather than assume single delivery.\n\nThis is often described as \"at-least-once\" delivery -- a real, named guarantee level, weaker than \"exactly-once\" but far more practical to actually provide at scale, and the honest starting assumption most production job queues are actually built around.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A job's visibility timeout expires while the original worker is still actively (and correctly) processing it, not crashed. A second worker then picks up the same job. What does this situation illustrate?",
+          "definition": {
+            "options": [
+              "Duplicate processing is a normal, expected outcome of how the timeout mechanism works, not a sign something broke",
+              "This can only happen due to a real bug in the queue itself; a correctly operating queue would never allow it to occur",
+              "The second worker receiving the job is an error that should be reported right away as a serious system failure",
+              "This is specific to a misconfigured queue and would never happen with any correctly-sized visibility timeout at all"
+            ],
+            "correct_index": 0,
+            "explanation": "The queue can't distinguish \"the worker crashed\" from \"the worker is just slower than the timeout allows\" -- both look identical once the timeout expires. A second worker picking up the same job in this case is the mechanism working exactly as designed, which is why handling duplicate delivery is a normal requirement, not evidence of a bug."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Sizing the Timeout: the Same Tradeoff Shape as Module 38's Network Timeouts",
+      "body": "A visibility timeout set too short makes duplicate processing happen constantly, even with zero actual crashes: any job that simply takes a bit longer than usual gets reclaimed by a second worker while the first is still legitimately working on it. A timeout set too long means a genuinely crashed job sits unprocessed for a long time before anything notices and retries it, since the queue has no other way to detect the crash.\n\nThis is the identical shape of tradeoff module 38's network-timeout content already covered -- too aggressive risks false positives (there, falsely-timed-out healthy calls; here, falsely-reclaimed still-processing jobs), too generous risks slow recovery (there, a hung connection tying up resources; here, a crashed job sitting idle) -- just applied to job processing instead of a single network call.\n\nThe practical fix is the same too: measure the job's own real processing-time distribution and size the timeout against that, the way module 38 sized a network timeout against a dependency's measured latency percentile, rather than picking a number that merely feels reasonable.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team sets their job queue's visibility timeout far shorter than their jobs' typical processing time, reasoning that a shorter timeout means faster crash recovery. What's the actual consequence of this choice?",
+          "definition": {
+            "options": [
+              "Jobs still legitimately processing get falsely reclaimed and duplicated constantly, not only on a real crash",
+              "There's no real downside here at all -- a shorter timeout only ever improves crash recovery, nothing else changes",
+              "The queue automatically extends the timeout by itself the moment it detects a job still legitimately running",
+              "Jobs simply fail outright once the short timeout expires, rather than ever being reclaimed by another worker"
+            ],
+            "correct_index": 0,
+            "explanation": "A timeout shorter than typical processing time causes the queue to reclaim jobs that are still being legitimately worked on, not just genuinely crashed ones -- generating constant duplicate processing as a side effect of trying to recover from crashes faster. This is the same too-aggressive-causes-false-positives tradeoff module 38 covered for network timeouts, applied here to job visibility."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Concrete Failure: a Payment Job Processed Twice",
+      "body": "A payment-processing job takes 40 seconds under heavy load, but the queue's visibility timeout is set to 30. At the 30-second mark, the job becomes visible again and a second worker picks it up -- both workers are now actively charging the same customer's card, each unaware of the other, since neither crashed and neither did anything wrong by the queue's own rules. Without an idempotency safeguard, this customer gets charged twice for one purchase, a direct, concrete consequence of exactly the mechanism blocks 2 through 4 described, not a rare or contrived edge case.\n\nThe actual fix isn't a cleverer timeout value -- no timeout setting eliminates this risk entirely, since any value is still a guess about how long processing will take under worse-than-usual load. The real fix is making the payment operation itself idempotent (the subject of this module's next subtopic): giving each job a unique key the payment provider can use to recognize and reject a duplicate charge attempt, regardless of how many times the same job happens to run.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A payment job runs longer than the queue's visibility timeout under heavy load, causing two workers to process (and charge) the same payment. What actually fixes this risk, rather than just reducing how often it happens?",
+          "definition": {
+            "options": [
+              "Making the payment operation itself idempotent, so a duplicate attempt is recognized and rejected on its own",
+              "Picking a more precisely tuned timeout value, since the right number alone would eliminate this risk completely",
+              "Switching to an entirely different queue provider, since this failure is somehow unique to how this one works",
+              "Processing payment jobs faster across the board, which would make this exact scenario impossible to ever occur"
+            ],
+            "correct_index": 0,
+            "explanation": "No timeout value fully eliminates the risk -- it's always a guess about worst-case processing time under unknown future load. Idempotency fixes the actual problem directly: a duplicate charge attempt gets recognized and rejected by design, regardless of how many times the underlying job happens to run or how the timeout happens to be tuned."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A job queue's visibility timeout is the mechanism that lets a system recover from a crashed worker without directly detecting the crash -- it simply reclaims any job not explicitly completed within the timeout window. The direct, documented consequence (confirmed by AWS's own guidance for standard queues) is that duplicate job processing is a normal, expected possibility, not a bug, since a slow-but-healthy worker and a crashed one look identical to the queue once the timeout expires. Sizing that timeout trades off false-positive duplicate work against slow crash recovery -- the same shape module 38's network-timeout content already covered, just applied to job visibility instead of a single network call.\n\nThe next sessions in this module build directly on accepting duplicate delivery as a given rather than an anomaly: retry policies, backoff, and dead-letter queues for jobs that keep failing; deduplication and idempotency as the actual fix for the payment-job scenario this session described; long-running workflows and cancellation; the outbox pattern; and job visibility and reconciliation for keeping track of what's actually happened across all of this."
+    }
+  ]
+}

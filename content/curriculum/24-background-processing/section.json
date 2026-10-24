@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Backend & APIs",
+    "slug": "backend-apis",
+    "description": "Service architecture, API contracts, identity, job processing"
+  },
+  "module": {
+    "title": "Backend & APIs"
+  },
+  "section": {
+    "title": "Background Processing",
+    "slug": "24-background-processing",
+    "description": "Implement recoverable asynchronous execution.",
+    "proficiency_tier": "D"
+  }
+}
