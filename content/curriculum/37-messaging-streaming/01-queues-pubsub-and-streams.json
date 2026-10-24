@@ -1,0 +1,104 @@
+{
+  "title": "Queues, Pub/Sub, and Streams: Three Models, One Consumer-Group Abstraction",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Distinguish queue-style load balancing from pub/sub-style broadcast, and recognize retention and replay as the genuinely new capability a log-based stream adds beyond either traditional model.",
+  "content_blocks": [
+    {
+      "heading": "Two Traditional Models That Look Similar but Solve Different Problems",
+      "body": "Messaging has traditionally offered two distinct models. A queue hands each message to exactly one consumer out of a pool -- useful for distributing work across multiple workers, where you want each job done once, by whichever worker happens to be free. Publish-subscribe instead broadcasts each message to every subscriber -- useful for notifying multiple independent systems that something happened, where each one needs its own full copy of every event.\n\nThese aren't two implementations of the same idea -- they answer different questions. A queue answers \"which one of these workers should handle this job\"; pub/sub answers \"which of these independent systems need to know this happened.\" Picking the wrong one for a given problem -- broadcasting work that should be load-balanced, or load-balancing a notification multiple systems each need to see -- causes real bugs, not just a style mismatch."
+    },
+    {
+      "heading": "Kafka's Consumer Group: One Mechanism That Generalizes Both",
+      "body": "Apache Kafka's own documentation describes a single abstraction -- the consumer group -- that produces either behavior depending on how consumers are grouped, rather than requiring two separate mechanisms. If every consumer instance shares the same consumer group, each message goes to exactly one instance in that group, reproducing a traditional queue's load-balancing behavior. If each consumer instance has its own distinct consumer group, every group receives its own full copy of every message, reproducing pub/sub's broadcast behavior.\n\nThe practical consequence: the same underlying topic can serve both use cases simultaneously -- a \"process this order\" consumer group load-balancing work across several worker instances, and a completely separate \"log every order for analytics\" consumer group receiving every single message independently, both reading from the exact same stream of events without interfering with each other at all.",
+      "reference_links": [
+        { "label": "Apache Kafka Documentation -- Intro, Concepts and Terms", "url": "https://kafka.apache.org/documentation/#intro_concepts_and_terms" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team wants both a worker pool that load-balances order-processing jobs AND a separate analytics system that logs every single order independently. How does Kafka's consumer-group model let both read from the same topic?",
+          "definition": {
+            "options": [
+              "Each use case gets its own consumer group -- same group balances load, different groups each get a full independent copy",
+              "This isn't actually possible with one topic; Kafka requires two entirely separate topics to serve these two different needs",
+              "The worker pool and the analytics system must coordinate manually to decide which one processes each individual message",
+              "Kafka automatically detects which use case each consumer represents and applies the correct delivery behavior on its own"
+            ],
+            "correct_index": 0,
+            "explanation": "Consumer group membership is what determines the behavior: instances sharing one group split the work (queue-like), while a separate group gets its own full stream of every message (pub/sub-like). Both groups can read the exact same topic simultaneously without any coordination between them or any need for two separate topics."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "What Neither Traditional Model Offers: Retention and Replay",
+      "body": "A traditional queue removes a message once a consumer has processed it -- there's no going back to re-read something already consumed. Kafka's documentation describes a genuinely different property: the cluster retains published records for a configurable period regardless of whether they've already been consumed, and each consumer tracks its own position (offset) in that retained log rather than the broker deleting what's been read.\n\nThis unlocks something neither a traditional queue nor traditional pub/sub actually offers: a consumer can reset its own offset backward and reprocess messages it already handled, and a brand-new consumer that didn't even exist when the original messages were published can still read the entire retained history from the beginning. The messages aren't gone just because someone already read them -- they're retained on their own schedule, independent of any particular consumer's progress through them.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A new analytics consumer is added to a system six months after a Kafka topic started receiving events. Why can this new consumer still process every event from the very beginning, something a traditional queue wouldn't allow?",
+          "definition": {
+            "options": [
+              "The log retains records independent of consumption, so a new consumer can read what's still retained from before",
+              "Kafka automatically re-sends a full copy of every single historical message to any consumer the moment it's added",
+              "This isn't actually possible at all -- a consumer added later can only ever see messages published after joining",
+              "The original producers would all need to manually republish every historical event for the new consumer's benefit"
+            ],
+            "correct_index": 0,
+            "explanation": "Kafka's retention model keeps records for a configurable period regardless of whether any consumer has already read them -- a traditional queue, by contrast, deletes a message once consumed, with nothing left to replay. A new consumer can simply start reading from the beginning of whatever's still retained, with no special handling needed."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why This Distinction Matters: Contrasting With Module 24's Job Queue",
+      "body": "Module 24's job queue (an SQS-style visibility-timeout queue) is squarely a traditional queue: once a message is successfully processed and deleted, it's genuinely gone -- there's no retained history to replay if a bug is later discovered in how yesterday's jobs were handled, and no way for a newly-added consumer to see jobs that already completed. That's a perfectly reasonable design for \"get this job done exactly once, then forget it\" work, which is most of what module 24 covered.\n\nA log-based stream is the right choice when the retained history itself has ongoing value: reprocessing past events after fixing a bug, backfilling a brand-new consumer, or feeding multiple independent systems from one durable, replayable record of everything that happened -- not just getting a single job done and discarded. Choosing between the two isn't about one being more modern than the other; it's about whether replaying history is actually a requirement for the problem at hand.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team needs to reprocess a month of past events after discovering a bug in how they were originally handled. Why would module 24's SQS-style job queue be a poor fit for this specific need, compared to a log-based stream?",
+          "definition": {
+            "options": [
+              "Once a job queue's messages are processed and deleted, they're genuinely gone, with no retained history available to replay",
+              "SQS-style queues are universally the worse choice for every use case; log-based streams should always be preferred instead",
+              "Job queues and log-based streams are functionally identical in every respect, so this specific scenario makes no real difference",
+              "The bug itself is the actual blocker here; the choice of messaging system plays no meaningful role in this situation at all"
+            ],
+            "correct_index": 0,
+            "explanation": "A traditional job queue deletes a message once it's processed -- there's nothing left to go back and replay once a bug is discovered in how it was handled. A log-based stream's retention is exactly what makes a month of history available to reprocess, which is the specific capability this scenario actually needs."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Ordering Within a Partition, Not Across the Whole Topic",
+      "body": "A Kafka topic is split into partitions so the underlying log can scale past what a single server can hold, and each partition assigns its own records a sequential offset. Ordering is only guaranteed within one partition, not across an entire topic's partitions combined -- two events landing on different partitions carry no guaranteed relative order between them, even if one was genuinely produced before the other.\n\nA common, deliberate pattern addresses this directly: producers choose a partition key (a user ID, an order ID) so that every event for the same key always lands on the same partition, guaranteeing per-key ordering -- all of one user's events arrive in the order they happened -- without requiring the far more expensive guarantee of total ordering across every event in the entire topic at once, most of which don't actually need to be ordered relative to each other.\n\nMore partitions generally means more throughput, since different partitions can be consumed in parallel by different consumer instances -- but choosing a partition key is a real design decision with a real constraint: a single key's events can never be processed in parallel across multiple partitions, since they all have to land on the same one to preserve that key's own ordering.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A system needs every event for a given user to be processed in the exact order it happened, but doesn't need ordering between different users' events at all. What's the practical way to get this using Kafka's partition model?",
+          "definition": {
+            "options": [
+              "Use the user ID as the partition key, so every event for that user always lands on the same, ordered partition",
+              "Use a single partition for the entire topic, since that's the only way Kafka can guarantee any ordering at all",
+              "This specific requirement is impossible to satisfy with Kafka's partition model under any producer configuration",
+              "Order doesn't need to be addressed at all here, since Kafka already guarantees total ordering across every partition by default"
+            ],
+            "correct_index": 0,
+            "explanation": "Partitioning by user ID guarantees every event for that specific user lands on the same partition, where ordering is guaranteed -- giving exactly the per-user ordering needed without forcing the whole topic onto a single partition (which would eliminate the scalability partitioning exists to provide in the first place)."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Queues and pub/sub traditionally solved different problems -- work distribution versus broadcast notification -- and Kafka's consumer-group abstraction generalizes both into one mechanism rather than requiring separate systems. The genuinely new capability a log-based stream adds beyond either traditional model is retention and replay: records persist on their own schedule independent of consumption, letting a consumer reprocess history or a new consumer backfill from the beginning, something module 24's job-queue model deliberately doesn't offer because most job-queue work doesn't need it. Ordering is guaranteed only within a partition, which is why partition-key choice (routing related events to the same partition) matters directly for correctness, not just throughput.\n\nThe next sessions in this module build on these same mechanics directly: consumer groups and partition assignment in more depth, ordering/delivery/replay semantics, at-least-once processing and deduplication (the same theme module 24 raised, now at the stream level), backpressure and consumer lag, and the outbox/inbox patterns plus event versioning that keep a long-lived event stream maintainable as it evolves."
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Distributed Systems",
+    "slug": "distributed-systems",
+    "description": "Failure modes, consistency, messaging, resilience"
+  },
+  "module": {
+    "title": "Distributed Systems"
+  },
+  "section": {
+    "title": "Messaging & Streaming",
+    "slug": "37-messaging-streaming",
+    "description": "Operate reliable event driven workloads.",
+    "proficiency_tier": "W"
+  }
+}
