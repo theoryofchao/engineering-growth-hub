@@ -1,0 +1,104 @@
+{
+  "title": "SLIs, SLOs, and SLAs: Turning \"Keep It Reliable\" Into a Specific Number",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Distinguish an SLI (a measurement), an SLO (a target for that measurement), and an SLA (a contract with real consequences), and apply the \"what happens if it's missed\" test the SRE book uses to tell an SLO from an SLA.",
+  "content_blocks": [
+    {
+      "heading": "From \"Keep It Reliable\" to a Specific, Measurable Target",
+      "body": "Module 54's golden signals give a team continuous visibility into a service's behavior, but visibility alone doesn't answer a different, equally important question: how reliable does this service actually need to be, and how do we know if it's meeting that bar. Google's SRE book formalizes this with three distinct, often-confused terms -- SLI, SLO, and SLA -- each answering a different part of that question rather than being three names for the same thing.\n\nGetting this specific is what turns a vague goal like \"keep checkout reliable\" into something a team can actually be held accountable to, and that an error budget (this module's next subtopic) can be computed against.\n\nThis session works through the three terms in order -- SLI, then SLO, then SLA -- precisely because each one builds on the last: an SLO is meaningless without a well-defined SLI underneath it, and an SLA is meaningless without a real SLO it's attached to."
+    },
+    {
+      "heading": "The SLI: a Carefully-Defined Measurement",
+      "body": "The SRE book defines an SLI -- a service level indicator -- as a carefully-defined quantitative measure of some aspect of the service being provided: request latency and error rate are the two most common examples, with availability (the fraction of time a service is usable) also frequently used. An SLI is often literally one of the golden signals module 54 already covered, chosen and precisely defined for this specific accountability purpose rather than introduced as a brand-new concept.\n\n\"Carefully-defined\" matters here specifically: \"latency\" alone is ambiguous until you specify which percentile, measured where (client-side or server-side), over what time window -- exactly the kind of precision module 65's benchmark-design content already emphasized is easy to get subtly wrong.\n\nTwo teams can both claim to track \"error rate\" and mean genuinely different things -- errors as a fraction of all requests, or errors as a fraction of requests that reached a specific downstream dependency -- which is exactly why the SLI itself has to be pinned down before any target built on top of it means anything.",
+      "reference_links": [
+        { "label": "Google SRE Book -- Service Level Objectives", "url": "https://sre.google/sre-book/service-level-objectives/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team defines an SLI simply as \"latency,\" without specifying which percentile, where it's measured, or over what window. What problem does this create?",
+          "definition": {
+            "options": [
+              "The definition is ambiguous -- an SLI has to be carefully, precisely defined to actually serve as a usable measurement",
+              "No real problem exists here; any mention of \"latency\" is automatically precise enough to serve as a valid SLI on its own",
+              "This is only a problem for error-rate SLIs specifically; latency SLIs never need this kind of additional precision",
+              "SLIs are never actually required to be quantitative at all, so this level of ambiguity is an accepted, normal practice"
+            ],
+            "correct_index": 0,
+            "explanation": "An SLI has to be a carefully-defined quantitative measure -- \"latency\" alone leaves out which percentile, where it's measured, and over what window, all of which change what's actually being tracked. Without that precision, the same word can mean different things to different people reading the same dashboard."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The SLO: a Target, and the Test That Separates It From an SLA",
+      "body": "An SLO -- a service level objective -- is a target value or range for an SLI: \"99.5% of checkout requests complete successfully\" is an SLO built on an SLI measuring successful-completion rate. Publishing an SLO, even just internally, sets concrete expectations about how the service is meant to perform, which is what makes it something a team can actually be held to.\n\nThe SRE book gives a specific, practical test for telling an SLO apart from an SLA: ask what happens if the target is missed. If nothing concrete happens -- no contractual consequence, just an internal signal that something needs attention -- it's an SLO. An SLA additionally carries a real consequence, typically financial, for missing the same kind of target.\n\nMost SLOs a team sets for its own internal use never become SLAs at all -- they stay purely internal targets used to drive engineering priorities, with the SLA layer reserved specifically for cases where an external, contractual promise is actually being made to a customer.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team sets an internal target of 99.5% successful checkout requests, with no contract or financial consequence if it's missed -- just an internal flag that something needs investigation. According to the SRE book's own test, is this an SLO or an SLA?",
+          "definition": {
+            "options": [
+              "An SLO -- there's no explicit consequence for missing it, which is exactly the test used to tell these two apart",
+              "An SLA -- any numeric target at all, whether or not real consequences happen to be attached, automatically counts as one",
+              "Neither one -- a target with no contract attached doesn't count as any kind of service level term whatsoever",
+              "Both at once -- SLO and SLA are simply two interchangeable names for exactly the same underlying concept here"
+            ],
+            "correct_index": 0,
+            "explanation": "The SRE book's own test is specifically whether there's an explicit consequence for missing the target -- an internal flag with no contractual or financial consequence is exactly what makes this an SLO, not an SLA. An SLA requires that additional, real consequence layered on top of the same kind of target."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Consequences Don't Require a Contract: the Google Search Example",
+      "body": "The SRE book makes a sharper point with a real example: Google Search has no public SLA for its availability, yet missing that availability still carries real consequences -- reputational damage, lost advertising revenue -- even without a contract specifying them. This separates two things that are easy to conflate: having *any* real-world consequence for poor reliability, versus having a formal *agreement* that names those consequences explicitly.\n\nAn SLA specifically requires that explicit or implicit contract; a service can face serious real consequences for missing a reliability bar without ever having one. This is why the SRE book's own test for SLA status is specifically about an explicit, named consequence tied to an agreement -- not just \"does missing this target matter at all,\" which would make almost every SLO an SLA by that looser standard.\n\nThe practical upshot for a team setting internal targets: treating every internally-important SLO as if it were a binding SLA, with the same rigidity, misreads what actually makes something an SLA -- the explicit agreement, not merely the fact that getting it wrong has real costs.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Google Search has no public SLA for availability, but the SRE book notes real consequences (reputation, ad revenue) still follow if it goes down. What does this example illustrate?",
+          "definition": {
+            "options": [
+              "Real consequences can exist without any formal contract at all -- that's distinct from actually having an SLA",
+              "Google Search secretly does have an SLA after all, since real consequences exist whether or not it's public",
+              "The example contradicts the SRE book's own definitions, since consequences are supposed to always require an SLA",
+              "This situation is unique to Google and doesn't generalize to how any other company's own services might work"
+            ],
+            "correct_index": 0,
+            "explanation": "The example separates having real-world consequences from having a formal agreement that names them -- Google Search faces genuine consequences for poor availability without any public SLA specifying them. An SLA specifically requires that explicit contract; consequences alone, without one, keep something an SLO rather than promoting it to an SLA."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Worked Example: Why the Target Is 99.5%, Not 100%",
+      "body": "Continuing module 54's checkout example: the SLI is defined as the percentage of checkout requests completing successfully within 500ms, and the SLO sets that at 99.5% over a rolling 28-day window. Setting the target at 100% would be both economically wasteful (chasing the last fraction of a percent typically costs far more than the business value it protects) and close to technically unachievable in a distributed system -- modules 35, 38, and 39's partial-failure and resilience content already established why some failures are structurally inevitable at real scale.\n\nChoosing 99.5% rather than some other number is itself a deliberate business and engineering decision, not an arbitrary round figure -- it has to reflect what users actually need from checkout specifically and what's realistically achievable given the system's actual architecture, which is exactly the kind of tradeoff this module's later subtopic on reliability governance returns to in more depth.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team considers setting checkout's SLO at 100% successful requests rather than 99.5%. What's the main problem with that choice?",
+          "definition": {
+            "options": [
+              "It's both wasteful and close to unachievable, given distributed systems' structural partial-failure reality",
+              "100% is actually always both achievable and correct; the only real downside is that it looks unambitious on paper",
+              "There's no real problem at all here; any SLO that isn't exactly 100% simply reflects insufficient engineering effort",
+              "100% targets are specifically forbidden by the SRE book's own definitions and can never be set as a valid SLO"
+            ],
+            "correct_index": 0,
+            "explanation": "Chasing the last fraction of a percent typically costs far more than the business value it protects, and distributed systems face structural partial-failure realities (already covered in modules 35/38/39) that make 100% success close to unachievable in practice -- which is exactly why a deliberately chosen target below 100%, like 99.5%, is the realistic and economically sound choice."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "An SLI is a carefully-defined measurement, often one of module 54's golden signals refined for this specific purpose. An SLO is a target for that measurement, and the SRE book's own test -- what happens if it's missed -- is what separates an SLO from an SLA, which additionally requires an explicit contract naming real consequences. The Google Search example shows these aren't the same as \"does missing this matter at all\": real consequences can exist without a formal agreement, and only the agreement itself promotes something to an SLA. A target below 100% is typically the deliberately correct choice, not a compromise, given both the economics and the structural realities of distributed systems.\n\nThe next sessions in this module build directly on having these terms precisely defined: error budgets and burn rates (the practical mechanism for spending the gap between an SLO and 100%), toil and automation, capacity management, reliability governance and tradeoffs, and SRE team interaction models."
+    }
+  ]
+}

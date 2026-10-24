@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Observability & Reliability",
+    "slug": "observability-reliability",
+    "description": "Instrumentation, monitoring, SRE, incident response"
+  },
+  "module": {
+    "title": "Observability & Reliability"
+  },
+  "section": {
+    "title": "Site Reliability Engineering",
+    "slug": "55-site-reliability-engineering",
+    "description": "Manage reliability with measurable customer outcomes.",
+    "proficiency_tier": "W"
+  }
+}
