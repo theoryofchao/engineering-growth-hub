@@ -1,0 +1,107 @@
+{
+  "title": "Layered and Modular Monoliths: The Default Worth Actually Defending",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Distinguish a layered monolith from a modular one, and evaluate the monolith-vs-microservices choice as a real tradeoff between operational simplicity and independent deployability rather than a question with one universally correct answer.",
+  "content_blocks": [
+    {
+      "heading": "An Architectural Style Is a Bet on Which Costs You'd Rather Pay",
+      "body": "Module 30's framing -- translating real constraints into a defensible design decision -- applies directly to picking an architectural style: a monolith and a microservices architecture aren't \"simple\" versus \"sophisticated,\" they're two different bets about which operational and organizational costs a team is willing to take on. A monolith bets on operational simplicity (one thing to deploy, one process to debug) at the cost of coupling everything to one deploy cycle; microservices bet on independent deployability and team autonomy at the cost of network calls, distributed debugging, and real operational overhead per service.\n\nThis session starts with the monolith specifically because, as later blocks cover, it's frequently the more defensible starting bet -- not because it's simpler to think about, but because of what you actually know (and don't yet know) about your system's real boundaries at the point you're making this decision."
+    },
+    {
+      "heading": "The Layered Monolith: One Deployable, Internal Separation by Concern",
+      "body": "A layered monolith ships as a single deployable unit but organizes its own code into layers by concern -- typically presentation, business logic, and data access -- each layer only calling the layer directly below it. This gives a real benefit over an undifferentiated pile of code: a change to how data is persisted shouldn't require touching presentation code, and the layering makes that boundary explicit rather than accidental.\n\nOperationally, a layered monolith is about as simple as it gets: one process to deploy, one set of logs to read, one database transaction that can span most business operations without any network call in between. The tradeoff is that every part of the system still ships together -- a bug fix in one layer requires redeploying the whole application, and a performance problem in one area can't be scaled independently from the rest.\n\nFor a team that's small, a system whose scale doesn't demand independent scaling per component, or a product whose real boundaries aren't yet clear, this is frequently the right tradeoff to accept -- the operational simplicity is a genuine benefit, not merely the absence of a more sophisticated approach the team hasn't gotten around to yet.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A layered monolith separates presentation, business logic, and data-access code into distinct layers, but still ships as one deployable unit. What's the real operational cost of this structure?",
+          "definition": {
+            "options": [
+              "Every part of the system ships together -- a fix in one layer requires redeploying the entire application each time",
+              "There is no real operational cost at all; layering fully eliminates every tradeoff a monolithic deployment would otherwise have",
+              "Each layer can be deployed and scaled completely independently of the others, identical to a true microservices architecture",
+              "The layers themselves add network calls between each other, carrying the same latency cost a microservices split would"
+            ],
+            "correct_index": 0,
+            "explanation": "Layering organizes code internally by concern, but doesn't change the deployment unit -- the whole application still ships as one artifact, so a change anywhere requires redeploying everything, and nothing can scale independently of anything else. That's the real cost traded for the layered monolith's operational simplicity."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Modular Monolith: Module 16's Boundary Discipline, at a Much Larger Grain",
+      "body": "A modular monolith applies the same boundary discipline module 16's component-design content already covered -- clear ownership, a deliberate interface, minimal leakage across the boundary -- but at the scale of whole internal modules (an \"orders\" module, a \"billing\" module) rather than individual UI components. Modules communicate through explicit internal interfaces, often enforced by tooling (package boundaries, lint rules, or compiler-level visibility controls) rather than mere convention, even though every module still ships together as one deployable.\n\nThis buys a meaningful piece of what microservices promise -- genuine separation of concerns, independent testability, clearer ownership boundaries -- without yet paying for network calls between those boundaries or separate deployment pipelines per module. It's also, as the next block covers, what makes a monolith genuinely splittable later if and when that becomes the right call, rather than a tangled mess no one can safely pull apart.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A modular monolith enforces clear internal boundaries between an \"orders\" module and a \"billing\" module, even though both ship in the same deployable. What does this buy, compared to an unstructured monolith?",
+          "definition": {
+            "options": [
+              "Genuine separation of concerns and clearer ownership, without the network-call cost a real service split would add",
+              "The exact same deployment and scaling independence a true microservices split between orders and billing provides",
+              "Nothing meaningful -- module boundaries inside one deployable are purely cosmetic, with no real design benefit at all",
+              "Automatic network-level isolation between the modules, identical to running them as fully separate processes"
+            ],
+            "correct_index": 0,
+            "explanation": "A modular monolith's internal boundaries give real separation-of-concerns and ownership clarity -- the same benefits module 16's component-boundary discipline provides, just at a module-sized grain -- without introducing the network calls, separate deployments, or operational overhead an actual service split would require."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why \"Monolith First\" Is Real Advice, Not Just Caution",
+      "body": "Martin Fowler's \"MonolithFirst\" post makes a specific, pattern-based observation: almost every successful microservices story he's aware of started as a monolith that grew large enough to be worth splitting, while projects built as microservices from scratch frequently ran into serious trouble. His explanation ties directly to this session's earlier blocks: getting service boundaries right requires knowing where your system's real seams are, and that knowledge usually only becomes clear once a system has actually been built and lived with for a while -- not guessed correctly on day one.\n\nFowler adds an important caveat that connects straight back to block 3: this only works if the monolith was built with real internal modularity in the first place -- a tangled, poorly-modularized monolith accumulates dependencies between its parts that make it genuinely unsafe to split later, while a disciplined modular monolith's existing internal boundaries are close to exactly where a later service split would naturally occur.",
+      "reference_links": [
+        { "label": "Martin Fowler -- MonolithFirst", "url": "https://martinfowler.com/bliki/MonolithFirst.html" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "According to Fowler's observation, why does starting with microservices from scratch frequently lead to serious trouble, while starting with a monolith and splitting later tends to work out better?",
+          "definition": {
+            "options": [
+              "Good boundaries need real knowledge of a system's seams, which usually only becomes clear after living with it a while",
+              "Microservices are always harder to implement correctly than a monolith is, no matter how well their boundaries are chosen",
+              "Starting with microservices works fine if more services get added quickly; the only real problem is adding too few of them",
+              "There's no real pattern here -- Fowler's observation is just one isolated anecdote with no generalizable explanation at all"
+            ],
+            "correct_index": 0,
+            "explanation": "Fowler's explanation is specifically about boundary knowledge: a system's real seams -- where it actually makes sense to split -- tend to become clear only once it exists and has been used for a while, not guessed correctly before it's even built. Starting as a monolith defers the boundary decision until that knowledge actually exists."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Real Reversal: Segment's Move Back to a Monolith",
+      "body": "Segment's engineering team built a microservices architecture where each third-party integration (\"destination\") got its own service, queue, and repository. As the number of destinations grew -- reportedly around three new ones a month -- operational overhead grew linearly right along with it: every new destination meant a new repo, new queues, and a new service to operate, monitor, and keep healthy. The team ultimately replaced this with a single service (internally called Centrifuge) handling all destinations from one shared codebase, explicitly trading away the per-destination isolation and independent deployability microservices had given them in exchange for relief from that compounding operational burden.\n\nThis is a concrete, real-world instance of this session's core tradeoff resolving in the monolith's favor for Segment's specific situation -- not a universal verdict that microservices are a mistake, but a documented case where the operational cost of many small services outgrew the isolation benefit they were providing, and a team making that call explicitly rather than drifting into either architecture by default.",
+      "reference_links": [
+        { "label": "InfoQ -- Segment Simplifies Architecture, Returns to a Monolith", "url": "https://www.infoq.com/news/2018/07/segment-microservices" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Segment moved from a per-destination microservices architecture back to a single monolithic service. What was the core tradeoff they made in that decision?",
+          "definition": {
+            "options": [
+              "They gave up per-destination isolation and independent deployability for relief from growing operational overhead",
+              "They concluded microservices are strictly worse than monoliths everywhere, for every company, regardless of circumstance",
+              "They kept every microservices benefit while adding a monolith on top, purely for extra redundancy and backup purposes",
+              "The move was unrelated to any real tradeoff -- it was driven by an unrelated internal reorganization at the company"
+            ],
+            "correct_index": 0,
+            "explanation": "Segment's operational overhead scaled linearly with each new destination under microservices -- a new repo, queue, and service every time. Consolidating into one shared service traded away per-destination isolation and independent deployability specifically to relieve that compounding cost, a deliberate tradeoff for their actual situation, not a universal verdict against microservices."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A layered monolith separates code by concern while still shipping as one deployable; a modular monolith adds real, tooling-enforced boundaries between internal modules at the same component-design discipline module 16 already covers, just at a larger grain -- and that discipline is exactly what makes a monolith safely splittable later, per Fowler's own caveat. \"Monolith first\" isn't caution for its own sake: it's a pattern-based observation that the knowledge needed to draw good service boundaries usually only exists after a system has actually been built and used for a while. Segment's real move back to a monolith shows this tradeoff resolving the other direction too, when operational overhead outgrows the isolation it was buying.\n\nThe next sessions in this module build on exactly this tradeoff: microservices and SOA in depth, event-driven architecture, CQRS and event sourcing, serverless and function design, and the module's closing session on choosing architectural complexity deliberately rather than by default or trend."
+    }
+  ]
+}
