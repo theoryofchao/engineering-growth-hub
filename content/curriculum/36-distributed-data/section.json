@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Distributed Systems",
+    "slug": "distributed-systems",
+    "description": "Failure modes, consistency, messaging, resilience"
+  },
+  "module": {
+    "title": "Distributed Systems"
+  },
+  "section": {
+    "title": "Distributed Data",
+    "slug": "36-distributed-data",
+    "description": "Select distributed correctness and recovery guarantees.",
+    "proficiency_tier": "W"
+  }
+}

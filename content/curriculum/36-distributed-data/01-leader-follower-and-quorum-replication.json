@@ -1,0 +1,104 @@
+{
+  "title": "Leader, Follower, and Quorum Replication: Why Majority, Not Unanimity",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Explain why a strong-leader replication model simplifies reasoning about distributed writes, and why requiring only a majority (not every replica) to acknowledge a write is both what makes the system tolerate failures and what guarantees a committed write survives a leader crash.",
+  "content_blocks": [
+    {
+      "heading": "Once Data Is Replicated, Something Has to Decide the Order",
+      "body": "Module 35's content already covered why distributed systems have to plan for partial failure -- any individual machine can be slow, unreachable, or down at any moment. Replicating data across several machines is a direct response to that reality: if one replica fails, others still hold the data. But replication alone introduces a new problem replication itself doesn't solve -- if writes can arrive at different replicas in a different order, or get applied inconsistently, the replicas drift apart and \"the data\" stops meaning one consistent thing.\n\nLeader/follower replication with quorum-based commitment is the standard answer to this: one replica (the leader) decides the order writes actually happen in, followers replicate that same order, and a write only counts as durable once enough replicas -- a quorum -- have it. This session covers why that specific design, not some alternative, is what most production replicated systems actually use."
+    },
+    {
+      "heading": "The Strong-Leader Model: a Deliberate Simplification, Not a Limitation",
+      "body": "In a strong-leader design, every write goes through one elected leader at a time; followers only ever receive log entries from that leader, never from each other. The Raft consensus algorithm's own paper, \"In Search of an Understandable Consensus Algorithm,\" makes this an explicit design goal rather than an accident: Raft was built specifically to be easier to reason about than the earlier multi-Paxos approach, by decomposing the problem into leader election, log replication, and safety as separate, independently understandable pieces -- a strong leader is central to that decomposition, since it means only one direction of data flow (leader to followers) ever needs reasoning about at a time.\n\nThe paper backs this understandability goal with an actual user study: in a controlled comparison, students answered Raft-related questions correctly more often than Paxos-related questions, suggesting the simpler structure is a real, measured advantage, not just an aesthetic preference of the algorithm's designers.",
+      "reference_links": [
+        { "label": "Ongaro & Ousterhout -- In Search of an Understandable Consensus Algorithm (Raft)", "url": "https://raft.github.io/raft.pdf" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Raft's strong-leader model means log entries only ever flow from the leader to followers, never between followers. According to the Raft paper's own stated design goal, why does this specific choice matter?",
+          "definition": {
+            "options": [
+              "It decomposes the problem into separately-reasonable pieces, making the algorithm easier to understand correctly",
+              "It makes Raft strictly faster than every other alternative consensus algorithm, the paper's stated primary design goal",
+              "It eliminates the need for leader election entirely, since followers would never need a leader to coordinate at all",
+              "It removes any possibility of data loss entirely, no matter how many replicas fail at the exact same time"
+            ],
+            "correct_index": 0,
+            "explanation": "The Raft paper's explicit goal was understandability over Paxos, achieved partly through this decomposition -- a single direction of data flow (leader to followers) is one of the pieces that makes the whole system easier to reason about correctly, backed by the paper's own user study showing a measured comprehension advantage."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why a Majority, Not Every Replica, Must Acknowledge a Write",
+      "body": "A write is considered committed -- durable, safe to acknowledge to the client -- once a majority of replicas (not necessarily all of them) have received and persisted it. This single design choice is what lets the system keep accepting writes even while a minority of replicas are slow or unreachable: the leader doesn't have to wait for every replica to respond, just enough of them to form a majority.\n\nThe tradeoff is real, not free: more replicas in the majority generally means stronger durability (more copies exist) but a slower commit (more replicas have to respond before the write counts as done), so sizing the total replica count and what counts as a majority is itself a deliberate choice between write latency and failure tolerance, not a fixed universal number.\n\nThis also means a client reading from a replica that hasn't yet received the latest committed write can see stale data -- a direct consequence of only requiring a majority rather than every replica, and exactly the kind of tradeoff the next session's consistency-models content picks up in more depth.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A write only needs acknowledgment from a majority of replicas to be considered committed, rather than from all of them. What does this specific choice directly enable?",
+          "definition": {
+            "options": [
+              "The system can keep accepting writes even while a minority of replicas are slow or unreachable, without blocking on them",
+              "Every replica is now guaranteed to always have identical data at every single moment, with zero possible lag between them",
+              "Writes no longer need to be persisted to disk at all, since majority acknowledgment alone is sufficient for full durability",
+              "The leader itself becomes unnecessary, since a majority of followers can commit a write entirely without any leader involved"
+            ],
+            "correct_index": 0,
+            "explanation": "Requiring only a majority, not every replica, means the leader never has to wait on a minority of slow or unreachable replicas before committing a write -- that's the direct, practical benefit of this choice, trading off against the fact that a smaller or larger majority threshold changes both commit latency and failure tolerance."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Real Payoff: Majority Overlap Guarantees Nothing Committed Is Lost",
+      "body": "The majority requirement isn't just about tolerating slow replicas -- it's what makes failover safe. If a leader crashes after committing a write to a majority of replicas, a new leader has to also be elected by a majority vote among the remaining replicas. Because any two majorities drawn from the same set of replicas must overlap by at least one server, the newly-elected leader is mathematically guaranteed to include at least one replica that already has the previously-committed write -- it cannot possibly have been elected by a majority that excludes every replica holding that data.\n\nThis is the actual safety property quorum-based replication provides: a write, once committed to a majority, can survive any single leader crash and subsequent re-election, because the next leader's own majority is guaranteed to overlap with the write's majority -- not by luck, but as a direct mathematical consequence of what \"majority\" means within one fixed set of replicas.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A leader commits a write to a majority of replicas, then crashes. A new leader is elected by a separate majority vote among the remaining replicas. Why is the committed write guaranteed to survive this leader change?",
+          "definition": {
+            "options": [
+              "Any two majorities drawn from the same set of replicas must overlap by at least one server that has the committed write",
+              "The crashed leader's own data is automatically recovered and restored once it comes back online after the crash occurs",
+              "New leader elections always specifically re-select the exact same majority of replicas the previous write was committed to",
+              "This survival isn't actually guaranteed at all; it depends entirely on which specific replicas happen to still be reachable"
+            ],
+            "correct_index": 0,
+            "explanation": "Since both the commit majority and the election majority are drawn from the same fixed set of replicas, any two majorities must share at least one common member -- it's a direct consequence of what \"majority\" means, not a coincidence. That shared replica is guaranteed to carry the committed write forward into the new leader's term."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Concrete Case: Sizing a 5-Node Cluster",
+      "body": "A 5-replica cluster's majority is 3 -- meaning the system tolerates up to 2 replicas being down or slow while still accepting writes (3 of the remaining nodes still form a majority), and any two separate majority votes drawn from those same 5 replicas are mathematically guaranteed to overlap. A smaller cluster (3 replicas, majority 2) tolerates only 1 failure but commits faster, since fewer replicas need to respond; a larger one (7 replicas, majority 4) tolerates more failures at the cost of waiting on more replicas per write.\n\nOdd replica counts are typical specifically because an even count (4 replicas, say) wastes a replica's worth of hardware without buying any additional fault tolerance over the next odd number down -- 4 replicas and 3 replicas both tolerate exactly 1 failure, since a majority of 4 is 3, identical to a majority of 3 being 2 with one fewer total replica to pay for.\n\nThis same reasoning scales up directly: 7 replicas (majority 4) tolerate 3 failures, one more than a 6-replica cluster (majority 4 as well) would tolerate for the cost of an extra, functionally wasted node.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why do production replicated systems typically use an odd number of replicas (3, 5, 7) rather than an even number (4, 6)?",
+          "definition": {
+            "options": [
+              "An even count wastes a replica's cost without adding fault tolerance beyond what the next odd number down provides",
+              "Even numbers of replicas are technically incompatible with how majority votes get counted in any consensus algorithm",
+              "Odd numbers are strictly required for quorum replication to function; even-numbered clusters cannot replicate at all",
+              "This is purely a stylistic convention with no actual technical reasoning behind it in any real production system here"
+            ],
+            "correct_index": 0,
+            "explanation": "A 4-replica cluster's majority is 3, tolerating exactly 1 failure -- identical fault tolerance to a 3-replica cluster (majority 2, also tolerating 1 failure), but at the cost of one extra replica's hardware with no additional benefit. Moving to the next odd number up (5) is what actually buys additional fault tolerance (2 failures), which is why odd counts are the typical practical choice."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Leader/follower replication with quorum-based commitment gives distributed data a single agreed order (via the strong leader) and a concrete durability guarantee (via majority acknowledgment) without requiring every single replica to participate in every write. Raft's own design explicitly chose this shape for understandability, backed by a real measured comparison against Paxos. The majority requirement isn't just about tolerating slow replicas -- it's the exact mechanism that guarantees a committed write survives a leader crash, since any two majorities drawn from the same replica set are mathematically guaranteed to overlap.\n\nThe next sessions in this module build directly on this foundation: consistency models (what guarantees a read actually gets after a write), distributed transactions and sagas, conflict resolution and CRDT basics for when strict leader-based ordering isn't the right fit, distributed locks and fencing tokens, and the practical realities of global data and migration."
+    }
+  ]
+}
