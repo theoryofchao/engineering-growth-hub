@@ -1,0 +1,104 @@
+{
+  "title": "Throughput, Latency, and Concurrency: Three Numbers That Aren't Interchangeable",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Distinguish throughput, latency, and concurrency as three related but distinct measurements, and recognize why adding concurrency past a system's real capacity increases queueing and can even reduce throughput rather than increasing it.",
+  "content_blocks": [
+    {
+      "heading": "Three Numbers, Easily Confused, Not Interchangeable",
+      "body": "Throughput is how much work a system completes per unit of time -- requests per second, jobs per minute. Latency is how long one unit of work takes from start to finish. Concurrency is how many units of work are in flight, being worked on simultaneously, at any given moment. These sound related because they are, but they measure genuinely different things: a system can have high throughput with high latency (many slow requests completing in parallel), or low throughput with low latency (a system that's simply idle most of the time, finishing each request quickly when one does arrive).\n\nConflating these three is a common source of bad capacity decisions -- assuming higher throughput automatically means lower latency, or that adding more concurrent requests always increases throughput, are both intuitive but wrong assumptions this session exists to correct.\n\nGetting these three straight is also what makes the rest of this module's content usable at all: capacity planning, saturation analysis, and autoscaling all reason explicitly in terms of these same three measurements, so confusing them early tends to compound into real misconfiguration later."
+    },
+    {
+      "heading": "The Informal Relationship: Concurrency Links Throughput and Latency",
+      "body": "Marc Brooker's post on Little's Law states the intuitive version of a relationship this module's next session formalizes: concurrency is approximately throughput multiplied by latency. A service handling 100 requests per second where each request takes 200 milliseconds has, on average, about 20 requests in flight at any given moment (100 x 0.2) -- that's the system's actual concurrency, a direct consequence of its throughput and latency, not a separately chosen number.\n\nThis matters practically because it means you can't independently pick throughput, latency, and concurrency as three free variables -- fixing any two determines the third. A system can't serve 100 requests/second at 200ms latency with only 5 requests in flight; the math simply doesn't allow it, regardless of how the system is architected.\n\nThis relationship is precisely why concurrency is a useful proxy for sizing resources like connection pools and thread pools -- knowing a service's expected throughput and typical latency tells you roughly how many of those resources need to exist simultaneously, without having to measure concurrency directly first.",
+      "reference_links": [
+        { "label": "Marc Brooker -- Little's Law", "url": "https://brooker.co.za/blog/2018/06/20/littles-law" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A service handles 50 requests per second, and each request takes an average of 400 milliseconds to complete. Roughly how many requests are in flight (concurrent) at any given moment?",
+          "definition": {
+            "options": [
+              "About 20 -- throughput (50/sec) multiplied by latency (0.4 sec) gives the approximate concurrency",
+              "Exactly 50, since concurrency is always equal to the throughput number regardless of how long each request takes",
+              "Exactly 1, since only one request can realistically be in flight within any given 400-millisecond window",
+              "This can't be estimated at all without separately measuring concurrency directly; it isn't derivable from the other two"
+            ],
+            "correct_index": 0,
+            "explanation": "Concurrency is approximately throughput multiplied by latency: 50 requests/second x 0.4 seconds per request = 20 requests in flight on average. Throughput, latency, and concurrency aren't three independent numbers -- fixing any two determines the third."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Adding Concurrency Doesn't Add Throughput for Free",
+      "body": "Because concurrency, throughput, and latency are linked, pushing more concurrent requests at a system that's already running at its real processing capacity doesn't increase throughput -- the system can only complete work at the rate its actual bottleneck (CPU, database connections, a downstream dependency) allows. Extra concurrent requests beyond that point simply wait longer, which shows up as rising latency, not rising throughput.\n\nThis is the direct, practical version of the tradeoff this module's later sessions on saturation and capacity planning build on: throughput has a real ceiling determined by the system's actual bottleneck, and once a workload reaches that ceiling, adding more concurrency only redistributes time spent waiting rather than completing more work per second.\n\nThis is also exactly why latency alone is a misleading health signal in isolation -- rising latency under constant throughput can mean the system is simply approaching its real capacity ceiling, not that something is newly broken.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A system is already running at the limit of its real processing capacity. A team doubles the number of concurrent requests sent to it, expecting throughput to double as well. What actually happens?",
+          "definition": {
+            "options": [
+              "Throughput stays capped at the real bottleneck; extra requests mostly just wait longer, raising latency instead",
+              "Throughput doubles exactly as expected, since more concurrent requests always proportionally increase completed work",
+              "The system crashes immediately, since no system can handle any concurrency beyond its original configured level",
+              "Latency stays exactly the same, since latency is entirely unrelated to how many concurrent requests are handled"
+            ],
+            "correct_index": 0,
+            "explanation": "Once a system is already at its real processing bottleneck, it can't complete work any faster no matter how many additional concurrent requests arrive -- the extra requests simply queue up and wait, which shows up as increased latency, not increased throughput."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Counter-Intuitive Part: Throughput Can Actually Drop, Not Just Plateau",
+      "body": "Brooker's post makes a further, less obvious point: most real systems don't just plateau at their maximum throughput as concurrency increases past saturation -- throughput can actually fall. This happens because contention itself has a real cost: more in-flight requests competing for the same lock, connection pool, or CPU cache can mean more time spent on coordination overhead and less time spent on actual useful work, directly echoing module 4's point about context-switch overhead eating into real throughput when there are far more runnable things than a system can actually handle at once.\n\nThis means pushing concurrency higher under the assumption \"worst case, throughput just stays flat\" is itself a risky assumption -- past a certain point, more concurrency can make a struggling system meaningfully worse, not merely fail to help it.\n\nThis is the Universal Scalability Law's core insight, named because it generalizes beyond any one system: contention and coordination overhead both grow with concurrency, so a real system's throughput curve eventually bends downward rather than staying flat forever, no matter how it's built.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why can throughput actually decrease, rather than simply plateau, when concurrency is pushed well past a system's saturation point?",
+          "definition": {
+            "options": [
+              "Contention itself has a real cost -- more in-flight requests competing for shared resources adds coordination overhead",
+              "This never actually happens in real systems; throughput can only ever plateau, never decrease, past saturation",
+              "Throughput decreases purely because of network latency, which is entirely unrelated to how concurrency is actually handled",
+              "Decreasing throughput only happens due to a bug in the specific system; a correctly built system would never show this pattern"
+            ],
+            "correct_index": 0,
+            "explanation": "Past saturation, additional concurrent requests compete more intensely for the same limited resources (locks, connections, CPU cache) -- that competition itself consumes time and resources that would otherwise go toward actual work, which is why throughput can genuinely fall, not just level off, under heavy contention."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Concrete Case: Shrinking a Connection Pool to Go Faster",
+      "body": "A team notices their database is struggling under load and, reasoning that more concurrency should mean more throughput, increases their connection pool size to allow more simultaneous queries. Throughput gets worse, not better -- the database was already at its real processing capacity, and the additional connections just added more contention for its limited CPU and I/O, exactly the mechanism block 4 described.\n\nThe actual fix is counter-intuitive: shrinking the connection pool back down reduces contention on the database's real bottleneck, letting the queries that are running complete faster, which paradoxically increases overall throughput even though fewer queries are allowed to run simultaneously. Fewer requests competing for the same limited resource, each completing faster, can beat more requests fighting each other for that same resource.\n\nThis specific failure mode is common enough to have a name among database and connection-pool practitioners, and it's a direct, real-world instance of block 4's abstract point about contention cost -- not a one-off quirk of this particular database.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team facing database slowness increases their connection pool size, expecting more throughput, but throughput actually gets worse. What's the more effective fix, and why does it work?",
+          "definition": {
+            "options": [
+              "Shrinking the pool reduces contention on the database's real bottleneck, letting running queries finish faster overall",
+              "Increasing the pool size even further, since the original increase simply wasn't large enough to see the expected benefit",
+              "Switching databases entirely, since this specific problem is unique to this one database technology and no others",
+              "Nothing can be done here; once throughput drops under increased concurrency, it can never be recovered by any means"
+            ],
+            "correct_index": 0,
+            "explanation": "The database was already at its real capacity -- more connections just added contention for its limited resources, not more actual processing capability. Reducing the pool size cuts that contention, letting the queries that do run complete faster, which can increase overall throughput even with fewer requests running at once."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Throughput, latency, and concurrency measure genuinely different things, but they're mathematically linked -- concurrency is approximately throughput times latency, so fixing any two determines the third. Pushing more concurrency at a system already running at its real bottleneck doesn't buy more throughput; it mostly buys more waiting, visible as rising latency. Past a certain point, the cost of contention itself can make throughput actively fall, not just plateau -- which is exactly why a smaller connection pool sometimes outperforms a larger one.\n\nThe next sessions in this module build directly on these three numbers: Little's Law formalized with queueing intuition, capacity planning, workload and traffic distributions, saturation and hotspots, and autoscaling and limits as the practical mechanisms for managing concurrency against a system's real, measured capacity rather than an assumed one."
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Performance Engineering",
+    "slug": "performance-engineering",
+    "description": "Profiling, optimization, load and capacity"
+  },
+  "module": {
+    "title": "Performance Engineering"
+  },
+  "section": {
+    "title": "Scalability & Capacity",
+    "slug": "64-scalability-capacity",
+    "description": "Predict and validate scaling thresholds.",
+    "proficiency_tier": "W"
+  }
+}
