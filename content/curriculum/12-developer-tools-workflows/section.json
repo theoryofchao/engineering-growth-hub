@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Programming & Code Quality",
+    "slug": "programming-code-quality",
+    "description": "Idiomatic programming, maintainability, collaborative practice"
+  },
+  "module": {
+    "title": "Programming & Code Quality"
+  },
+  "section": {
+    "title": "Developer Tools & Workflows",
+    "slug": "12-developer-tools-workflows",
+    "description": "Work efficiently and reproducibly in unfamiliar repositories.",
+    "proficiency_tier": "D"
+  }
+}

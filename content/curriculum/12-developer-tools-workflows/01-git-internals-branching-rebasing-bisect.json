@@ -1,0 +1,107 @@
+{
+  "title": "Git Internals: Why Branches Are Cheap, Rebase Rewrites History, and Bisect Is Binary Search",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Understand git's actual content-addressable object model well enough to explain why branches are near-free, why rebasing produces new commit identities even for unchanged content, and why bisect is an efficient regression-finding tool rather than a lucky shortcut.",
+  "content_blocks": [
+    {
+      "heading": "Git Isn't a Sequence of Diffs -- It's a Content-Addressable Snapshot Store",
+      "body": "A common misconception treats a commit as a diff against the previous one, the way some older version-control systems worked. Git's actual model, documented in the Pro Git book's chapter on git internals, is different: every commit points to a tree object representing a full snapshot of the repository at that moment, built from blob objects (file contents) and tree objects (directory structure), all addressed by the SHA-1 (now increasingly SHA-256) hash of their own content.\n\nThat hash-addressing is the detail that explains almost everything else in this session: an object's identity is entirely determined by its content, and a commit's identity is determined by its tree plus its parent commit's hash -- change either, and you get a different hash, meaning a genuinely different commit object, even if the actual file content ends up identical.\n\nThis is also why git can store a large history so compactly despite keeping a full snapshot per commit: identical blobs across many commits -- an unchanged file that never gets touched -- are the exact same object on disk, referenced by the same hash from every tree that includes it, rather than being duplicated once per commit.",
+      "reference_links": [
+        { "label": "Pro Git -- Git Internals: Git Objects", "url": "https://git-scm.com/book/en/v2/Git-Internals-Git-Objects" }
+      ]
+    },
+    {
+      "heading": "A Branch Is Just a Movable Pointer, Not a Copy of Anything",
+      "body": "Because commits already form a full history through their parent links, a branch doesn't need to duplicate anything -- it's just a small file holding one commit's hash, the branch's current tip. Creating a new branch means writing one new 40-character hash to a new file; switching branches means updating which commit the repository's working files reflect. Neither operation copies the project's history or files, which is exactly why git branches are near-instant regardless of repository size, unlike systems where branching genuinely duplicates data.\n\nCommitting on a branch simply moves that one pointer forward to the new commit, whose parent is the previous tip -- the branch itself never \"contains\" commits in any stronger sense than pointing at the most recent one in a chain that reaches backward through parent links.\n\n`HEAD` is the same idea one level up: it's just a pointer to whichever branch (or, in a detached state, whichever specific commit) is currently checked out, which is why switching branches is also just a matter of updating what `HEAD` points to and what the working directory reflects.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why can `git branch new-feature` complete instantly even on a repository with a huge history, while some older version-control systems treat branching as an expensive operation?",
+          "definition": {
+            "options": [
+              "A git branch is just a pointer to one commit hash; no history or files are duplicated when it's created",
+              "Git branches are instant because git silently defers all the actual copying work until the next commit happens",
+              "Git only allows branching on small repositories; larger ones require a separate, slower branching command instead",
+              "The speed difference is purely a result of git being written in C, unrelated to how branches are actually represented"
+            ],
+            "correct_index": 0,
+            "explanation": "A branch is a small reference file holding a single commit hash -- creating one just writes that one pointer, since the full history is already reachable by following parent links from any commit. There's nothing to duplicate, which is why branch creation cost doesn't scale with repository size at all."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Rebase Rewrites History -- Literally, Not Figuratively",
+      "body": "Rebasing a branch onto a new base replays its commits one at a time on top of the new base commit, but because a commit's hash depends on its parent, every replayed commit gets a new parent hash, which means a new commit hash overall -- even if the actual file changes are byte-for-byte identical to the original commit. The original commits still exist in git's object store until garbage-collected; the branch pointer now just points to an entirely new, parallel chain of commits with different identities.\n\nMerging, by contrast, doesn't rewrite anything -- it creates one new merge commit with two parents, preserving both original chains of commits exactly as they were. This is why rewriting shared history with rebase is considered dangerous on a branch others have already pulled: their copies still reference the old commit hashes, which no longer exist on the rebased branch at all.\n\nThe common guidance -- rebase local, not-yet-shared work; merge (or force-push carefully, with coordination) once a branch is shared -- follows directly from this: rebasing after others have already built on the original commits leaves their work pointing at history that's about to effectively disappear from the branch they're tracking.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A commit is rebased onto a new base, with its actual file changes staying byte-for-byte identical to the original. Why does it still get a completely different commit hash?",
+          "definition": {
+            "options": [
+              "A commit's hash depends on its parent commit's hash too, and rebasing gives it a different parent, changing the hash",
+              "Git always generates a fresh random hash for any rebased commit, regardless of whether the content actually changed",
+              "It doesn't actually get a new hash at all -- the original commit object is directly reused without modification",
+              "Rebasing specifically re-hashes only the file contents, which is why identical content always keeps the same commit hash"
+            ],
+            "correct_index": 0,
+            "explanation": "A commit object's hash is computed from its own content, which includes a reference to its parent commit's hash. Rebasing onto a different base gives the replayed commit a different parent, which changes the commit object's content and therefore its hash -- even though the actual file diff is unchanged."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Bisect: Binary Search Applied to a Regression Hunt",
+      "body": "`git bisect` finds the commit that introduced a bug by repeatedly checking out a commit halfway between a known-good and known-bad point, asking whether the bug is present there, and narrowing the remaining range by half each time -- the exact same binary-search idea module 02 already covered, applied to commit history instead of a sorted array. Checking commits one at a time from the start would take, in the worst case, as many steps as there are commits (`O(n)`); bisecting a history of 1,000 commits down to the exact offending one takes roughly 10 steps (`O(log n)`), since each step eliminates half the remaining candidates.\n\nThe official git-bisect documentation also describes `git bisect run`, which automates the \"good\"/\"bad\" check itself by running a test script at each step -- turning a tedious manual hunt into an unattended search that still completes in that same logarithmic number of steps.",
+      "reference_links": [
+        { "label": "Git documentation -- git-bisect", "url": "https://git-scm.com/docs/git-bisect" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A regression exists somewhere in the last 1,000 commits. Why does `git bisect`'s binary-search approach reach the exact offending commit in roughly 10 steps rather than needing to check all 1,000?",
+          "definition": {
+            "options": [
+              "Each check eliminates half the remaining candidates, the same logarithmic narrowing a sorted-array binary search uses",
+              "Git bisect actually checks every single commit internally, but only displays the final 10 steps of that whole process",
+              "It works because most regressions happen to be introduced within the 10 most recent commits of any real repository",
+              "The 10-step figure is a fixed configuration default, unrelated to how many commits are actually being searched here"
+            ],
+            "correct_index": 0,
+            "explanation": "Bisect checks a commit roughly in the middle of the remaining range and uses the good/bad result to discard half the remaining candidates each time -- identical in shape to binary search over a sorted array. Halving 1,000 repeatedly reaches a single commit in about log2(1000) ≈ 10 steps, not the 1,000 a linear check would need."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Putting It Together: Reproducing and Isolating a Regression",
+      "body": "A realistic scenario: a test that passed last month now fails, and nobody knows which of the hundred commits since then is responsible. Marking the old passing commit as `good` and the current commit as `bad`, then running `git bisect start`, hands git the job of checking out the midpoint commit automatically -- the engineer (or `bisect run`'s test script) only answers whether the test passes at each checkout. Because each branch and each bisect checkout is just git moving pointers and swapping which commit's snapshot is reflected in the working directory, this whole search happens without ever duplicating the repository or losing any history along the way.\n\nThis is also why bisect pairs naturally with small, focused commits: a `good`/`bad` verdict is only as precise as the commit granularity being searched -- a single giant commit bundling ten unrelated changes narrows bisect down to \"somewhere in this one commit,\" not to the specific change actually responsible.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team bisects a regression down to a single commit, but that commit bundles ten unrelated changes together. What does this reveal about commit granularity and bisect's usefulness?",
+          "definition": {
+            "options": [
+              "Bisect's precision is limited by commit size -- a large bundled commit only narrows the search to \"somewhere in here\"",
+              "This situation can't actually happen, since git bisect automatically splits any multi-change commit during the search",
+              "Bundled commits make bisect run faster, since there are fewer total commits for it to have needed to check overall",
+              "Commit granularity has no effect on bisect's result at all -- the search always identifies one specific line of code"
+            ],
+            "correct_index": 0,
+            "explanation": "Bisect can only narrow the search down to the granularity of an actual commit -- if ten unrelated changes are bundled into one, the search stops there, correctly identifying the commit but not which of the ten changes within it actually caused the regression. Small, focused commits make this narrowing far more actionable."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Git's object model -- content-addressed snapshots, not sequential diffs -- is what makes branches near-free (a branch is just a pointer), explains why rebasing produces new commit hashes even for unchanged content (a commit's hash includes its parent's), and underlies bisect's efficiency (the same binary-search idea module 02 already covered, applied to commit history). None of these behaviors are arbitrary tool quirks; they all follow directly from the same underlying object model once it's understood -- which is also why debugging a confusing git situation (a rebase that seems to have lost commits, a branch that won't fast-forward) goes faster once you can reason about pointers and hashes directly instead of guessing at command incantations.\n\nThe next sessions in this module build on this same \"understand the actual mechanism, not just the command\" approach for the rest of a developer's daily toolkit: shell scripting and CLI fluency, debuggers and profilers, build tools and package managers, and reproducible environments."
+    }
+  ]
+}
