@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Data & Storage",
+    "slug": "data-storage",
+    "description": "SQL, persistence design, caching, data architecture"
+  },
+  "module": {
+    "title": "Data & Storage"
+  },
+  "section": {
+    "title": "Data Architecture",
+    "slug": "27-data-architecture",
+    "description": "Design data systems resilient to change and concurrency.",
+    "proficiency_tier": "D"
+  }
+}
