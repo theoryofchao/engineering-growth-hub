@@ -1,0 +1,107 @@
+{
+  "title": "The Shared Responsibility Model: Where the Provider's Job Ends and Yours Begins",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Understand the cloud shared responsibility model's actual dividing line, and recognize that most real cloud security incidents trace back to the customer's side of it, not a breach of the provider's own infrastructure.",
+  "content_blocks": [
+    {
+      "heading": "Not \"AWS's Job\" or \"Your Job\" -- a Specific, Named Line",
+      "body": "Cloud security isn't split by vague intuition about who's \"more responsible\" -- AWS names the actual dividing line directly: AWS is responsible for security *of* the cloud (the physical facilities, hardware, networking, and the virtualization layer underneath every service), while the customer is responsible for security *in* the cloud (their own data, access policies, operating-system configuration, and network rules on top of whatever AWS provides).\n\nThis session covers what that line actually means in practice, and why the empirical pattern in real, publicly documented incidents consistently lands on one specific side of it.\n\nThat pattern turns out to matter directly for deciding where to actually spend limited security effort, not just as background context worth knowing in the abstract.\n\nIt's worth naming upfront why this distinction gets confused so often: both halves of the system -- the provider's infrastructure and the customer's own configuration on top of it -- are genuinely called \"the cloud\" in casual conversation, which makes it easy to treat a security question as entirely the provider's problem when the actual failure point sits squarely on the customer's own side of that line.",
+      "reference_links": [
+        { "label": "AWS -- Shared Responsibility Model", "url": "https://aws.amazon.com/compliance/shared-responsibility-model/" }
+      ]
+    },
+    {
+      "heading": "The Line Moves Depending on the Service Model",
+      "body": "For an IaaS service like EC2, the customer manages almost everything above the physical hardware and hypervisor: the guest operating system, its patches, firewall rules, and every IAM policy governing who can touch it. For a more abstracted, managed service like S3 or DynamoDB, AWS takes on more of that stack itself -- the customer's remaining responsibility narrows mostly to access policy and the data itself, since AWS already manages the underlying OS and platform for that service.\n\nThe practical consequence: \"what am I actually responsible for securing\" doesn't have one fixed answer across every AWS service -- it depends specifically on how abstracted the chosen service is, and has to be checked service by service rather than assumed to be constant.\n\nChoosing a more managed service is itself a security decision, not just a convenience tradeoff -- it genuinely narrows the customer's own side of the line.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team runs a database on a raw EC2 instance instead of a managed service like RDS. How does this choice affect their side of the shared-responsibility line?",
+          "definition": {
+            "options": [
+              "Widens -- they now manage the OS, patches, firewalls a managed service would otherwise cover",
+              "Narrows, since running software directly on EC2 always shifts more of the security burden onto AWS instead",
+              "Nothing at all changes -- the responsibility line is fixed and identical across every AWS service and abstraction level",
+              "AWS becomes fully responsible for the database's security specifically, since EC2 is itself an AWS-managed compute service"
+            ],
+            "correct_index": 0,
+            "explanation": "EC2 is IaaS -- AWS manages the hardware and hypervisor, but everything above that (guest OS, patching, firewall/security-group rules, and the database software itself) falls to the customer. Choosing a managed service like RDS instead would shift the OS and platform management onto AWS, narrowing the customer's responsibility -- the line genuinely depends on which service and abstraction level is chosen."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Real Case: Capital One's 2019 Breach Stayed Entirely on the Customer's Side",
+      "body": "The well-documented 2019 Capital One breach began with a misconfigured web application firewall -- a customer-managed configuration -- that allowed unintended requests to reach an internal server. That server's associated IAM role turned out to be far more permissive than it needed to be, letting the attacker use its credentials to read sensitive data directly out of S3. Every link in that chain -- the firewall's own configuration, the IAM role's excessive permissions -- sat on the customer's side of the shared-responsibility line; AWS's own underlying infrastructure was never the part that failed.\n\nThis is the pattern worth internalizing, not just this one incident: a breach happening *on* AWS doesn't mean AWS itself was breached -- the actual failure is overwhelmingly likely to be found on the configuration and policy side the customer was always responsible for, not in AWS's own hardware or hypervisor layer.",
+      "reference_links": [
+        { "label": "Krebs on Security -- What We Can Learn From the Capital One Hack", "url": "https://krebsonsecurity.com/2019/08/what-we-can-learn-from-the-capital-one-hack/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "In the 2019 Capital One breach, a misconfigured firewall and an overly permissive IAM role let an attacker reach sensitive S3 data. Which side of the shared-responsibility line does this failure fall on?",
+          "definition": {
+            "options": [
+              "The customer's side -- both the firewall config and the IAM role's permissions were theirs to manage",
+              "AWS's side -- the underlying cloud infrastructure itself was compromised, which is squarely AWS's responsibility to prevent",
+              "Neither side applies here, since this specific incident happened before the shared responsibility model was first introduced",
+              "Impossible to attribute to either side without AWS publicly releasing its own internal infrastructure audit logs first"
+            ],
+            "correct_index": 0,
+            "explanation": "Both the firewall's configuration and the IAM role's permissions are customer-managed settings -- exactly the \"security in the cloud\" side of the line. AWS's own hardware, networking, and virtualization layer (\"security of the cloud\") was never the part that failed; the entire chain of failure happened in configuration the customer always controlled."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Where This Points Security Effort: Audit Your Own Configuration First",
+      "body": "Teams sometimes worry most about whether the cloud provider's own infrastructure could itself be compromised -- a real but comparatively rare failure mode. The empirically common pattern, illustrated directly by Capital One and echoed across many other publicly documented cloud incidents, is a misconfiguration on the customer's own side: an IAM policy granting more access than a role actually needs, a storage bucket left open, a security group rule too permissive.\n\nThe actionable habit this creates: audit your own configuration first, specifically, rather than assuming the provider's infrastructure is the more likely point of failure -- the dividing line the shared responsibility model draws is also, empirically, a map of where real incidents actually concentrate.\n\nThis doesn't mean the provider's own infrastructure is never worth considering -- it means a limited audit budget gets more value starting on the customer's own side first.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A security team has limited time and is deciding where to focus their next audit: AWS's underlying infrastructure, or their own IAM policies and storage configurations. Which does the shared-responsibility pattern suggest is the higher-leverage place to look first?",
+          "definition": {
+            "options": [
+              "Their own IAM policies and storage -- that side is where real, documented incidents concentrate",
+              "AWS's underlying infrastructure -- that side carries the larger share of real, publicly documented cloud security incidents",
+              "Neither side is meaningfully more likely to fail, so time is best split exactly evenly between auditing the two",
+              "This can't be decided at all without first calculating the exact dollar value of the data in each specific system"
+            ],
+            "correct_index": 0,
+            "explanation": "Capital One and the broader pattern of publicly documented cloud incidents consistently point to the customer's own configuration -- IAM permissions, storage access, firewall rules -- as where real failures concentrate, not a breach of the provider's underlying infrastructure. That's exactly where a time-limited audit gets the most value for the effort spent."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Least Privilege as the Single Highest-Leverage Habit",
+      "body": "If IAM misconfiguration is a recurring theme in the customer-side incidents that actually happen, the single highest-leverage habit on that side is granting the minimum access a role actually needs, by default, rather than something broader \"just in case\" it turns out to be needed later. An IAM role scoped to exactly the handful of actions its job requires can't be abused into reading an unrelated S3 bucket, even if the service it's attached to is compromised the same way Capital One's was -- the blast radius of that one compromised credential is bounded by how narrowly its own permissions were already scoped.\n\nAuditing existing roles for permissions wider than their actual job is the practical, ongoing version of this habit -- not a one-time setup step, since roles tend to accumulate unused permissions over time as requirements shift and nobody goes back to remove what's no longer needed.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Two IAM roles both get compromised the same way Capital One's was. Role A has broad S3 access across the whole account; role B is scoped to read-only access on one specific bucket it actually needs. What's the practical difference in outcome?",
+          "definition": {
+            "options": [
+              "Role B bounds the damage to that one bucket; role A's broader scope lets the same compromise reach far more data",
+              "There's no practical difference -- once any role is compromised, the attacker gains the exact same account-wide access either way",
+              "Role A is actually safer, since broader access means more monitoring tools are likely watching that role's unusual activity",
+              "This scenario can't happen to role B at all, since read-only roles are structurally immune to every form of credential compromise"
+            ],
+            "correct_index": 0,
+            "explanation": "A compromised credential can only do what its own permissions allow -- role B's narrow, read-only scope on one bucket caps the damage to that bucket, while role A's broad access lets the exact same compromise technique reach everything that role could touch. Least privilege doesn't prevent every compromise, but it directly bounds how much damage any single one can do."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "AWS draws the shared-responsibility line explicitly: security *of* the cloud is AWS's job, security *in* the cloud is the customer's, and exactly where that line falls shifts depending on how abstracted a given service is. Capital One's 2019 breach is a real, well-documented case where every link in the failure chain -- firewall configuration, IAM permissions -- sat on the customer's side, with AWS's own infrastructure never actually compromised. That pattern is common enough across real incidents that it should shape where security effort actually goes: auditing your own configuration first, not assuming the provider's infrastructure is the more likely point of failure.\n\nThe next sessions in this module get concrete about the specific customer-side mechanisms this line puts in your hands: VPC networking and IAM policy design, and the managed services that shift more of the line back toward the provider."
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Infrastructure & Cloud",
+    "slug": "infrastructure-cloud",
+    "description": "Linux, containers, orchestration, cloud, IaC"
+  },
+  "module": {
+    "title": "Infrastructure & Cloud"
+  },
+  "section": {
+    "title": "Cloud Platforms",
+    "slug": "47-cloud-platforms",
+    "description": "Deploy secure small production-like cloud systems.",
+    "proficiency_tier": "W"
+  }
+}
