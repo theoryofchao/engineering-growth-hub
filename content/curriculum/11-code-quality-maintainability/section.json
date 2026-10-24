@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Programming & Code Quality",
+    "slug": "programming-code-quality",
+    "description": "Idiomatic programming, maintainability, collaborative practice"
+  },
+  "module": {
+    "title": "Programming & Code Quality"
+  },
+  "section": {
+    "title": "Code Quality & Maintainability",
+    "slug": "11-code-quality-maintainability",
+    "description": "Improve internal quality while preserving externally observable behavior.",
+    "proficiency_tier": "D"
+  }
+}

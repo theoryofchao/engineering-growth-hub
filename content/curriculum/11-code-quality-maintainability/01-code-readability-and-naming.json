@@ -1,0 +1,104 @@
+{
+  "title": "Code Readability and Naming: Why a Name Is the Cheapest Thing You'll Ever Fix",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Treat a misleading or vague name as a genuine code smell worth fixing, understand why naming problems are both unusually common and unusually cheap to resolve, and recognize when a name actively misrepresents what code does rather than merely under-describing it.",
+  "content_blocks": [
+    {
+      "heading": "Code Is Read Far More Often Than It's Written",
+      "body": "A piece of code is typically written once and then read many times afterward -- by its own author returning weeks later, by teammates extending it, by whoever eventually debugs it in production. This asymmetry is why readability isn't a cosmetic preference layered on top of \"real\" engineering work -- it's a direct lever on the dominant ongoing cost of any codebase that survives past its first week.\n\nNaming sits at the center of readability because names are the interface between code and the human reading it: a variable, function, or class name is often the only context a reader has before they decide whether to dig further or trust what it appears to do at a glance. A misleading name doesn't just slow a reader down -- it actively points them toward the wrong mental model of what the code actually does.\n\nThis session treats naming as a first-class design activity, not a final cosmetic pass applied once the \"real\" logic is already finished -- the two are worth revisiting together, since a name that's hard to get right is often a sign the logic underneath hasn't quite settled either."
+    },
+    {
+      "heading": "A Bad Name Is a Code Smell -- a Symptom, Not Just an Aesthetic Complaint",
+      "body": "Martin Fowler's bliki entry on code smells frames the term precisely: a smell is a surface-level sign that often points to a deeper problem, coined by Kent Beck while the two worked together on Fowler's *Refactoring* book. A smell doesn't guarantee a real defect is hiding underneath -- but it's specifically worth stopping to look.\n\nA confusing or vague name fits this definition exactly: struggling to name something well is frequently a sign that the thing itself is poorly scoped -- doing two unrelated jobs at once, or representing a concept nobody has actually pinned down yet. Treating \"I can't think of a good name for this\" as a smell worth investigating, rather than a naming exercise to push through, catches design problems a purely cosmetic rename would miss entirely.\n\nFowler's broader point about smells applies here too: a smell is a prompt to look closer, not an automatic verdict. Sometimes the honest answer after investigating is that the thing really is doing two jobs and should be split; other times a clearer name alone turns out to be enough, once the actual concept underneath is pinned down precisely.",
+      "reference_links": [
+        { "label": "Martin Fowler -- Code Smell", "url": "https://martinfowler.com/bliki/CodeSmell.html" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A developer struggles for several minutes to come up with a good name for a new function, eventually settling on something vague like `processData`. What does this struggle itself suggest, treated as a code smell?",
+          "definition": {
+            "options": [
+              "The function may be poorly scoped -- doing multiple unrelated things, which is why no single clear name fits it",
+              "Nothing beyond the naming itself -- struggling to name something has no bearing on whether its design is sound",
+              "The developer simply needs a larger vocabulary; this is purely a language-skill issue, not a design issue at all",
+              "This situation never actually indicates a real problem, since all code smells are strictly about duplication specifically"
+            ],
+            "correct_index": 0,
+            "explanation": "Difficulty naming something well is frequently a symptom of unclear scope -- a function doing several unrelated jobs at once resists a single precise name because no single name can honestly describe all of it. Treating that struggle as worth investigating, rather than just pushing through to a vague name, surfaces design problems a cosmetic rename alone wouldn't catch."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Good Name Distinguishes Intent Precisely -- Length Isn't the Point",
+      "body": "The common advice to avoid short, cryptic names (`d`, `tmp`, `data`) is really a proxy for a sharper rule: a name should let a reader distinguish this thing from everything else it could plausibly be confused with, without needing to read the implementation. `elapsedTimeInDays` beats `d` not because it's longer, but because it answers the two questions a reader actually has -- what unit, and what this value represents -- that `d` leaves completely open.\n\nThe more dangerous failure mode isn't a name that's merely vague -- it's a name that's actively misleading: `getUser` that silently creates a new user record if none exists performs a side effect its name gives no indication of, inviting a caller to assume it's a safe, repeatable read when it isn't. A long, precise name that's wrong is worse than a short, vague one, because the wrong name actively steers a reader's mental model in the wrong direction rather than just leaving it underspecified.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A function named `getUser` actually creates a new user record if one doesn't already exist, as a side effect. Why is this a more serious naming problem than a vague name like `data`?",
+          "definition": {
+            "options": [
+              "It actively misleads callers into assuming a safe, repeatable read, when it can really mutate state unexpectedly",
+              "It isn't actually a more serious problem -- vague names and misleading names cause identical confusion either way",
+              "The real issue is only that `getUser` is grammatically awkward phrasing, unrelated to what the function does internally",
+              "This naming pattern is standard practice industry-wide and isn't considered a real problem by any style guide at all"
+            ],
+            "correct_index": 0,
+            "explanation": "A vague name like `data` leaves a reader's mental model underspecified, prompting them to dig further. A misleading name like `getUser` that secretly creates a record instead actively steers the reader toward a wrong, confident assumption -- that it's a safe read -- which is a more dangerous failure than simply not knowing yet."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Renaming Is Cheap; Living With a Bad Name Is the Expensive Part",
+      "body": "Modern IDE tooling makes renaming a variable, function, or class a mechanical, low-risk operation -- a rename-refactor updates every reference at once, and the change is easy to review because the diff is obviously just a rename. That cost is paid exactly once. Living with a bad name, by contrast, is a cost every future reader pays independently and repeatedly: each person who encounters `getUser`'s hidden side effect has to rediscover the mismatch themselves, usually the hard way, in the middle of debugging something else.\n\nThis is the same one-time-cost-vs-recurring-cost asymmetry module 10's YAGNI argument already applies to premature abstraction -- here flipped the other direction: where YAGNI says don't pay a cost now for a benefit that may never materialize, naming says do pay the small one-time cost now, because the alternative is a recurring cost paid by everyone who reads the code afterward, for as long as the bad name survives.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team debates whether a confusingly-named function is worth renaming, given that doing so touches several call sites. How does the one-time-vs-recurring cost framing apply here?",
+          "definition": {
+            "options": [
+              "Renaming is a one-time, mechanical cost; leaving the bad name in place is a recurring cost every future reader re-pays",
+              "Renaming should always be deferred, since any change touching multiple call sites carries more risk than it's worth",
+              "There's no real cost asymmetry here at all -- renaming and leaving the name as-is are equivalent in total cost either way",
+              "The call-site count is irrelevant; naming cost only ever depends on how many characters the new name has compared to the old"
+            ],
+            "correct_index": 0,
+            "explanation": "A rename-refactor is a mechanical, one-time operation modern tooling handles safely across every call site. Leaving a misleading name in place instead means every future reader independently pays the cost of being misled or having to dig into the implementation to figure out what it actually does -- a recurring cost, not a one-time one, that compounds the longer the bad name survives."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Concrete Bug Traced Back to a Mismatched Name",
+      "body": "A boolean flag named `isValid` is set once, early, after a basic format check -- but later code treats it as meaning \"has passed all validation, including business rules checked much later in the pipeline.\" A bug surfaces where clearly invalid data slips through a downstream step that trusted `isValid` at face value. The actual defect isn't a logic error in any single function -- it's that the name `isValid` promised something broader than what it was ever actually set to mean, and every reader who encountered it downstream inherited that same wrong assumption.\n\nRenaming it to something like `hasValidFormat` wouldn't just be a cosmetic fix -- it would have made the downstream code's trust in it visibly wrong at the point where it was written, surfacing the actual missing validation step instead of letting a plausible-sounding name paper over the gap until it caused a real failure.\n\nThis kind of bug is also notoriously hard to catch with tests alone, since the code does exactly what its name claims at the point it's set -- the mismatch only becomes a real failure once a downstream reader, months later, relies on a meaning the name implied but the original author never actually guaranteed.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A flag named `isValid` is actually only set after a basic format check, not full business-rule validation. Downstream code trusts it as if it meant full validation, and a bug results. What's the actual root cause here?",
+          "definition": {
+            "options": [
+              "The name promises more than it actually means, misleading every downstream reader who takes it at face value instead",
+              "The downstream code has a logic bug unrelated to naming; the flag's own name plays no real role in causing this at all",
+              "Boolean flags are an inherently unreliable pattern and should never be used for representing validation state in general",
+              "The bug is purely a testing gap here -- better test coverage alone would have fully resolved it without any renaming"
+            ],
+            "correct_index": 0,
+            "explanation": "The flag's name claims a broader guarantee (\"is valid\") than what it actually represents (\"has a valid format\"), and every downstream reader inherits that same overstated assumption. A more precise name like `hasValidFormat` wouldn't fix the missing business-rule check by itself, but it would make the gap visible at the point where the mismatch currently hides."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Code is read far more than it's written, which makes naming -- the primary interface between code and its readers -- a direct lever on a codebase's ongoing cost, not a cosmetic afterthought. Struggling to find a good name is itself a code smell worth investigating, often pointing to a poorly-scoped piece of code underneath. A name's real job is distinguishing intent precisely; a misleading name that promises more than the code actually does is more dangerous than a merely vague one, because it actively steers readers toward a wrong assumption rather than just leaving them unsure.\n\nBecause modern tooling makes renaming a cheap, mechanical, one-time fix, the asymmetry strongly favors paying that small cost now over letting every future reader independently re-discover and re-pay the confusion a bad name creates. The next sessions in this module build on this same \"small, concrete signal pointing to a real underlying issue\" idea: refactoring and characterization tests, complexity measurement, error contracts, and the static-analysis tooling that catches some of these smells automatically."
+    }
+  ]
+}
