@@ -1,0 +1,104 @@
+{
+  "title": "Processes, Threads, and Scheduling: The OS's Own Concurrency Primitives",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Distinguish a process from a thread by what each actually shares and isolates, understand fork/exec as Linux's real process-creation mechanism, and reason about the real cost and purpose of preemptive scheduling.",
+  "content_blocks": [
+    {
+      "heading": "A Process Is an Isolation Boundary, Not Just \"a Running Program\"",
+      "body": "A process is the operating system's unit of isolation: its own virtual address space, its own file descriptor table, its own memory mappings -- nothing one process writes to its own memory is visible to another, by construction. This is the OS-level mechanism behind module 03's memory-hierarchy framing: the virtual addresses a program manipulates are private to its process, translated by the hardware into physical memory no other process can reach.\n\nA thread lives inside that boundary rather than replacing it: multiple threads within one process share that same address space, the same file descriptors, the same memory mappings -- they're concurrent paths of execution inside one isolation boundary, not separate boundaries of their own.\n\nThis sharing-vs-isolating distinction is the single fact that drives almost every tradeoff the rest of this session covers: what's cheap to create, what crashes safely, and what needs explicit coordination to stay correct."
+    },
+    {
+      "heading": "fork() and exec(): Linux's Actual Process-Creation Mechanism",
+      "body": "Unix-family systems create a new process through a deliberately two-step design: fork() duplicates the calling process -- a near-complete copy of its address space, file descriptors, and execution state -- and exec() then replaces that copy's entire program image with a different one. A shell starting a new command does exactly this: fork() to get a fresh process, then exec() to turn it into the actual program being run.\n\nMichael Kerrisk's free sample chapter on process creation from *The Linux Programming Interface* explains why this split matters rather than one combined \"spawn a new program\" call: the gap between fork() and exec() is exactly where a shell redirects file descriptors, changes the working directory, or adjusts signal handling for the child, before the new program image even starts running -- flexibility a single all-in-one call couldn't offer.\n\nThis two-step shape also explains a detail that otherwise looks odd: right after fork() returns, there are briefly *two* processes running the exact same program -- parent and child -- distinguished only by fork()'s own return value, until the child calls exec() and becomes something else entirely.",
+      "reference_links": [
+        { "label": "Michael Kerrisk -- The Linux Programming Interface, Ch. 24: Process Creation (free sample chapter)", "url": "https://man7.org/tlpi/download/TLPI-24-Process_Creation.pdf" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A shell runs a command with output redirected to a file (`ls > output.txt`). Why does the two-step fork()-then-exec() design make this easy to implement?",
+          "definition": {
+            "options": [
+              "The gap between fork() and exec() lets the shell redirect the child's own file descriptors before the new program starts",
+              "fork() and exec() must always run together as a single combined call, which is specifically what makes redirection possible",
+              "Redirection is handled entirely by the terminal emulator itself, with neither fork() nor exec() playing any real role here",
+              "exec() automatically redirects output for any command by default, without the shell ever needing to do anything extra here"
+            ],
+            "correct_index": 0,
+            "explanation": "fork() creates a copy of the shell process, and in the gap before exec() replaces that copy's program image, the shell (running as the child) can freely modify its own file descriptors -- pointing output at a file -- before the new program ever starts. A single combined spawn call would have no such gap to act in."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Threads: Cheaper to Create, but Nothing Crashes Alone",
+      "body": "Because threads within one process share its address space, creating a thread is far cheaper than fork()ing a whole new process -- no address space or file-descriptor table needs duplicating, just a new stack and execution context inside the existing one. Switching between threads of the same process is correspondingly cheaper too.\n\nThat shared address space is also the cost: a bug in one thread -- writing past the end of an array, dereferencing a bad pointer -- can corrupt memory any other thread in that process is also using, since there's no isolation boundary between them. A crashing process, by contrast, takes down only its own isolated memory; other processes on the same machine are unaffected by construction.\n\nThis is the same isolation-vs-overhead tradeoff module 45 already covered for containers (shared kernel, cheaper, less isolated) vs. true VMs (separate kernel, heavier, more isolated) -- threads vs. processes is that identical tradeoff shape one level further down, inside a single machine rather than across virtualized ones.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A buggy thread writes past the end of an array it allocated, corrupting memory. What's the actual blast radius of this bug?",
+          "definition": {
+            "options": [
+              "Potentially any other thread in the same process, since all threads in a process share one address space",
+              "Only that one thread itself -- every thread's memory stays fully isolated from every other thread in the same process",
+              "Every process currently running on the machine, since thread memory corruption always spreads across process boundaries",
+              "Nothing at all, since modern CPUs automatically detect and prevent any out-of-bounds memory write before it happens"
+            ],
+            "correct_index": 0,
+            "explanation": "Threads within one process share that process's address space -- there's no isolation boundary between them, so a memory-corrupting bug in one thread can affect data any other thread in the same process is using. That shared-everything model is exactly what makes thread creation and switching cheap, and exactly what removes the crash-containment a separate process would have provided."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Preemptive Scheduling: Sharing Finite Cores Among Many Runnable Things",
+      "body": "A machine with 8 CPU cores can still run hundreds of processes and thousands of threads because the OS scheduler doesn't dedicate a core to each -- it preempts a running thread after a short time slice, saves its full execution state (registers, program counter, stack pointer), and loads a different thread's saved state onto that same core. From each thread's own perspective, it simply runs continuously; the interleaving is invisible unless you're measuring for it.\n\nThat save-and-restore step -- a context switch -- isn't free: it costs CPU cycles that do no useful work for either thread involved, and it can also evict useful data from the CPU's cache (module 03's cache-locality framing again), making the next few instructions after a switch run slower than they otherwise would. A system can genuinely run slower overall if it creates far more runnable threads than it has cores to run them, simply from context-switch overhead, even though every individual thread is doing real work when it does get scheduled.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A service is redesigned to use thousands of threads on an 8-core machine, far more than the number of cores. What's a real risk this introduces, even if every thread's own work is useful?",
+          "definition": {
+            "options": [
+              "Context-switch overhead can grow large enough to meaningfully slow the system down, on top of the useful work",
+              "Nothing changes at all -- the OS scheduler guarantees identical total throughput regardless of how many threads exist",
+              "Only the newest threads created will ever actually get scheduled; older threads are permanently starved by design",
+              "The machine will immediately crash, since an OS scheduler can never handle more runnable threads than available cores"
+            ],
+            "correct_index": 0,
+            "explanation": "Each context switch spends real CPU cycles saving and restoring thread state, doing no useful work for either thread, and can evict cache contents that slow down what runs next. Far more runnable threads than cores means far more switching, which can measurably erode throughput even when every thread's actual work is legitimate and necessary."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Concrete Choice: Process-per-Request vs. Thread-per-Request vs. an Event Loop",
+      "body": "Classic Apache (prefork mode) handles concurrent requests with one process per request: maximum isolation (one crashing request can't take down another), but the heaviest per-request overhead, since each needs its own address space and file-descriptor table. A thread-per-request model (common in many application servers) shares one process's address space across request-handling threads: much cheaper to create and switch between, at the cost of losing that per-request crash isolation. An event-loop model (Node.js's default) runs on a single thread with no OS-level concurrency at all for CPU work -- concurrency instead comes from not blocking that one thread on I/O, handing waiting work off and resuming it later.\n\nNone of these is universally \"correct\" -- they're the same isolation-vs-overhead tradeoff from blocks 1 and 3, applied at the request-handling level, and the right choice depends on whether per-request crash isolation or minimizing per-request overhead matters more for a given workload.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A team is choosing between process-per-request and thread-per-request for a new service, and crash isolation between individual requests is their top priority. Which better fits that priority, and why?",
+          "definition": {
+            "options": [
+              "Process-per-request -- each request gets its own address space, so one request's crash can't corrupt another's memory",
+              "Thread-per-request -- threads being cheaper to create directly translates into stronger isolation between requests too",
+              "Neither offers any real isolation difference at all -- the choice only ever affects raw requests-per-second throughput",
+              "An event loop -- it avoids both processes and threads entirely, so no request can ever possibly affect another one"
+            ],
+            "correct_index": 0,
+            "explanation": "Process-per-request gives each request its own OS-level isolation boundary -- a crash or memory corruption in one request's process can't reach another's. Thread-per-request shares one address space across requests for lower overhead, but trades away exactly that crash isolation, which is the wrong tradeoff when isolation is the stated top priority."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "A process is an isolation boundary -- its own address space, file descriptors, and memory mappings -- created on Linux through fork()'s duplication followed by exec()'s image replacement. A thread lives inside that boundary, sharing everything the process owns, which makes it cheap to create and switch but removes the crash containment a separate process provides. The OS scheduler shares finite cores among many runnable processes and threads through preemption and context switching, a mechanism with a real, measurable cost when overused.\n\nThese same two tradeoffs -- isolation vs. overhead, and the real cost of switching between concurrent things -- recur at every layer this module and the adjacent infrastructure modules already touch: containers vs. VMs, thread-per-request vs. process-per-request web servers, and the synchronization problems the next sessions in this module get into directly: virtual memory and paging, and the deadlocks that arise once multiple threads need to coordinate access to shared state."
+    }
+  ]
+}
