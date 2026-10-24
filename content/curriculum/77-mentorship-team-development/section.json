@@ -1,0 +1,16 @@
+{
+  "topic": {
+    "name": "Leadership & Strategy",
+    "slug": "leadership-strategy",
+    "description": "Leadership, mentorship, economics, roadmaps"
+  },
+  "module": {
+    "title": "Leadership & Strategy"
+  },
+  "section": {
+    "title": "Mentorship & Team Development",
+    "slug": "77-mentorship-team-development",
+    "description": "Develop others through actionable feedback and support.",
+    "proficiency_tier": "G"
+  }
+}

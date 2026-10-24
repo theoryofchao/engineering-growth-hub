@@ -1,0 +1,104 @@
+{
+  "title": "Coaching and Structured Feedback: Situation, Behavior, Impact",
+  "duration_minutes": 25,
+  "sequence": 1,
+  "access_tier": "free",
+  "objective": "Apply the Situation-Behavior-Impact model to turn vague feedback into something specific and actionable, and recognize why describing observable behavior rather than labeling character is what makes feedback land without triggering defensiveness.",
+  "content_blocks": [
+    {
+      "heading": "Vague Feedback Is Hard to Act On",
+      "body": "Feedback like \"you need to communicate better\" or \"great job this quarter\" names a general impression without giving the other person anything concrete to actually change or repeat. The person receiving it is left guessing which specific moments the feedback is even about, which makes genuine improvement -- or genuine reinforcement of something that worked -- much harder than it needs to be.\n\nThis is the same specificity principle module 74's ADR content already applied to decision records: a vague Consequences section that only says \"this had some tradeoffs\" is useless compared to one naming the actual tradeoffs. Feedback has the identical problem -- specificity is what turns an impression into something a person can genuinely use.\n\nThis session covers a structured model for closing that specificity gap deliberately, rather than relying on whoever's giving feedback to happen to phrase it well in the moment."
+    },
+    {
+      "heading": "The SBI Model: Situation, Behavior, Impact",
+      "body": "The Center for Creative Leadership's Situation-Behavior-Impact model structures feedback into three specific parts: the Situation (naming the specific when and where, not a vague \"in general\"), the Behavior (the specific, observable action someone actually took or said -- stated as fact, not as an opinion or label), and the Impact (the actual effect that behavior had, often framed as how it affected the speaker, the team, or the work).\n\nThe model's own guidance is specific about why the Behavior step matters so much: an observable behavior can't really be argued with -- it either happened or it didn't -- while an interpretation or a character label (\"you were unprofessional,\" \"you don't care about quality\") absolutely can be argued with, since it's a judgment layered on top of what actually happened, not the thing itself.\n\nCCL's own guidance also stresses naming the Situation precisely -- a specific meeting, a specific date -- rather than a vague \"generally\" or \"lately,\" since a precise situation is what actually lets someone recall the moment clearly enough to engage with the feedback at all.",
+      "reference_links": [
+        { "label": "Center for Creative Leadership -- Use SBI to Inquire About Intent", "url": "https://www.ccl.org/articles/leading-effectively-articles/closing-the-gap-between-intent-vs-impact-sbii/" }
+      ],
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "\"You were unprofessional in that meeting\" and \"You checked your phone three times while a teammate was presenting\" describe the same incident. Which one is actually an observable Behavior in the SBI sense, and why?",
+          "definition": {
+            "options": [
+              "The phone-checking description -- it's a specific, factual action, while \"unprofessional\" layers a judgment on top",
+              "Both are equally valid Behavior statements, since they each describe something that happened during that same meeting",
+              "\"Unprofessional\" is the real Behavior statement, since it more directly names the actual problem with that meeting",
+              "Neither one qualifies as a Behavior statement at all; the Behavior step only applies to physical, measurable actions"
+            ],
+            "correct_index": 0,
+            "explanation": "\"Checked your phone three times\" is a specific, observable fact -- it either happened or it didn't, and it can't really be argued with. \"Unprofessional\" is a label, an interpretation of that behavior, which is exactly the kind of judgment SBI's Behavior step is designed to replace with something concrete and undeniable."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "Why This Reduces Defensiveness",
+      "body": "A character label like \"you're not a team player\" asks someone to defend their entire identity, which is a much bigger, more threatening thing to be asked to respond to than a specific action in a specific moment. SBI's structure -- naming one concrete situation and one concrete behavior -- gives the person something narrow and real to actually engage with, rather than a global judgment that invites a defensive reaction almost by its very nature.\n\nThis isn't a trick for softening criticism -- the Impact described can still be entirely honest and direct about real consequences. What changes is that the conversation becomes about a specific, nameable thing that happened, which is something a person can actually examine and decide what to do about, rather than an abstract verdict on their character that there's genuinely no concrete way to respond to.\n\nThis also makes disagreement more productive when it happens: if someone disputes the Behavior as described, that's a concrete, checkable claim to sort out together, not a referendum on whether they're fundamentally a good colleague.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Why does SBI's structure tend to produce less defensiveness than a global character judgment like \"you're not a team player,\" even when the underlying concern being raised is identical?",
+          "definition": {
+            "options": [
+              "A specific situation and behavior give someone something narrow and concrete to engage with, not a judgment on their whole identity",
+              "SBI feedback is inherently softer and less direct, which is specifically why it produces less defensiveness in the recipient",
+              "There's no actual difference in how defensively people respond; the underlying concern is what determines the reaction, not its framing",
+              "SBI avoids ever naming a real consequence or impact at all, which is the actual reason it comes across as less threatening"
+            ],
+            "correct_index": 0,
+            "explanation": "A global character judgment asks someone to defend who they are as a person -- a much larger, more threatening ask than responding to one specific, nameable moment. SBI's narrower, concrete framing doesn't soften the message's honesty, but it does give the person something real and bounded to actually engage with instead of an abstract identity verdict."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "SBI Works for Praise, Not Just Criticism",
+      "body": "The same specificity that makes critical feedback actionable makes positive feedback far more useful too: \"good job this quarter\" doesn't tell someone which specific thing to keep doing, while \"in yesterday's design review, when you walked through all three alternatives you'd considered before recommending one, that gave the team a clear way to evaluate the tradeoff\" names the exact behavior worth repeating.\n\nThis matters in a mentoring relationship specifically: generic praise feels nice but reinforces nothing concrete, while SBI-structured praise functions as genuinely actionable signal -- the person now knows precisely which behavior earned the recognition and can deliberately choose to repeat it, rather than guessing at what \"good job\" was actually referring to.\n\nThis is also a genuinely underused opportunity -- most feedback conversations default to addressing problems, leaving positive, specific reinforcement of exactly the behaviors a mentor actually wants to see more of mostly unsaid.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "A manager wants to reinforce a specific good habit an engineer showed during a design review. Why would SBI-structured praise work better than simply saying \"good job\"?",
+          "definition": {
+            "options": [
+              "It names the exact behavior worth repeating, so the engineer knows precisely what to keep doing rather than guessing",
+              "SBI-structured praise is required by the model; generic praise like \"good job\" isn't actually a valid form of feedback",
+              "There's no real difference between the two; both communicate the same amount of useful information to the recipient",
+              "SBI only works for critical feedback, so applying it to praise specifically isn't something the model actually supports"
+            ],
+            "correct_index": 0,
+            "explanation": "\"Good job\" doesn't identify which specific action was actually valuable, leaving the recipient to guess. SBI-structured praise names the exact situation and behavior worth repeating, turning a vague compliment into a specific, actionable signal the person can deliberately choose to do again."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "A Worked Rewrite: From Vague to SBI",
+      "body": "Vague version: \"You need to be more proactive.\" Rewritten with SBI: Situation -- \"In yesterday's standup, when the deployment pipeline failed\"; Behavior -- \"you waited for someone else to investigate rather than looking into it yourself\"; Impact -- \"which meant the fix was delayed by about two hours, and a couple of teammates mentioned afterward that they weren't confident failures would get caught quickly.\"\n\nThe rewritten version gives the person an actual moment to reflect on, a specific action they can recognize (or dispute, if the facts are wrong -- which is itself useful information), and a concrete consequence tied directly to that action -- all three things the vague original left the person with no real way to act on.\n\nNotice that the rewrite took longer to say than the original -- SBI trades brevity for actual usefulness, which is a real cost worth accepting deliberately, not an accident of over-explaining.",
+      "exercises": [
+        {
+          "type": "multiple_choice",
+          "sequence": 1,
+          "prompt": "Comparing \"you need to be more proactive\" to its SBI rewrite, what does the rewritten version give the recipient that the original didn't?",
+          "definition": {
+            "options": [
+              "A specific moment, a recognizable action, and a concrete consequence tied to it, rather than just a vague impression",
+              "A softer, less direct version of the same feedback, with the real concern deliberately watered down to avoid any conflict",
+              "Nothing meaningfully different -- both versions communicate the same underlying message in roughly the same detail",
+              "An instruction to be proactive in every future situation, rather than feedback tied to one specific past moment"
+            ],
+            "correct_index": 0,
+            "explanation": "The vague version leaves the person guessing which moments it's even about. The SBI rewrite names one specific situation, one specific observable behavior, and the actual impact that behavior had -- giving the person something concrete to reflect on, agree or disagree with, and act on, none of which the vague original provided."
+          }
+        }
+      ]
+    },
+    {
+      "heading": "The Bottom Line",
+      "body": "Vague feedback -- whether critical or positive -- leaves the recipient guessing at what specifically to change or repeat, the same specificity problem module 74's ADR content already covered for decision records. The SBI model's three parts (a specific Situation, an observable Behavior stated as fact rather than judgment, and the actual Impact) turn a vague impression into something concrete a person can genuinely act on. Describing observable behavior rather than labeling character is specifically what reduces defensiveness, since it gives someone a narrow, real thing to engage with instead of an identity verdict to defend against -- and the same structure works just as well for reinforcing good behavior as for addressing a problem.\n\nThe next sessions in this module build on this same foundation: pairing, teaching, and code review as ongoing contexts for this kind of feedback; delegation and autonomy; growth plans; interviewing calibration; and knowledge sharing as a mentoring practice at team scale."
+    }
+  ]
+}
